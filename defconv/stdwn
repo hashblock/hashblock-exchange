@@ -1,0 +1,4 @@
+#!/bin/bash
+
+docker-compose -f ~/sawtooth.misc/sawtooth-default.yaml down
+
