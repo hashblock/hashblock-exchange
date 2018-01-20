@@ -23,10 +23,13 @@ public class IntegerKeyTransactionProcessor {
    * the method that runs a Thread with a TransactionProcessor in it.
    */
   public static void main(String[] args) {
-
+    // tcp://localhost:4004
+    System.out.println("Startup of UOM TP");
     TransactionProcessor transactionProcessor = new TransactionProcessor(args[0]);
     transactionProcessor.addHandler(new IntegerKeyHandler());
     Thread thread = new Thread(transactionProcessor);
+    System.out.println("UOM TP Ready for execution. Entering event thread");
     thread.start();
+
   }
 }

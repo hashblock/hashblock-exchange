@@ -66,11 +66,13 @@ public class IntegerKeyHandler implements TransactionHandler {
 
   @Override
   public String transactionFamilyName() {
-    return "intkey";
+    System.out.println("UOM family name 'uomkey' requested");
+    return "uomkey";
   }
 
   @Override
   public String getVersion() {
+    System.out.println("UOM 'uomkey' version '1.0' requested");
     return "1.0";
   }
 
@@ -86,6 +88,7 @@ public class IntegerKeyHandler implements TransactionHandler {
    * Convert the co.nstant.in.cbor.model.Map to a HashMap.
    */
   public Map<String, String> decodePayload(byte[] bytes) throws CborException {
+    System.out.println("UOM decodePayload called");
     ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
     co.nstant.in.cbor.model.Map data =
         (co.nstant.in.cbor.model.Map) new CborDecoder(bais).decodeNext();
@@ -104,6 +107,7 @@ public class IntegerKeyHandler implements TransactionHandler {
    * Convert the co.nstant.in.cbor.model.Map to a HashMap.
    */
   public Map<String, Long> decodeState(byte[] bytes) throws CborException {
+    System.out.println("UOM decodeState called");
     ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
     co.nstant.in.cbor.model.Map data =
         (co.nstant.in.cbor.model.Map) new CborDecoder(bais).decodeNext();
@@ -123,6 +127,7 @@ public class IntegerKeyHandler implements TransactionHandler {
    */
   public Map.Entry<String, ByteString> encodeState(String address, String name, Long value)
       throws CborException {
+    System.out.println("UOM encodeState called");        
     ByteArrayOutputStream boas = new ByteArrayOutputStream();
     new CborEncoder(boas).encode(new CborBuilder()
         .addMap()
@@ -144,6 +149,7 @@ public class IntegerKeyHandler implements TransactionHandler {
      * would be a possibility if the hashing algorithm hashes foo and bar to the
      * same address
      */
+    System.out.println("UOM in apply!!!"); 
     try {
       if (transactionRequest.getPayload().size() == 0) {
         throw new InvalidTransactionException("Payload is required.");
@@ -170,6 +176,9 @@ public class IntegerKeyHandler implements TransactionHandler {
       if (verb.length() == 0) {
         throw new InvalidTransactionException("Verb is required");
       }
+      
+      System.out.print("apply verb "); 
+      System.out.println(verb); 
 
       if (!Arrays.asList("set", "dec", "inc").contains(verb)) {
         throw new InvalidTransactionException(
