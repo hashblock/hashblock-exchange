@@ -21,7 +21,7 @@ services:
     image: sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-local
     volumes:
-      - ../../:/project/sawtooth-core
+      - ~/sawtooth-core:/project/sawtooth-core
     depends_on:
       - validator
     command: settings-tp -vv -C tcp://validator:4004
@@ -51,7 +51,7 @@ services:
     image: sawtooth-validator:latest
     container_name: sawtooth-validator-local
     volumes:
-      - ../../:/project/sawtooth-core
+      - ~/sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
       - 8800
@@ -72,7 +72,7 @@ services:
     image: sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-local
     volumes:
-      - ../../:/project/sawtooth-core
+      - ~/sawtooth-core:/project/sawtooth-core
     ports:
       - "8008:8008"
     depends_on:
@@ -93,7 +93,7 @@ services:
     image: sawtooth-dev-python:latest
     container_name: sawtooth-client-local
     volumes:
-      - ../../:/project/sawtooth-core      
+      - ~/sawtooth-core:/project/sawtooth-core      
       - ~/sawtooth-uom/examples/uom_intkey:/uomkey
     depends_on:
       - rest-api
