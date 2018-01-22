@@ -58,6 +58,7 @@ public class IntegerKeyHandler implements TransactionHandler {
     try {
       this.intkeyNameSpace = Utils.hash512(
               this.transactionFamilyName().getBytes("UTF-8")).substring(0, 6);
+      System.out.println(this.intkeyNameSpace);
     } catch (UnsupportedEncodingException usee) {
       usee.printStackTrace();
       this.intkeyNameSpace = "";
@@ -66,18 +67,19 @@ public class IntegerKeyHandler implements TransactionHandler {
 
   @Override
   public String transactionFamilyName() {
-    System.out.println("UOM family name 'uomkey' requested");
-    return "uomkey";
+    System.out.println("UOM family name requested");
+    return "intkey";
   }
 
   @Override
   public String getVersion() {
-    System.out.println("UOM 'uomkey' version '1.0' requested");
+    System.out.println("UOM version requested");
     return "1.0";
   }
 
   @Override
   public Collection<String> getNameSpaces() {
+    System.out.println("UOM namespace requested");
     ArrayList<String> namespaces = new ArrayList<String>();
     namespaces.add(this.intkeyNameSpace);
     return namespaces;
@@ -159,7 +161,7 @@ public class IntegerKeyHandler implements TransactionHandler {
 
       // validate name
       String name = updateMap.get("Name").toString();
-
+      System.out.println(name); 
       if (name.length() == 0) {
         throw new InvalidTransactionException("Name is required");
       }
@@ -221,6 +223,7 @@ public class IntegerKeyHandler implements TransactionHandler {
       if (verb.equals("set")) {
         // The ByteString is cbor encoded dict/hashmap
         Map<String, ByteString> possibleAddressValues = state.getState(Arrays.asList(address));
+        System.out.println("Have valid state from getState");
         byte[] stateValueRep = possibleAddressValues.get(address).toByteArray();
         Map<String, Long> stateValue = null;
         if (stateValueRep.length > 0) {
