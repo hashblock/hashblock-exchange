@@ -1,2 +1,2 @@
 # sawtooth-uom
-Sawtooth Lake units of measure transaction family
+Sawtooth Lake Units of Measure transaction family
