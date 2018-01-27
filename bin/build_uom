@@ -15,19 +15,19 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-uom_dir=~/sawtooth-uom
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
 unset PYTHONPATH
 
 set -e
 
 echo -e "\033[0;32m--- Running protogen ---\n\033[0m"
-$uom_dir/bin/protogen || exit 1
+$top_dir/bin/protogen || exit 1
 
 
-echo -e "\033[0;32m--- Running clean in $uom_dir ---\n\033[0m"
-cd $uom_dir
+echo -e "\033[0;32m--- Running clean in $top_dir ---\n\033[0m"
+cd $top_dir
 python3 setup.py clean --all
 
-echo -e "\033[0;32m--- Running build in $uom_dir ---\n\033[0m"
+echo -e "\033[0;32m--- Running build in $top_dir ---\n\033[0m"
 python3 setup.py build
