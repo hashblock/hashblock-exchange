@@ -17,7 +17,6 @@
 from __future__ import print_function
 
 import os
-import subprocess
 
 from setuptools import setup, find_packages
 
@@ -34,8 +33,7 @@ if os.path.exists("/lib/systemd/system"):
 
 setup(
     name='sawtooth-uom',
-    version=subprocess.check_output(
-        ['../../bin/get_version']).decode('utf-8').strip(),
+    version='0.0.1',
     description='Sawtooth UOM Transaction Processor',
     author='Frank V. Castellucci',
     url='https://github.com/arthurgreef/sawtooth-uom',
