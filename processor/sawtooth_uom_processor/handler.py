@@ -25,12 +25,12 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from sawtooth_uom.protobuf.uom_pay_pb2 import UOMPayload
-from sawtooth_uom.protobuf.uom_pay_pb2 import UOMProposal
-from sawtooth_uom.protobuf.uom_pay_pb2 import UOMVote
-from sawtooth_uom.protobuf.uom_pay_pb2 import UOMCandidate
-from sawtooth_uom.protobuf.uom_pay_pb2 import UOMCandidates
-from sawtooth_uom.protobuf.uom_pb2 import UOM
+from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMPayload
+from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMProposal
+from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMVote
+from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMCandidate
+from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMCandidates
+from sawtooth_uom_processor.protobuf.uom_pb2 import UOM
 
 LOGGER = logging.getLogger(__name__)
 
@@ -42,10 +42,10 @@ SETTINGS_NAMESPACE = '000000'
 STATE_TIMEOUT_SEC = 10
 
 
-class SettingsTransactionHandler(TransactionHandler):
+class UOMTransactionHandler(TransactionHandler):
     @property
     def family_name(self):
-        return 'sawtooth_settings'
+        return 'sawtooth_uom'
 
     @property
     def family_versions(self):
@@ -124,7 +124,7 @@ class SettingsTransactionHandler(TransactionHandler):
                 uom_proposal.value)
 
     def _apply_vote(self, public_key,
-                    settings_vote_data, authorized_keys, context):
+                    uom_vote_data, authorized_keys, context):
         uom_vote = UOMVote()
         uom_vote.ParseFromString(uom_vote.data)
         proposal_id = uom_vote.proposal_id

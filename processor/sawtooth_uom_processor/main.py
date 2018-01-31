@@ -28,13 +28,13 @@ from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from sawtooth_settings.processor.handler import UOMTransactionHandler
-from sawtooth_uom.processor.config.uom import SettingsConfig
-from sawtooth_uom.processor.config.uom import \
+from sawtooth_uom_processor.handler import UOMTransactionHandler
+from sawtooth_uom_processor.config.uom import UOMConfig
+from sawtooth_uom_processor.config.uom import \
     load_default_uom_config
-from sawtooth_uom.processor.config.uom import \
+from sawtooth_uom_processor.config.uom import \
     load_toml_uom_config
-from sawtooth_uom.processor.config.uom import \
+from sawtooth_uom_processor.config.uom import \
     merge_uom_config
 
 
@@ -134,7 +134,7 @@ def load_settings_config(first_config):
 
 
 def create_settings_config(args):
-    return SettingsConfig(connect=args.connect)
+    return UOMConfig(connect=args.connect)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,

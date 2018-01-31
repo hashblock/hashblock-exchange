@@ -1,6 +1,4 @@
-#!/bin/bash
-#
-# Copyright 2017 Frank V. Castellucci
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,21 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+FROM ubuntu:16.04
 
-unset PYTHONPATH
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD && \
+    echo 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe' >> /etc/apt/sources.list && \
+    apt-get update
 
-set -e
+RUN apt-get install -y -q python3-sawtooth-sdk
 
-echo -e "\033[0;32m--- Running protogen ---\n\033[0m"
-$top_dir/bin/protogen || exit 1
+WORKDIR /devprj/sawtooth-uom
 
+ENV PATH $PATH:/devprj/sawtooth-uom/bin
 
-echo -e "\033[0;32m--- Running clean in $top_dir ---\n\033[0m"
-cd $top_dir
-python3 setup.py clean --all
-
-echo -e "\033[0;32m--- Running build in $top_dir ---\n\033[0m"
-python3 setup.py build
+CMD ['uom-tp']
