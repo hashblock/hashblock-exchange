@@ -1,10 +1,11 @@
-# sawtooth-uom
-Sawtooth Lake Units of Measure transaction family
+# sawtooth-uom/bin
 
-## Something here about something
+This script directory is 'pathed' into the various containers of sawtooth-uom.
 
-## Installing
+## Map
 
-## Building
+name | description
+-----|------------
+protogen | Compiles the protobuff descriptors (in protos folder) to processor/sawtooth_uom_processor
+uom-tp | Called within the uom-processor container to start the UOM TP 
 
-## Running
