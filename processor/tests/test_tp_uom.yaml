@@ -25,7 +25,7 @@ services:
       - ../..:/devprj/sawtooth-uom
     expose:
       - 4004
-    command: uom-tp -vv -C tcp://test-tp-settings:4004        
+    command: uom-tp -vv -C tcp://test-tp-uom:4004        
     stop_signal: SIGKILL
 
 
