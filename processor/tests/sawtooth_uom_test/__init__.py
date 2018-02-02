@@ -12,20 +12,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# -----------------------------------------------------------------------------
-
-FROM ubuntu:16.04
-
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD && \
-    echo 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe' >> /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install -y --allow-unauthenticated -q \
-    	python-pudb 
-
-RUN apt-get install -y -q python3-sawtooth-sdk
-
-WORKDIR /devprj/sawtooth-uom
-
-ENV PATH $PATH:/devprj/sawtooth-uom/bin
-
-CMD ['uom-tp']
+# ------------------------------------------------------------------------------
