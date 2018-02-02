@@ -37,7 +37,6 @@ from sawtooth_uom_processor.config.uom import \
 from sawtooth_uom_processor.config.uom import \
     merge_uom_config
 
-
 DISTRIBUTION_NAME = 'sawtooth-uom'
 
 
@@ -156,10 +155,14 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level, processor=processor)
 
+    my_logger = logging.getLogger(__name__)
+    my_logger.debug("Processor loaded")
+
     handler = UOMTransactionHandler()
 
     processor.add_handler(handler)
-    print("Handler added, starting TP")
+
+    my_logger.debug("Handler instantiated, starting processor thread")
 
     try:
         processor.start()

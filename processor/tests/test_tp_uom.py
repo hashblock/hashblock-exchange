@@ -77,6 +77,7 @@ class TestUOM(TransactionProcessorTestCase):
             self.factory.create_tp_response("INTERNAL_ERROR"))
 
     def _propose(self, key, value):
+        print('sending propose...')
         self.validator.send(self.factory.create_proposal_transaction(
             key, value, "somenonce"))
 
@@ -180,7 +181,7 @@ class TestUOM(TransactionProcessorTestCase):
         self._expect_get('sawtooth.uom.vote.proposals')
 
         proposal = UOMProposal(
-            unit='my.config.unit',
+            setting='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
@@ -209,7 +210,7 @@ class TestUOM(TransactionProcessorTestCase):
         Tests voting on a given unit, where the unit is approved
         """
         proposal = UOMProposal(
-            unit='my.config.unit',
+            setting='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
@@ -253,7 +254,7 @@ class TestUOM(TransactionProcessorTestCase):
         Tests voting on a given unit, where the vote is counted only.
         """
         proposal = UOMProposal(
-            unit='my.config.unit',
+            setting='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
@@ -306,7 +307,7 @@ class TestUOM(TransactionProcessorTestCase):
         Tests voting on a given unit, where the unit is rejected.
         """
         proposal = UOMProposal(
-            unit='my.config.unit',
+            setting='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
@@ -350,7 +351,7 @@ class TestUOM(TransactionProcessorTestCase):
         for reject, with no remaining auth keys.
         """
         proposal = UOMProposal(
-            unit='my.config.unit',
+            setting='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )

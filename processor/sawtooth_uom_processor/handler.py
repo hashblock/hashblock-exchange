@@ -56,7 +56,7 @@ class UOMTransactionHandler(TransactionHandler):
         return [SETTINGS_NAMESPACE]
 
     def apply(self, transaction, context):
-
+        LOGGER.debug("in handler apply...")
         txn_header = transaction.header
         public_key = txn_header.signer_public_key
 
@@ -126,7 +126,7 @@ class UOMTransactionHandler(TransactionHandler):
     def _apply_vote(self, public_key,
                     uom_vote_data, authorized_keys, context):
         uom_vote = UOMVote()
-        uom_vote.ParseFromString(uom_vote.data)
+        uom_vote.ParseFromString(uom_vote_data)
         proposal_id = uom_vote.proposal_id
 
         uom_candidates = _get_uom_candidates(context)
