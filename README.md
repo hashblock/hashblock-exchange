@@ -1,10 +1,9 @@
-# sawtooth-uom
-Sawtooth Lake Units of Measure transaction family
+# Sawtooh Event Chain
+The structure and behavior of transactions stored in a blockchain distributed ledger are determined by the rules of an accounting system. The structure and behavior of UTXO and ICO transactions are determined by systems of accounting that evidence the transfer of value between addressable entities. The structure and behavior of a #B (hashblock) transaction is determined by a system of accounting that evidences the chain of event dualities that occur when trading partners make and keep their promises to exchange quantities of economic resources. The #B system of accounting allows trading partners to change their siloed double-matching processes to a shared single-matching process on a distrbuted ledger. This cuts the work of matching in half and ensures that all trading partners use the same matching rules.
 
-## Something here about something
+The #B system of accounting is designed as three Sawtooth transaction families that operate on the Sawtooth blockchain distributed ledger.
 
-## Installing
+- Units - registry of units of measure for on-chain event validation. A trading partner proposes updates to units of measure registrations that are used in on-chain event validation when a quorum of other trading partners vote up the proposal.
+- Resources - registry of economic resources for on-chain event validation. A trading partner proposes updates to resource registrations that are used in on-chain event validation when a quorum of other trading partners vote up the proposal.
+- Events - initaing and reciprocating events characterized by quantities of economic resources that are validated on-chain using the the on-chain unit and resource registrations. On-chain validation also applies matching rules as balancing equations, and also ensures that ther is no double-matching in a transaction block proposed for extending the blockchain. 
 
-## Building
-
-## Running
