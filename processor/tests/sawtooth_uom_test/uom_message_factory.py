@@ -57,7 +57,6 @@ class UOMMessageFactory(object):
         return self._factory.create_tp_response(status)
 
     def _create_tp_process_request(self, setting, payload):
-        LOGGER.debug("_create_tp_process_request")
         inputs = [
             self._key_to_address('sawtooth.uom.vote.proposals'),
             self._key_to_address('sawtooth.uom.vote.authorized_keys'),
@@ -74,7 +73,6 @@ class UOMMessageFactory(object):
             payload.SerializeToString(), inputs, outputs, [])
 
     def create_proposal_transaction(self, setting, value, nonce):
-        LOGGER.debug("create_proposal_transaction")
         proposal = UOMProposal(setting=setting, value=value, nonce=nonce)
         payload = UOMPayload(
             action=UOMPayload.PROPOSE,
@@ -83,7 +81,6 @@ class UOMMessageFactory(object):
         return self._create_tp_process_request(setting, payload)
 
     def create_vote_proposal(self, proposal_id, setting, vote):
-        LOGGER.debug("create_vote_proposal")
         vote = UOMVote(proposal_id=proposal_id, vote=vote)
         payload = UOMPayload(
             action=UOMPayload.VOTE,
@@ -122,7 +119,6 @@ class UOMMessageFactory(object):
         return self._factory.create_set_response(addresses)
 
     def create_add_event_request(self, key):
-        print("create_add_event_request")
         return self._factory.create_add_event_request(
             "uom/update",
             [("updated", key)])

@@ -56,7 +56,6 @@ class UOMTransactionHandler(TransactionHandler):
         return [SETTINGS_NAMESPACE]
 
     def apply(self, transaction, context):
-        LOGGER.debug("in handler apply...")
         txn_header = transaction.header
         public_key = txn_header.signer_public_key
 

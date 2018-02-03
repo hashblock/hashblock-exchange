@@ -138,7 +138,6 @@ def create_settings_config(args):
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
          with_loggers=True):
-    print("Inside the belly of the beast")
     if args is None:
         args = sys.argv[1:]
     parser = create_parser(prog_name)
@@ -162,7 +161,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     processor.add_handler(handler)
 
-    my_logger.debug("Handler instantiated, starting processor thread")
+    my_logger.debug("Handler instantiated, starting processor thread...")
 
     try:
         processor.start()
