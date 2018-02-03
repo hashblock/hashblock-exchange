@@ -4,7 +4,8 @@ A collection convenience items
 
 name | description
 -------| -----------
-Dockerfile   | Provides a shell container when running UOM. This is referenced by various UOM compose constructs
+sawtooh-dev-python   | Docker build file for python development image
+sawtooth-int-units-tp | Docker build file for units transaction processor image
 
 
 

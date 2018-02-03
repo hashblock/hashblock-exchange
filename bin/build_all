@@ -1,0 +1,234 @@
+#!/bin/bash
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+# Exit on non-zero exit code from subcommand
+set -e
+
+# Default args
+TARGETS="python"
+EXCLUDE=""
+
+MOUNTED="mounted"
+INSTALLED="installed"
+DEBS="debs"
+
+usage() {
+    echo "Usage:"
+    echo "  $0 {$MOUNTED,$INSTALLED,$DEBS}"
+    echo
+    echo "Options:"
+    echo "  -h                 print usage and exit"
+    echo "  -t Target          only build the specified target(s)"
+    echo ""
+    echo "Build type options: {$MOUNTED,$INSTALLED,$DEBS}"
+    echo "  $MOUNTED - build docker images that mount the Sawtooth"
+    echo "      from your file system"
+    echo "  $INSTALLED - build docker images with the Sawtooth "
+    echo "      modules installed in them."
+    echo "  $DEBS - build the debian packages for the selected targets"
+}
+
+info() {
+    echo -e "\033[0;36m\n[--- $1 ---]\n\033[0m"
+}
+
+warn() {
+    echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
+}
+
+while getopts :x:t:l:h opt
+do
+    case $opt in
+        h)
+            usage
+            exit 0
+            ;;
+        t)
+            TARGETS="$TARGETS $OPTARG"
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+shift $(($OPTIND-1))
+
+if [[ -z $1 ]]
+then
+    BUILD_MODE=$MOUNTED
+else
+    if [[ $1 == $MOUNTED || $1 == $INSTALLED || $1 == $DEBS ]]
+    then
+        BUILD_MODE=$1
+    else
+        echo "Invalid positional argument: $1"
+        usage
+        exit 1
+    fi
+fi
+
+main() {
+
+    info "Build mode: $BUILD_MODE"
+
+    # Set sawtooth-core project directory relative to this file
+    top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+
+    # Start in project directory
+    cd $top_dir
+
+    if [[ $BUILD_MODE == $DEBS ]]
+    then
+        build_debs
+    fi
+
+    for language in $TARGETS
+    do
+
+        # Check if we are skipping this module
+        skip=0
+        for exclude in $EXCLUDE
+        do
+            if [[ $language == $exclude ]]
+            then
+                skip=1
+                break
+            fi
+        done
+
+        if [[ $skip == 1 ]]
+        then
+            info "Skipping $language"
+        else
+            info "Building $language"
+            case $language in
+                python)
+                    build_python
+                    ;;
+                *)
+                    warn "Module '$language' not found."
+                    ;;
+            esac
+        fi
+    done
+}
+
+docker_run() {
+    image=$1
+    arg=$2
+
+    if [ -z $ISOLATION_ID ]; then
+        tag=$image
+    else
+        tag=$image:$ISOLATION_ID
+    fi
+
+    if [ -z $CARGO_REGISTRY ]; then
+      cargo_registry_flag=""
+    else
+      cargo_registry_flag="-v $CARGO_REGISTRY:/root/.cargo/registry"
+    fi
+
+    info "Running $image"
+    if [ -z $BUILD_TAG ]
+    then
+        docker run -t --rm -v $top_dir:/project/sawtooth-core \
+            $cargo_registry_flag \
+            --env https_proxy=$https_proxy \
+            --env http_proxy=$http_proxy \
+            --env HTTPS_PROXY=$HTTPS_PROXY \
+            --env HTTP_PROXY=$HTTP_PROXY \
+            $tag $arg
+    else
+        docker run --rm -v $top_dir:/project/sawtooth-core \
+            $cargo_registry_flag \
+            --env https_proxy=$https_proxy \
+            --env http_proxy=$http_proxy \
+            --env HTTPS_PROXY=$HTTPS_PROXY \
+            --env HTTP_PROXY=$HTTP_PROXY \
+            $tag $arg
+    fi
+}
+
+docker_build() {
+    image=$1
+    context=$2
+    tag=$3
+
+    if [ ! -z $ISOLATION_ID ]
+    then
+        tag=$tag:$ISOLATION_ID
+    fi
+
+    info "Building $tag from $image"
+
+    # Build the image and pass in any proxy information if set
+    docker build -f $image -t $tag $context \
+        --build-arg https_proxy=$https_proxy \
+        --build-arg http_proxy=$http_proxy \
+        --build-arg HTTPS_PROXY=$HTTPS_PROXY \
+        --build-arg HTTP_PROXY=$HTTP_PROXY
+}
+
+build_debs() {
+    build_dir=/tmp/build-docker$ISOLATION_ID
+    rm -rf $build_dir
+    mkdir -p $build_dir
+
+    cp $top_dir/bin/install_packaging_deps $build_dir
+    cp $top_dir/ci/sawtooth-build-debs $build_dir
+    docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
+    docker_run sawtooth-build-debs
+    exit 0
+}
+
+if [[ $BUILD_MODE == $MOUNTED ]]
+then
+    build_python() {
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-units-tp
+        docker_run sawtooth-dev-python
+    }
+fi
+
+if [[ $BUILD_MODE == $INSTALLED ]]
+then
+    build_python() {
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
+        cp $top_dir/bin/install_packaging_deps $build_dir
+        cp $top_dir/ci/sawtooth-build-debs $build_dir
+        docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
+        docker_run sawtooth-build-debs python
+
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
+        docker_run sawtooth-dev-python
+
+        cp $top_dir/build/debs/python/python3*.deb $build_dir/
+        cp $top_dir/docker/sawtooth-int-* $build_dir/
+        ls $build_dir
+
+        docker_build $build_dir/sawtooth-int-units-tp \
+            $build_dir/ sawtooth-units-tp
+    }
+fi
+
+main

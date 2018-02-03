@@ -30,7 +30,7 @@ except ImportError:
 
 
 JOIN = os.path.join
-TOP_DIR = os.path.dirname(os.path.realpath("bin"))
+TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 
 def main(args=None):
@@ -38,9 +38,11 @@ def main(args=None):
         args = sys.argv[1:]
     # 1. Generate and distribute top-level protos
     proto_dir = JOIN(TOP_DIR, "protos")
+    protoc_python(proto_dir, "families/units","sawtooth_units/protobuf")
 
-    protoc_python(proto_dir, "processor/sawtooth_uom_processor", "protobuf")
-
+    # 2. Generate config protos
+    proto_dir = JOIN(TOP_DIR, "families/units/protos")
+    protoc_python(proto_dir, "families/units", "sawtooth_units/protobuf")
 
 def protoc_python(src_dir, base_dir, pkg):
     # 1. Create output package directory

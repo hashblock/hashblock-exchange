@@ -14,18 +14,29 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
-FROM ubuntu:16.04
+# This Dockerfile is for running protogen, lint, and unit-tests
 
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD && \
+FROM ubuntu:xenial
+
+RUN echo "deb apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD" && \
     echo 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe' >> /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y --allow-unauthenticated -q \
-    	python-pudb 
+        python3-pip \
+        python3-sawtooth-sdk \
+        python3-sawtooth-rest-api \
+        python3-sawtooth-cli \
+        python3-sawtooth-signing 
 
-RUN apt-get install -y -q python3-sawtooth-sdk
+RUN pip3 install \
+    pylint==1.8.1 \
+    pycodestyle==2.3.1 \
+    grpcio-tools==1.7.0 \
+    nose2==0.7.2 \
+    bcrypt \
+    pycrypto 
 
-WORKDIR /devprj/sawtooth-uom
+ENV PATH $PATH:/project/sawtooth-eventchain/bin
 
-ENV PATH $PATH:/devprj/sawtooth-uom/bin
-
-CMD ['uom-tp']
+WORKDIR /project/sawtooth-eventchain
+CMD build_python
