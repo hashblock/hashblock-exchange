@@ -25,12 +25,12 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from processor.protobuf.units_pay_pb2 import UOMPayload
-from processor.protobuf.units_pay_pb2 import UOMProposal
-from processor.protobuf.units_pay_pb2 import UOMVote
-from processor.protobuf.units_pay_pb2 import UOMCandidate
-from processor.protobuf.units_pay_pb2 import UOMCandidates
-from processor.protobuf.units_pb2 import UOM
+from protobuf.unit_pb2 import UOMPayload
+from protobuf.unit_pb2 import UOMProposal
+from protobuf.unit_pb2 import UOMVote
+from protobuf.unit_pb2 import UOMCandidate
+from protobuf.unit_pb2 import UOMCandidates
+from protobuf.units_pb2 import UOM
 
 LOGGER = logging.getLogger(__name__)
 
