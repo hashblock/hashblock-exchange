@@ -19,8 +19,8 @@ version: "2.1"
 services:
 
   units-processor:
-    image: hashblock-dev-units:latest
-    container_name: units-processor
+    image: hashblock-dev-units-tp:latest
+    container_name: hashblock-units-dev-tp
     volumes:
       - ../../..:/project/sawtooth-eventchain
     expose:
