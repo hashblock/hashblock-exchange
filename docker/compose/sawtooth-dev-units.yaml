@@ -26,7 +26,6 @@ services:
     volumes:
       - ../../:/project/sawtooth-eventchain      
     command: "bash -c \
-        cd ../ &&
         tail -f /dev/null \
       "
     stop_signal: SIGKILL
