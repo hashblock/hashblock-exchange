@@ -24,16 +24,19 @@ services:
     image: units-dev
     container_name: units-dev
     volumes:
-      - ../../:/project/sawtooth-eventchain      
-    command: "bash -c \
-        tail -f /dev/null \
-      "
+      - ../../:/project/sawtooth-eventchain  
+     # Expose 5678 for remote debugging
+    expose:
+      - 5678
+    ports:
+      - "5678:5678"
+    command: ["tail", "-f", "/dev/null"]
     stop_signal: SIGKILL
 
   units-processor:
     build:
       context: ../..
-      dockerfile: docker/sawtooth-int-units-tp
+      dockerfile: docker/sawtooth-dev-units-tp
       args:
         - http_proxy
         - https_proxy
@@ -42,6 +45,11 @@ services:
     container_name: units-processor
     volumes:
       - ../../:/project/sawtooth-eventchain
+    # Expose 5679 for remote debugging
+    expose:
+      - 5679
+    ports:
+      - "5679:5679"
     depends_on:
       - units-dev
       - validator

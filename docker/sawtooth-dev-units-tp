@@ -26,7 +26,8 @@ RUN echo "deb apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 
         python3-sawtooth-sdk \
         python3-sawtooth-rest-api \
         python3-sawtooth-cli \
-        python3-sawtooth-signing 
+        python3-sawtooth-signing \
+        python-pudb
 
 RUN pip3 install \
     pylint==1.8.1 \
@@ -34,7 +35,8 @@ RUN pip3 install \
     grpcio-tools==1.7.0 \
     nose2==0.7.2 \
     bcrypt \
-    pycrypto 
+    pycrypto \
+    ptvsd
 
 ENV PATH $PATH:/project/sawtooth-eventchain/bin
 
