@@ -22,19 +22,21 @@ import pkg_resources
 
 from colorlog import ColoredFormatter
 
+# UOMTransactionHandler
+
 from sawtooth_sdk.processor.core import TransactionProcessor
 from sawtooth_sdk.processor.log import init_console_logging
 from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from sawtooth_uom_processor.handler import UOMTransactionHandler
-from sawtooth_uom_processor.config.uom import UOMConfig
-from sawtooth_uom_processor.config.uom import \
+from processor.handler import UOMTransactionHandler
+from processor.config.uom import UOMConfig
+from processor.config.uom import \
     load_default_uom_config
-from sawtooth_uom_processor.config.uom import \
+from processor.config.uom import \
     load_toml_uom_config
-from sawtooth_uom_processor.config.uom import \
+from processor.config.uom import \
     merge_uom_config
 
 DISTRIBUTION_NAME = 'sawtooth-uom'
