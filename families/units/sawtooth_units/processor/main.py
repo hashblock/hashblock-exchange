@@ -14,6 +14,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import hashlib
 import argparse
 import logging
 import os
@@ -159,7 +160,12 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     my_logger = logging.getLogger(__name__)
     my_logger.debug("Processor loaded")
 
-    handler = UOMTransactionHandler()
+    # The prefix should eventually be looked up from the
+    # validator's namespace registry.
+    units_prefix = \
+        hashlib.sha512('units'.encode("utf-8")).hexdigest()[0:6]
+    handler = \
+        UOMTransactionHandler(namespace_prefix=units_prefix)
 
     processor.add_handler(handler)
 

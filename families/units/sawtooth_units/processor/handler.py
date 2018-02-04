@@ -33,27 +33,30 @@ from protobuf.unit_pb2 import UOMCandidates
 from protobuf.units_pb2 import UOM
 
 LOGGER = logging.getLogger(__name__)
+ADDRESS = ''
 
-
-# The config namespace is special: it is not derived from a hash.
-SETTINGS_NAMESPACE = '000000'
 
 # Number of seconds to wait for state operations to succeed
 STATE_TIMEOUT_SEC = 10
 
 
 class UOMTransactionHandler(TransactionHandler):
+    def __init__(self, namespace_prefix):
+        global ADDRESS
+        ADDRESS = namespace_prefix
+        self._namespace_prefix = namespace_prefix
+
     @property
     def family_name(self):
-        return 'sawtooth_uom'
+        return 'sawtooth_units'
 
     @property
     def family_versions(self):
-        return ['1.0']
+        return ['0.1.0']
 
     @property
     def namespaces(self):
-        return [SETTINGS_NAMESPACE]
+        return [self._namespace_prefix]
 
     def apply(self, transaction, context):
         txn_header = transaction.header
@@ -325,4 +328,4 @@ def _make_uom_key(key):
     # pad the parts with the empty hash, if needed
     addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
 
-    return SETTINGS_NAMESPACE + ''.join(addr_parts)
+    return ADDRESS + ''.join(addr_parts)
