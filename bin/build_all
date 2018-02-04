@@ -202,7 +202,7 @@ if [[ $BUILD_MODE == $MOUNTED ]]
 then
     build_python() {
         docker_build $top_dir/docker/hashblock-dev-python docker/ hashblock-dev-python
-        docker_build $top_dir/docker/hashblock-dev-units-tp docker/ hashblock-dev-units
+        docker_build $top_dir/docker/hashblock-dev-units-tp docker/ hashblock-dev-units-tp
         docker_run hashblock-dev-python
     }
 fi

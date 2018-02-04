@@ -21,8 +21,8 @@ services:
     build:
       context: ../..
       dockerfile: docker/hashblock-dev-units-tp
-    image: units-dev
-    container_name: units-dev
+    image: hashblock-dev-units-tp
+    container_name: hashblock-units-dev-shell
     volumes:
       - ../../:/project/sawtooth-eventchain  
      # Expose 5678 for remote debugging
@@ -41,8 +41,8 @@ services:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: units-tp
-    container_name: units-processor
+    image: hashblock-dev-units-tp
+    container_name: hashblock-dev-units-tp
     volumes:
       - ../../:/project/sawtooth-eventchain
     # Expose 5679 for remote debugging
