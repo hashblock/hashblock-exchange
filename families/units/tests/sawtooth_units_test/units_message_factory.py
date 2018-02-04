@@ -17,10 +17,10 @@
 import logging
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMPayload
-from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMProposal
-from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMVote
-from sawtooth_uom_processor.protobuf.uom_pb2 import UOM
+from protobuf.unit_pb2 import UOMPayload
+from protobuf.unit_pb2 import UOMProposal
+from protobuf.unit_pb2 import UOMVote
+from protobuf.units_pb2 import UOM
 
 LOGGER = logging.getLogger(__name__)
 

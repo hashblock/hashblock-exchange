@@ -42,7 +42,7 @@ services:
     image: units-tp
     container_name: units-processor
     volumes:
-      - '../../:/project/sawtooth-eventchain'
+      - ../../:/project/sawtooth-eventchain
     depends_on:
       - units-dev
       - validator

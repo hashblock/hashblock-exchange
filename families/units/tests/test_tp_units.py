@@ -17,12 +17,12 @@
 import hashlib
 import base64
 
-from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMProposal
-from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMVote
-from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMCandidate
-from sawtooth_uom_processor.protobuf.uom_pay_pb2 import UOMCandidates
+from protobuf.unit_pb2 import UOMProposal
+from protobuf.unit_pb2 import UOMVote
+from protobuf.unit_pb2 import UOMCandidate
+from protobuf.unit_pb2 import UOMCandidates
 
-from sawtooth_uom_test.uom_message_factory \
+from sawtooth_units_test.units_message_factory \
     import UOMMessageFactory
 
 from sawtooth_processor_test.transaction_processor_test_case \

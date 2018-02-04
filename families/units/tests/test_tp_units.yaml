@@ -18,34 +18,35 @@ version: "2.1"
 
 services:
 
-  uom-processor:
-    image: uom-tp
-    container_name: uom-processor
+  units-processor:
+    image: units-tp:latest
+    container_name: units-processor
     volumes:
-      - ../..:/devprj/sawtooth-uom
+      - ../../..:/project/sawtooth-eventchain
     expose:
       - 4004
-    command: uom-tp -vv -C tcp://test-tp-uom:4004        
+    command: units-tp -vv -C tcp://test-tp-uom:4004        
     stop_signal: SIGKILL
 
 
   test-tp-uom:
     image: sawtooth-dev-python:latest
     volumes:
-      - ../..:/devprj/sawtooth-uom
-      - ../../../sawtooth-core:/project/sawtooth-core
+      - ../../..:/devprj/sawtooth-eventchain
+      - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
     command: nose2-3
-        -c /devprj/sawtooth-uom/processor/nose2.cfg
+        -c /devprj/sawtooth-eventchain/families/units/nose2.cfg
         -v
-        -s /devprj/sawtooth-uom/processor/tests
-        test_tp_uom
+        -s /devprj/sawtooth-eventchain/families/units/tests
+        test_tp_units
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/devprj/sawtooth-uom/processor/sawtooth_uom_processor:\
-            /devprj/sawtooth-uom/processor/tests:\
+        PYTHONPATH: "/devprj/sawtooth-eventchain/families/units/sawtooth_units:\
+            /devprj/sawtooth-eventchain/families/units/tests:\
+            /devprj/sawtooth-eventchain/sdk/python:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"
