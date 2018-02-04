@@ -103,8 +103,13 @@ ENV/
 # mkdocs documentation
 /site
 
-# sawtoot-uom
+# Python
 .mypy_cache/
-/sawtooth_uom/protobuf/__init__.py
-/sawtooth_uom/protobuf/uom_pay_pb2.py
-/sawtooth_uom/protobuf/uom_pb2.py
+
+#Protobuf
+protobuf/
+
+#Visual Studio code
+.vscode/
+
+
