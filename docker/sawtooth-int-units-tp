@@ -24,8 +24,8 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F10
 
 RUN apt-get install -y -q python3-sawtooth-sdk
 
-WORKDIR /devprj/sawtooth-uom
+WORKDIR /project/sawtooth-eventchain
 
-ENV PATH $PATH:/devprj/sawtooth-uom/bin
+ENV PATH $PATH:/project/sawtooth-eventchain/bin
 
-CMD ['units-tp']
+CMD units-tp

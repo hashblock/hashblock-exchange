@@ -17,58 +17,47 @@
 version: '2.1'
 
 services:
-  uom-shell:
+  units-dev:
     build:
-      context: .
-      dockerfile: ./defconv/Dockerfile
-    image: uom-dev-env
-    container_name: uom-shell
+      context: ../..
+      dockerfile: docker/sawtooth-dev-units-tp
+    image: units-dev
+    container_name: units-dev
     volumes:
-      - .:/devprj/sawtooth-uom      
-    command: |
-      bash -c "
+      - ../../:/project/sawtooth-eventchain      
+    command: "bash -c \
         cd ../ &&
-        tail -f /dev/null
+        tail -f /dev/null \
       "
     stop_signal: SIGKILL
 
-  uom-processor:
+  units-processor:
     build:
-      context: .
-      dockerfile: ./processor/Dockerfile
+      context: ../..
+      dockerfile: docker/sawtooth-int-units-tp
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: uom-tp
-    container_name: uom-processor
+    image: units-tp
+    container_name: units-processor
     volumes:
-      - '.:/devprj/sawtooth-uom'
+      - '../../:/project/sawtooth-eventchain'
     depends_on:
-      - uom-shell
+      - units-dev
       - validator
-    command: |
-      bash -c "
+    command: "bash -c \"\
         sleep 1 &&
-        uom-tp -v \
-          -C tcp://validator:4004
-      "
-
-  settings-tp:
-    image: sawtooth-settings-tp:latest
-    container_name: sawtooth-settings-tp-local
-    volumes:
-      - ../sawtooth-core/:/project/sawtooth-core
-    depends_on:
-      - validator
-    command: settings-tp -vv -C tcp://validator:4004
+        units-tp -v \
+          -C tcp://validator:4004 \
+      \""
     stop_signal: SIGKILL
 
   validator:
     image: sawtooth-validator:latest
     container_name: sawtooth-validator-local
     volumes:
-      - ../sawtooth-core/:/project/sawtooth-core
+      - ../../../sawtooth-core/:/project/sawtooth-core
     expose:
       - 4004
       - 8800
@@ -89,11 +78,10 @@ services:
     image: sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-local
     volumes:
-      - ../sawtooth-core/:/project/sawtooth-core
+      - ../../../sawtooth-core/:/project/sawtooth-core
     ports:
       - "8008:8008"
     depends_on:
       - validator
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
-
