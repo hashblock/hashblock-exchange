@@ -40,7 +40,7 @@ from processor.config.uom import \
 from processor.config.uom import \
     merge_uom_config
 
-DISTRIBUTION_NAME = 'sawtooth-uom'
+DISTRIBUTION_NAME = 'hasblock-units'
 
 
 def create_console_handler(verbose_level):
@@ -117,7 +117,7 @@ def create_parser(prog_name):
     parser.add_argument(
         '-V', '--version',
         action='version',
-        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        version=(DISTRIBUTION_NAME + ' (Hashblock Sawtooth) version {}')
         .format(version),
         help='display version information')
 
