@@ -19,9 +19,8 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='sawtooth_units/protobuf/unit.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\"sawtooth_units/protobuf/unit.proto\"q\n\nUOMPayload\x12\"\n\x06\x61\x63tion\x18\x01 \x01(\x0e\x32\x12.UOMPayload.Action\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"1\n\x06\x41\x63tion\x12\x10\n\x0c\x41\x43TION_UNSET\x10\x00\x12\x0b\n\x07PROPOSE\x10\x01\x12\x08\n\x04VOTE\x10\x02\"<\n\x0bUOMProposal\x12\x0f\n\x07setting\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\x12\r\n\x05nonce\x18\x03 \x01(\t\"k\n\x07UOMVote\x12\x13\n\x0bproposal_id\x18\x01 \x01(\t\x12\x1b\n\x04vote\x18\x02 \x01(\x0e\x32\r.UOMVote.Vote\".\n\x04Vote\x12\x0e\n\nVOTE_UNSET\x10\x00\x12\n\n\x06\x41\x43\x43\x45PT\x10\x01\x12\n\n\x06REJECT\x10\x02\"\xab\x01\n\x0cUOMCandidate\x12\x13\n\x0bproposal_id\x18\x01 \x01(\t\x12\x1e\n\x08proposal\x18\x02 \x01(\x0b\x32\x0c.UOMProposal\x12\'\n\x05votes\x18\x03 \x03(\x0b\x32\x18.UOMCandidate.VoteRecord\x1a=\n\nVoteRecord\x12\x12\n\npublic_key\x18\x01 \x01(\t\x12\x1b\n\x04vote\x18\x02 \x01(\x0e\x32\r.UOMVote.Vote\"2\n\rUOMCandidates\x12!\n\ncandidates\x18\x01 \x03(\x0b\x32\r.UOMCandidateB\x19\n\x15sawtooth.uom.protobufP\x01\x62\x06proto3')
+  serialized_pb=_b('\n\"sawtooth_units/protobuf/unit.proto\"q\n\nUOMPayload\x12\"\n\x06\x61\x63tion\x18\x01 \x01(\x0e\x32\x12.UOMPayload.Action\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"1\n\x06\x41\x63tion\x12\x10\n\x0c\x41\x43TION_UNSET\x10\x00\x12\x0b\n\x07PROPOSE\x10\x01\x12\x08\n\x04VOTE\x10\x02\"9\n\x0bUOMProposal\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\x12\r\n\x05nonce\x18\x03 \x01(\t\"k\n\x07UOMVote\x12\x13\n\x0bproposal_id\x18\x01 \x01(\t\x12\x1b\n\x04vote\x18\x02 \x01(\x0e\x32\r.UOMVote.Vote\".\n\x04Vote\x12\x0e\n\nVOTE_UNSET\x10\x00\x12\n\n\x06\x41\x43\x43\x45PT\x10\x01\x12\n\n\x06REJECT\x10\x02\"\xab\x01\n\x0cUOMCandidate\x12\x13\n\x0bproposal_id\x18\x01 \x01(\t\x12\x1e\n\x08proposal\x18\x02 \x01(\x0b\x32\x0c.UOMProposal\x12\'\n\x05votes\x18\x03 \x03(\x0b\x32\x18.UOMCandidate.VoteRecord\x1a=\n\nVoteRecord\x12\x12\n\npublic_key\x18\x01 \x01(\t\x12\x1b\n\x04vote\x18\x02 \x01(\x0e\x32\r.UOMVote.Vote\"2\n\rUOMCandidates\x12!\n\ncandidates\x18\x01 \x03(\x0b\x32\r.UOMCandidateB\x19\n\x15sawtooth.uom.protobufP\x01\x62\x06proto3')
 )
-_sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 
 
@@ -72,8 +71,8 @@ _UOMVOTE_VOTE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=276,
-  serialized_end=322,
+  serialized_start=273,
+  serialized_end=319,
 )
 _sym_db.RegisterEnumDescriptor(_UOMVOTE_VOTE)
 
@@ -91,14 +90,14 @@ _UOMPAYLOAD = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='data', full_name='UOMPayload.data', index=1,
       number=2, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -125,26 +124,26 @@ _UOMPROPOSAL = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='setting', full_name='UOMProposal.setting', index=0,
+      name='code', full_name='UOMProposal.code', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='value', full_name='UOMProposal.value', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='nonce', full_name='UOMProposal.nonce', index=2,
       number=3, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -158,7 +157,7 @@ _UOMPROPOSAL = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=153,
-  serialized_end=213,
+  serialized_end=210,
 )
 
 
@@ -175,14 +174,14 @@ _UOMVOTE = _descriptor.Descriptor(
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='vote', full_name='UOMVote.vote', index=1,
       number=2, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -196,8 +195,8 @@ _UOMVOTE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=215,
-  serialized_end=322,
+  serialized_start=212,
+  serialized_end=319,
 )
 
 
@@ -214,14 +213,14 @@ _UOMCANDIDATE_VOTERECORD = _descriptor.Descriptor(
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='vote', full_name='UOMCandidate.VoteRecord.vote', index=1,
       number=2, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -234,8 +233,8 @@ _UOMCANDIDATE_VOTERECORD = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=435,
-  serialized_end=496,
+  serialized_start=432,
+  serialized_end=493,
 )
 
 _UOMCANDIDATE = _descriptor.Descriptor(
@@ -251,21 +250,21 @@ _UOMCANDIDATE = _descriptor.Descriptor(
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='proposal', full_name='UOMCandidate.proposal', index=1,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='votes', full_name='UOMCandidate.votes', index=2,
       number=3, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -278,8 +277,8 @@ _UOMCANDIDATE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=325,
-  serialized_end=496,
+  serialized_start=322,
+  serialized_end=493,
 )
 
 
@@ -296,7 +295,7 @@ _UOMCANDIDATES = _descriptor.Descriptor(
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -309,8 +308,8 @@ _UOMCANDIDATES = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=498,
-  serialized_end=548,
+  serialized_start=495,
+  serialized_end=545,
 )
 
 _UOMPAYLOAD.fields_by_name['action'].enum_type = _UOMPAYLOAD_ACTION
@@ -327,6 +326,7 @@ DESCRIPTOR.message_types_by_name['UOMProposal'] = _UOMPROPOSAL
 DESCRIPTOR.message_types_by_name['UOMVote'] = _UOMVOTE
 DESCRIPTOR.message_types_by_name['UOMCandidate'] = _UOMCANDIDATE
 DESCRIPTOR.message_types_by_name['UOMCandidates'] = _UOMCANDIDATES
+_sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 UOMPayload = _reflection.GeneratedProtocolMessageType('UOMPayload', (_message.Message,), dict(
   DESCRIPTOR = _UOMPAYLOAD,

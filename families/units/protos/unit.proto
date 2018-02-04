@@ -45,8 +45,8 @@ message UOMPayload {
 // This message proposes a change in a UOM value.
 
 message UOMProposal {
-    // The setting key.  E.g. sawtooth.uom.authorization_type
-    string setting = 1;
+    // The code key.  E.g. sawtooth.uom.authorization_type
+    string code = 1;
 
     // The setting value. E.g. 'ballot'
     string value = 2;

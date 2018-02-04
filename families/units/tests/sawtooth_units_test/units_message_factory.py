@@ -56,66 +56,66 @@ class UOMMessageFactory(object):
     def create_tp_response(self, status):
         return self._factory.create_tp_response(status)
 
-    def _create_tp_process_request(self, setting, payload):
+    def _create_tp_process_request(self, code, payload):
         inputs = [
             self._key_to_address('sawtooth.uom.vote.proposals'),
             self._key_to_address('sawtooth.uom.vote.authorized_keys'),
             self._key_to_address('sawtooth.uom.vote.approval_threshold'),
-            self._key_to_address(setting)
+            self._key_to_address(code)
         ]
 
         outputs = [
             self._key_to_address('sawtooth.uom.vote.proposals'),
-            self._key_to_address(setting)
+            self._key_to_address(code)
         ]
 
         return self._factory.create_tp_process_request(
             payload.SerializeToString(), inputs, outputs, [])
 
-    def create_proposal_transaction(self, setting, value, nonce):
-        proposal = UOMProposal(setting=setting, value=value, nonce=nonce)
+    def create_proposal_transaction(self, code, value, nonce):
+        proposal = UOMProposal(code=code, value=value, nonce=nonce)
         payload = UOMPayload(
             action=UOMPayload.PROPOSE,
             data=proposal.SerializeToString())
 
-        return self._create_tp_process_request(setting, payload)
+        return self._create_tp_process_request(code, payload)
 
-    def create_vote_proposal(self, proposal_id, setting, vote):
+    def create_vote_proposal(self, proposal_id, code, vote):
         vote = UOMVote(proposal_id=proposal_id, vote=vote)
         payload = UOMPayload(
             action=UOMPayload.VOTE,
             data=vote.SerializeToString())
 
-        return self._create_tp_process_request(setting, payload)
+        return self._create_tp_process_request(code, payload)
 
-    def create_get_request(self, setting):
-        addresses = [self._key_to_address(setting)]
+    def create_get_request(self, code):
+        addresses = [self._key_to_address(code)]
         return self._factory.create_get_request(addresses)
 
-    def create_get_response(self, setting, value=None):
-        address = self._key_to_address(setting)
+    def create_get_response(self, code, value=None):
+        address = self._key_to_address(code)
 
         if value is not None:
-            entry = UOM.Entry(key=setting, value=value)
+            entry = UOM.Entry(key=code, value=value)
             data = UOM(entries=[entry]).SerializeToString()
         else:
             data = None
 
         return self._factory.create_get_response({address: data})
 
-    def create_set_request(self, setting, value=None):
-        address = self._key_to_address(setting)
+    def create_set_request(self, code, value=None):
+        address = self._key_to_address(code)
 
         if value is not None:
-            entry = UOM.Entry(key=setting, value=value)
+            entry = UOM.Entry(key=code, value=value)
             data = UOM(entries=[entry]).SerializeToString()
         else:
             data = None
 
         return self._factory.create_set_request({address: data})
 
-    def create_set_response(self, setting):
-        addresses = [self._key_to_address(setting)]
+    def create_set_response(self, code):
+        addresses = [self._key_to_address(code)]
         return self._factory.create_set_response(addresses)
 
     def create_add_event_request(self, key):

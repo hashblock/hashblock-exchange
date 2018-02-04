@@ -181,7 +181,7 @@ class TestUOM(TransactionProcessorTestCase):
         self._expect_get('sawtooth.uom.vote.proposals')
 
         proposal = UOMProposal(
-            setting='my.config.unit',
+            code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
@@ -210,7 +210,7 @@ class TestUOM(TransactionProcessorTestCase):
         Tests voting on a given unit, where the unit is approved
         """
         proposal = UOMProposal(
-            setting='my.config.unit',
+            code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
@@ -254,7 +254,7 @@ class TestUOM(TransactionProcessorTestCase):
         Tests voting on a given unit, where the vote is counted only.
         """
         proposal = UOMProposal(
-            setting='my.config.unit',
+            code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
@@ -307,7 +307,7 @@ class TestUOM(TransactionProcessorTestCase):
         Tests voting on a given unit, where the unit is rejected.
         """
         proposal = UOMProposal(
-            setting='my.config.unit',
+            code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
@@ -351,7 +351,7 @@ class TestUOM(TransactionProcessorTestCase):
         for reject, with no remaining auth keys.
         """
         proposal = UOMProposal(
-            setting='my.config.unit',
+            code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )

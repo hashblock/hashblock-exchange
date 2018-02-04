@@ -21,7 +21,6 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_pb=_b('\n#sawtooth_units/protobuf/units.proto\"G\n\x03UOM\x12\x1b\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\n.UOM.Entry\x1a#\n\x05\x45ntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\tB\x19\n\x15sawtooth.uom.protobufP\x01\x62\x06proto3')
 )
-_sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 
 
@@ -39,14 +38,14 @@ _UOM_ENTRY = _descriptor.Descriptor(
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='value', full_name='UOM.Entry.value', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -76,7 +75,7 @@ _UOM = _descriptor.Descriptor(
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None),
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -96,6 +95,7 @@ _UOM = _descriptor.Descriptor(
 _UOM_ENTRY.containing_type = _UOM
 _UOM.fields_by_name['entries'].message_type = _UOM_ENTRY
 DESCRIPTOR.message_types_by_name['UOM'] = _UOM
+_sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 UOM = _reflection.GeneratedProtocolMessageType('UOM', (_message.Message,), dict(
 

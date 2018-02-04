@@ -91,7 +91,7 @@ class UOMTransactionHandler(TransactionHandler):
 
         _validate_uom(
             auth_keys,
-            uom_proposal.setting,
+            uom_proposal.code,
             uom_proposal.value)
 
         if approval_threshold > 1:
@@ -104,7 +104,7 @@ class UOMTransactionHandler(TransactionHandler):
             if existing_candidate is not None:
                 raise InvalidTransaction(
                     'Duplicate proposal for {}'.format(
-                        uom_proposal.setting))
+                        uom_proposal.code))
 
             record = UOMCandidate.VoteRecord(
                 public_key=public_key,
@@ -116,13 +116,13 @@ class UOMTransactionHandler(TransactionHandler):
             )
 
             LOGGER.debug('Proposal made to set %s to %s',
-                         uom_proposal.setting,
+                         uom_proposal.code,
                          uom_proposal.value)
             _save_uom_candidates(context, uom_candidates)
         else:
             _set_uom_value(
                 context,
-                uom_proposal.setting,
+                uom_proposal.code,
                 uom_proposal.value)
 
     def _apply_vote(self, public_key,
@@ -165,17 +165,17 @@ class UOMTransactionHandler(TransactionHandler):
         if accepted_count >= approval_threshold:
             _set_uom_value(
                 context,
-                candidate.proposal.setting,
+                candidate.proposal.code,
                 candidate.proposal.value)
             del uom_candidates.candidates[candidate_index]
         elif rejected_count >= approval_threshold or \
                 (rejected_count + accepted_count) == len(authorized_keys):
             LOGGER.debug('Proposal for %s was rejected',
-                         candidate.proposal.setting)
+                         candidate.proposal.code)
             del uom_candidates.candidates[candidate_index]
         else:
             LOGGER.debug('Vote recorded for %s',
-                         candidate.proposal.setting)
+                         candidate.proposal.code)
 
         _save_uom_candidates(context, uom_candidates)
 
@@ -185,9 +185,9 @@ def _get_uom_candidates(context):
     if not value:
         return UOMCandidates(candidates={})
 
-    setting_candidates = UOMCandidates()
-    setting_candidates.ParseFromString(base64.b64decode(value))
-    return setting_candidates
+    unit_candidates = UOMCandidates()
+    unit_candidates.ParseFromString(base64.b64decode(value))
+    return unit_candidates
 
 
 def _save_uom_candidates(context, uom_candidates):
@@ -212,17 +212,17 @@ def _split_ignore_empties(value):
     return [v.strip() for v in value.split(',') if v]
 
 
-def _validate_uom(auth_keys, uom_setting, value):
+def _validate_uom(auth_keys, uom_code, value):
     if not auth_keys and \
-            uom_setting != 'sawtooth.uom.vote.authorized_keys':
+            uom_code != 'sawtooth.uom.vote.authorized_keys':
         raise InvalidTransaction(
-            'Cannot set {} until authorized_keys is set.'.format(uom_setting))
+            'Cannot set {} until authorized_keys is set.'.format(uom_code))
 
-    if uom_setting == 'sawtooth.uom.vote.authorized_keys':
+    if uom_code == 'sawtooth.uom.vote.authorized_keys':
         if not _split_ignore_empties(value):
             raise InvalidTransaction('authorized_keys must not be empty.')
 
-    if uom_setting == 'sawtooth.uom.vote.approval_threshold':
+    if uom_code == 'sawtooth.uom.vote.approval_threshold':
         threshold = None
         try:
             threshold = int(value)
@@ -234,7 +234,7 @@ def _validate_uom(auth_keys, uom_setting, value):
                 'approval_threshold must be less than or equal to number of '
                 'authorized_keys')
 
-    if uom_setting == 'sawtooth.uom.vote.proposals':
+    if uom_code == 'sawtooth.uom.vote.proposals':
         raise InvalidTransaction(
             'Setting sawtooth.uom.vote.proposals is read-only')
 
