@@ -20,7 +20,7 @@ services:
   units-dev:
     build:
       context: ../..
-      dockerfile: docker/sawtooth-dev-units-tp
+      dockerfile: docker/hashblock-dev-units-tp
     image: units-dev
     container_name: units-dev
     volumes:
@@ -36,7 +36,7 @@ services:
   units-processor:
     build:
       context: ../..
-      dockerfile: docker/sawtooth-dev-units-tp
+      dockerfile: docker/hashblock-dev-units-tp
       args:
         - http_proxy
         - https_proxy
