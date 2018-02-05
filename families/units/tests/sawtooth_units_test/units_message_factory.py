@@ -31,7 +31,7 @@ _ADDRESS_PART_SIZE = 16
 class UnitMessageFactory(object):
     def __init__(self, signer=None):
         self._factory = MessageFactory(
-            family_name="sawtooth_units",
+            family_name="hashblock_units",
             family_version="0.1.0",
             namespace=[MessageFactory.sha512('units'.encode("utf-8"))[0:6]],
             signer=signer)

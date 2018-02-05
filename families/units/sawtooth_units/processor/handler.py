@@ -48,7 +48,7 @@ class UnitTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
-        return 'sawtooth_units'
+        return 'hashblock_units'
 
     @property
     def family_versions(self):
