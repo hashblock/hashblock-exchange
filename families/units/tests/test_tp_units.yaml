@@ -25,11 +25,11 @@ services:
       - ../../..:/project/sawtooth-eventchain
     expose:
       - 4004
-    command: units-tp -vv -C tcp://test-tp-uom:4004        
+    command: units-tp -vv -C tcp://test-tp-units:4004        
     stop_signal: SIGKILL
 
 
-  test-tp-uom:
+  test-tp-units:
     image: sawtooth-dev-python:latest
     volumes:
       - ../../..:/devprj/sawtooth-eventchain

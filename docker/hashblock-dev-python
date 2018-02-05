@@ -109,7 +109,7 @@ RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /etc/sawtooth \
  && mkdir -p /etc/sawtooth/keys
 
-ENV PATH=$PATH:/project/sawtooth-core/bin
+ENV PATH=$PATH:/project/sawtooth-eventchain/bin:/project/sawtooth-core/bin
 
-WORKDIR /project/sawtooth-core
+WORKDIR /project/sawtooth-eventchain
 CMD build_python
