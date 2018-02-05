@@ -25,12 +25,12 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from protobuf.unit_pb2 import UOMPayload
-from protobuf.unit_pb2 import UOMProposal
-from protobuf.unit_pb2 import UOMVote
-from protobuf.unit_pb2 import UOMCandidate
-from protobuf.unit_pb2 import UOMCandidates
-from protobuf.units_pb2 import UOM
+from protobuf.unit_pb2 import UnitPayload
+from protobuf.unit_pb2 import UnitProposal
+from protobuf.unit_pb2 import UnitVote
+from protobuf.unit_pb2 import UnitCandidate
+from protobuf.unit_pb2 import UnitCandidates
+from protobuf.units_pb2 import Unit
 
 LOGGER = logging.getLogger(__name__)
 ADDRESS = ''
@@ -40,7 +40,7 @@ ADDRESS = ''
 STATE_TIMEOUT_SEC = 10
 
 
-class UOMTransactionHandler(TransactionHandler):
+class UnitTransactionHandler(TransactionHandler):
     def __init__(self, namespace_prefix):
         global ADDRESS
         ADDRESS = namespace_prefix
@@ -67,13 +67,13 @@ class UOMTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 '{} is not authorized to change settings'.format(public_key))
 
-        uom_payload = UOMPayload()
+        uom_payload = UnitPayload()
         uom_payload.ParseFromString(transaction.payload)
 
-        if uom_payload.action == UOMPayload.PROPOSE:
+        if uom_payload.action == UnitPayload.PROPOSE:
             return self._apply_proposal(
                 auth_keys, public_key, uom_payload.data, context)
-        elif uom_payload.action == UOMPayload.VOTE:
+        elif uom_payload.action == UnitPayload.VOTE:
             return self._apply_vote(public_key, uom_payload.data,
                                     auth_keys, context)
         else:
@@ -82,7 +82,7 @@ class UOMTransactionHandler(TransactionHandler):
 
     def _apply_proposal(self, auth_keys, public_key,
                         uom_proposal_data, context):
-        uom_proposal = UOMProposal()
+        uom_proposal = UnitProposal()
         uom_proposal.ParseFromString(uom_proposal_data)
 
         proposal_id = hashlib.sha256(uom_proposal_data).hexdigest()
@@ -106,9 +106,9 @@ class UOMTransactionHandler(TransactionHandler):
                     'Duplicate proposal for {}'.format(
                         uom_proposal.code))
 
-            record = UOMCandidate.VoteRecord(
+            record = UnitCandidate.VoteRecord(
                 public_key=public_key,
-                vote=UOMVote.ACCEPT)
+                vote=UnitVote.ACCEPT)
             uom_candidates.candidates.add(
                 proposal_id=proposal_id,
                 proposal=uom_proposal,
@@ -127,7 +127,7 @@ class UOMTransactionHandler(TransactionHandler):
 
     def _apply_vote(self, public_key,
                     uom_vote_data, authorized_keys, context):
-        uom_vote = UOMVote()
+        uom_vote = UnitVote()
         uom_vote.ParseFromString(uom_vote_data)
         proposal_id = uom_vote.proposal_id
 
@@ -157,9 +157,9 @@ class UOMTransactionHandler(TransactionHandler):
         accepted_count = 0
         rejected_count = 0
         for vote_record in candidate.votes:
-            if vote_record.vote == UOMVote.ACCEPT:
+            if vote_record.vote == UnitVote.ACCEPT:
                 accepted_count += 1
-            elif vote_record.vote == UOMVote.REJECT:
+            elif vote_record.vote == UnitVote.REJECT:
                 rejected_count += 1
 
         if accepted_count >= approval_threshold:
@@ -183,9 +183,9 @@ class UOMTransactionHandler(TransactionHandler):
 def _get_uom_candidates(context):
     value = _get_uom_value(context, 'sawtooth.uom.vote.proposals')
     if not value:
-        return UOMCandidates(candidates={})
+        return UnitCandidates(candidates={})
 
-    unit_candidates = UOMCandidates()
+    unit_candidates = UnitCandidates()
     unit_candidates.ParseFromString(base64.b64decode(value))
     return unit_candidates
 
@@ -280,7 +280,7 @@ def _set_uom_value(context, key, value):
         raise InternalError(
             'Unable to save config value {}'.format(key))
     if setting != 'sawtooth.uom.vote.proposals':
-        LOGGER.info('UOM setting %s changed from %s to %s',
+        LOGGER.info('Unit setting %s changed from %s to %s',
                     key, old_value, value)
     context.add_event(
         event_type="uom/update",
@@ -288,7 +288,7 @@ def _set_uom_value(context, key, value):
 
 
 def _get_uom_entry(context, address):
-    uom_setting = UOM()
+    uom_setting = Unit()
 
     try:
         entries_list = context.get_state([address], timeout=STATE_TIMEOUT_SEC)

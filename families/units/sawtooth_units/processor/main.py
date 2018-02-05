@@ -23,7 +23,7 @@ import pkg_resources
 
 from colorlog import ColoredFormatter
 
-# UOMTransactionHandler
+# UnitTransactionHandler
 
 from sawtooth_sdk.processor.core import TransactionProcessor
 from sawtooth_sdk.processor.log import init_console_logging
@@ -31,14 +31,14 @@ from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from processor.handler import UOMTransactionHandler
-from processor.config.uom import UOMConfig
-from processor.config.uom import \
-    load_default_uom_config
-from processor.config.uom import \
-    load_toml_uom_config
-from processor.config.uom import \
-    merge_uom_config
+from processor.handler import UnitTransactionHandler
+from processor.config.units import UnitConfig
+from processor.config.units import \
+    load_default_unit_config
+from processor.config.units import \
+    load_toml_unit_config
+from processor.config.units import \
+    merge_unit_config
 
 DISTRIBUTION_NAME = 'hasblock-units'
 
@@ -95,7 +95,7 @@ def create_parser(prog_name):
         prog=prog_name,
         description='Starts a sawtooth-uom transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
-               'UOM used by the Sawtooth platform.',
+               'Unit used by the Sawtooth platform.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
@@ -126,17 +126,17 @@ def create_parser(prog_name):
 
 def load_settings_config(first_config):
     default_settings_config = \
-        load_default_uom_config()
+        load_default_unit_config()
     conf_file = os.path.join(get_config_dir(), 'uom.toml')
 
-    toml_config = load_toml_uom_config(conf_file)
+    toml_config = load_toml_unit_config(conf_file)
 
-    return merge_uom_config(
+    return merge_unit_config(
         configs=[first_config, toml_config, default_settings_config])
 
 
 def create_settings_config(args):
-    return UOMConfig(connect=args.connect)
+    return UnitConfig(connect=args.connect)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
@@ -165,7 +165,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     units_prefix = \
         hashlib.sha512('units'.encode("utf-8")).hexdigest()[0:6]
     handler = \
-        UOMTransactionHandler(namespace_prefix=units_prefix)
+        UnitTransactionHandler(namespace_prefix=units_prefix)
 
     processor.add_handler(handler)
 

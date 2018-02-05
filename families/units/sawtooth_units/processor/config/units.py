@@ -25,24 +25,24 @@ from sawtooth_sdk.processor.exceptions import LocalConfigurationError
 LOGGER = logging.getLogger(__name__)
 
 
-def load_default_uom_config():
+def load_default_unit_config():
     """
-    Returns the default UOMConfig
+    Returns the default UnitConfig
     """
-    return UOMConfig(
+    return UnitConfig(
         connect='tcp://localhost:4004'
     )
 
 
-def load_toml_uom_config(filename):
-    """Returns a UOMConfig created by loading a TOML file from the
+def load_toml_unit_config(filename):
+    """Returns a UnitConfig created by loading a TOML file from the
     filesystem.
 
     Args:
         filename (string): The name of the file to load the config from
 
     Returns:
-        config (UOMConfig): The UOMConfig created from the stored
+        config (UnitConfig): The UnitConfig created from the stored
             toml file.
 
     Raises:
@@ -52,7 +52,7 @@ def load_toml_uom_config(filename):
         LOGGER.info(
             "Skipping transaction proccesor config loading from non-existent"
             " config file: %s", filename)
-        return UOMConfig()
+        return UnitConfig()
 
     LOGGER.info("Loading transaction processor information from config: %s",
                 filename)
@@ -73,25 +73,25 @@ def load_toml_uom_config(filename):
             "Invalid keys in transaction processor config: "
             "{}".format(", ".join(sorted(list(invalid_keys)))))
 
-    config = UOMConfig(
+    config = UnitConfig(
         connect=toml_config.get("connect", None)
     )
 
     return config
 
 
-def merge_uom_config(configs):
+def merge_unit_config(configs):
     """
-    Given a list of UOMConfig objects, merges them into a single
-    UOMConfig, giving priority in the order of the configs
+    Given a list of UnitConfig objects, merges them into a single
+    UnitConfig, giving priority in the order of the configs
     (first has highest priority).
 
     Args:
-        config (list of UOMConfigs): The list of uom configs that
+        config (list of UnitConfigs): The list of uom configs that
             must be merged together
 
     Returns:
-        config (UOMConfig): one UOMConfig that combines all of the
+        config (UnitConfig): one UnitConfig that combines all of the
             passed in configs.
     """
     connect = None
@@ -100,10 +100,10 @@ def merge_uom_config(configs):
         if config.connect is not None:
             connect = config.connect
 
-    return UOMConfig(connect=connect)
+    return UnitConfig(connect=connect)
 
 
-class UOMConfig:
+class UnitConfig:
     def __init__(self, connect=None):
         self._connect = connect
 

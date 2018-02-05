@@ -17,20 +17,20 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "sawtooth.uom.protobuf";
+option java_package = "hashblock.unit.protobuf";
 
-// UOM Payload
+// Unit Payload
 // - Contains either a proposal or a vote.
 
-message UOMPayload {
+message UnitPayload {
     // The action indicates data is contained within this payload
     enum Action {
         ACTION_UNSET = 0;
 
-        // A proposal action - data will be a UOMProposal
+        // A proposal action - data will be a UnitProposal
         PROPOSE = 1;
 
-        // A vote action - data will be a UOMVote
+        // A vote action - data will be a UnitVote
         VOTE = 2;
     }
     // The action of this payload
@@ -40,11 +40,11 @@ message UOMPayload {
     bytes data = 2;
 }
 
-// UOM Proposal
+// Unit Proposal
 //
-// This message proposes a change in a UOM value.
+// This message proposes a change in a Unit value.
 
-message UOMProposal {
+message UnitProposal {
     // The code key.  E.g. sawtooth.uom.authorization_type
     string code = 1;
 
@@ -56,13 +56,13 @@ message UOMProposal {
     string nonce = 3;
 }
 
-// UOM Vote
+// Unit Vote
 //
 // In ballot mode, a proposal must be voted on.  This message indicates an
 // acceptance or rejection of a proposal, where the proposal is identified
 // by its id.
 
-message UOMVote {
+message UnitVote {
     enum Vote {
         VOTE_UNSET = 0;
         ACCEPT = 1;
@@ -78,14 +78,14 @@ message UOMVote {
 
 // Contains the vote counts for a given proposal.
 
-message UOMCandidate {
+message UnitCandidate {
     // An individual vote record
     message VoteRecord {
         // The public key of the voter
         string public_key = 1;
 
         // The voter's actual vote
-        UOMVote.Vote vote = 2;
+        UnitVote.Vote vote = 2;
 
     }
 
@@ -93,7 +93,7 @@ message UOMCandidate {
     string proposal_id = 1;
 
     // The active proposal
-    UOMProposal proposal = 2;
+    UnitProposal proposal = 2;
 
     // list of votes
     repeated VoteRecord votes = 3;
@@ -101,6 +101,6 @@ message UOMCandidate {
 
 // Contains all the setting candiates up for vote.
 
-message UOMCandidates {
-    repeated UOMCandidate candidates = 1;
+message UnitCandidates {
+    repeated UnitCandidate candidates = 1;
 }

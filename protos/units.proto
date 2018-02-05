@@ -16,16 +16,16 @@
 
 syntax = "proto3";
 option java_multiple_files = true;
-option java_package = "sawtooth.uom.protobuf";
+option java_package = "hashblock.units.protobuf";
 
-// UOM Container for on-chain configuration key/value pairs
-message UOM {
-    // Contains a setting entry (or entries, in the case of collisions).
+// Unot Container for on-chain configuration key/value pairs
+message Unit {
+    // Contains a unit entry (or entries, in the case of collisions).
     message Entry {
         string key = 1;
         string value = 2;
     }
 
-    // List of setting entries - more than one implies a state key collision
+    // List of unit entries - more than one implies a state key collision
     repeated Entry entries = 1;
 }

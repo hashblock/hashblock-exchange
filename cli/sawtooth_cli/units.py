@@ -25,7 +25,7 @@ from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli import tty
 
-from sawtooth_cli.protobuf.units_pb2 import UOM
+from sawtooth_cli.protobuf.units_pb2 import Unit
 
 
 UNITS_NAMESPACE = hashlib.sha512('units'.encode("utf-8")).hexdigest()[0:6]
@@ -106,7 +106,7 @@ def _do_units_list(args):
             continue
 
         decoded = b64decode(state_value['data'])
-        units = UOM()
+        units = Unit()
         units.ParseFromString(decoded)
 
         for entry in units.entries:

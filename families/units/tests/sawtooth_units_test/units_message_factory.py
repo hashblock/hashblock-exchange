@@ -17,10 +17,10 @@
 import logging
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from protobuf.unit_pb2 import UOMPayload
-from protobuf.unit_pb2 import UOMProposal
-from protobuf.unit_pb2 import UOMVote
-from protobuf.units_pb2 import UOM
+from protobuf.unit_pb2 import UnitPayload
+from protobuf.unit_pb2 import UnitProposal
+from protobuf.unit_pb2 import UnitVote
+from protobuf.units_pb2 import Unit
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 
-class UOMMessageFactory(object):
+class UnitMessageFactory(object):
     def __init__(self, signer=None):
         self._factory = MessageFactory(
             family_name="sawtooth_units",
@@ -73,17 +73,17 @@ class UOMMessageFactory(object):
             payload.SerializeToString(), inputs, outputs, [])
 
     def create_proposal_transaction(self, code, value, nonce):
-        proposal = UOMProposal(code=code, value=value, nonce=nonce)
-        payload = UOMPayload(
-            action=UOMPayload.PROPOSE,
+        proposal = UnitProposal(code=code, value=value, nonce=nonce)
+        payload = UnitPayload(
+            action=UnitPayload.PROPOSE,
             data=proposal.SerializeToString())
 
         return self._create_tp_process_request(code, payload)
 
     def create_vote_proposal(self, proposal_id, code, vote):
-        vote = UOMVote(proposal_id=proposal_id, vote=vote)
-        payload = UOMPayload(
-            action=UOMPayload.VOTE,
+        vote = UnitVote(proposal_id=proposal_id, vote=vote)
+        payload = UnitPayload(
+            action=UnitPayload.VOTE,
             data=vote.SerializeToString())
 
         return self._create_tp_process_request(code, payload)
@@ -96,8 +96,8 @@ class UOMMessageFactory(object):
         address = self._key_to_address(code)
 
         if value is not None:
-            entry = UOM.Entry(key=code, value=value)
-            data = UOM(entries=[entry]).SerializeToString()
+            entry = Unit.Entry(key=code, value=value)
+            data = Unit(entries=[entry]).SerializeToString()
         else:
             data = None
 
@@ -107,8 +107,8 @@ class UOMMessageFactory(object):
         address = self._key_to_address(code)
 
         if value is not None:
-            entry = UOM.Entry(key=code, value=value)
-            data = UOM(entries=[entry]).SerializeToString()
+            entry = Unit.Entry(key=code, value=value)
+            data = Unit(entries=[entry]).SerializeToString()
         else:
             data = None
 

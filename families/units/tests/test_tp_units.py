@@ -17,13 +17,13 @@
 import hashlib
 import base64
 
-from protobuf.unit_pb2 import UOMProposal
-from protobuf.unit_pb2 import UOMVote
-from protobuf.unit_pb2 import UOMCandidate
-from protobuf.unit_pb2 import UOMCandidates
+from protobuf.unit_pb2 import UnitProposal
+from protobuf.unit_pb2 import UnitVote
+from protobuf.unit_pb2 import UnitCandidate
+from protobuf.unit_pb2 import UnitCandidates
 
 from sawtooth_units_test.units_message_factory \
-    import UOMMessageFactory
+    import UnitMessageFactory
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
@@ -33,15 +33,15 @@ def _to_hash(value):
     return hashlib.sha256(value).hexdigest()
 
 
-EMPTY_CANDIDATES = UOMCandidates(candidates=[]).SerializeToString()
+EMPTY_CANDIDATES = UnitCandidates(candidates=[]).SerializeToString()
 
 
-class TestUOM(TransactionProcessorTestCase):
+class TestUnit(TransactionProcessorTestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.factory = UOMMessageFactory()
+        cls.factory = UnitMessageFactory()
 
     def _expect_get(self, key, value=None):
         received = self.validator.expect(
@@ -180,21 +180,21 @@ class TestUOM(TransactionProcessorTestCase):
         self._expect_get('sawtooth.uom.vote.approval_threshold', '2')
         self._expect_get('sawtooth.uom.vote.proposals')
 
-        proposal = UOMProposal(
+        proposal = UnitProposal(
             code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        record = UOMCandidate.VoteRecord(
+        record = UnitCandidate.VoteRecord(
             public_key=self._public_key,
-            vote=UOMVote.ACCEPT)
-        candidate = UOMCandidate(
+            vote=UnitVote.ACCEPT)
+        candidate = UnitCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[record])
 
-        candidates = UOMCandidates(candidates=[candidate])
+        candidates = UnitCandidates(candidates=[candidate])
 
         # Get's again to update the entry
         self._expect_get('sawtooth.uom.vote.proposals')
@@ -209,23 +209,23 @@ class TestUOM(TransactionProcessorTestCase):
         """
         Tests voting on a given unit, where the unit is approved
         """
-        proposal = UOMProposal(
+        proposal = UnitProposal(
             code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        record = UOMCandidate.VoteRecord(
+        record = UnitCandidate.VoteRecord(
             public_key="some_other_public_key",
-            vote=UOMVote.ACCEPT)
-        candidate = UOMCandidate(
+            vote=UnitVote.ACCEPT)
+        candidate = UnitCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[record])
 
-        candidates = UOMCandidates(candidates=[candidate])
+        candidates = UnitCandidates(candidates=[candidate])
 
-        self._vote(proposal_id, 'my.config.unit', UOMVote.ACCEPT)
+        self._vote(proposal_id, 'my.config.unit', UnitVote.ACCEPT)
 
         self._expect_get('sawtooth.uom.vote.authorized_keys',
                          self._public_key + ',some_other_public_key')
@@ -253,23 +253,23 @@ class TestUOM(TransactionProcessorTestCase):
         """
         Tests voting on a given unit, where the vote is counted only.
         """
-        proposal = UOMProposal(
+        proposal = UnitProposal(
             code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        record = UOMCandidate.VoteRecord(
+        record = UnitCandidate.VoteRecord(
             public_key="some_other_public_key",
-            vote=UOMVote.ACCEPT)
-        candidate = UOMCandidate(
+            vote=UnitVote.ACCEPT)
+        candidate = UnitCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[record])
 
-        candidates = UOMCandidates(candidates=[candidate])
+        candidates = UnitCandidates(candidates=[candidate])
 
-        self._vote(proposal_id, 'my.config.unit', UOMVote.ACCEPT)
+        self._vote(proposal_id, 'my.config.unit', UnitVote.ACCEPT)
 
         self._expect_get('sawtooth.uom.vote.authorized_keys',
                          self._public_key +
@@ -282,18 +282,18 @@ class TestUOM(TransactionProcessorTestCase):
         self._expect_get('sawtooth.uom.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
 
-        record = UOMCandidate.VoteRecord(
+        record = UnitCandidate.VoteRecord(
             public_key="some_other_public_key",
-            vote=UOMVote.ACCEPT)
-        new_record = UOMCandidate.VoteRecord(
+            vote=UnitVote.ACCEPT)
+        new_record = UnitCandidate.VoteRecord(
             public_key=self._public_key,
-            vote=UOMVote.ACCEPT)
-        candidate = UOMCandidate(
+            vote=UnitVote.ACCEPT)
+        candidate = UnitCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[record, new_record])
 
-        updated_candidates = UOMCandidates(candidates=[candidate])
+        updated_candidates = UnitCandidates(candidates=[candidate])
         self._expect_set(
             'sawtooth.uom.vote.proposals',
             base64.b64encode(updated_candidates.SerializeToString()))
@@ -306,27 +306,27 @@ class TestUOM(TransactionProcessorTestCase):
         """
         Tests voting on a given unit, where the unit is rejected.
         """
-        proposal = UOMProposal(
+        proposal = UnitProposal(
             code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        candidate = UOMCandidate(
+        candidate = UnitCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[
-                UOMCandidate.VoteRecord(
+                UnitCandidate.VoteRecord(
                     public_key='some_other_public_key',
-                    vote=UOMVote.ACCEPT),
-                UOMCandidate.VoteRecord(
+                    vote=UnitVote.ACCEPT),
+                UnitCandidate.VoteRecord(
                     public_key='a_rejectors_public_key',
-                    vote=UOMVote.REJECT)
+                    vote=UnitVote.REJECT)
             ])
 
-        candidates = UOMCandidates(candidates=[candidate])
+        candidates = UnitCandidates(candidates=[candidate])
 
-        self._vote(proposal_id, 'my.config.unit', UOMVote.REJECT)
+        self._vote(proposal_id, 'my.config.unit', UnitVote.REJECT)
 
         self._expect_get(
             'sawtooth.uom.vote.authorized_keys',
@@ -350,24 +350,24 @@ class TestUOM(TransactionProcessorTestCase):
         Tests voting on a given unit, where there is a tie for accept and
         for reject, with no remaining auth keys.
         """
-        proposal = UOMProposal(
+        proposal = UnitProposal(
             code='my.config.unit',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        candidate = UOMCandidate(
+        candidate = UnitCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[
-                UOMCandidate.VoteRecord(
+                UnitCandidate.VoteRecord(
                     public_key='some_other_public_key',
-                    vote=UOMVote.ACCEPT),
+                    vote=UnitVote.ACCEPT),
             ])
 
-        candidates = UOMCandidates(candidates=[candidate])
+        candidates = UnitCandidates(candidates=[candidate])
 
-        self._vote(proposal_id, 'my.config.unit', UOMVote.REJECT)
+        self._vote(proposal_id, 'my.config.unit', UnitVote.REJECT)
 
         self._expect_get('sawtooth.uom.vote.authorized_keys',
                          self._public_key + ',some_other_public_key')
