@@ -20,8 +20,8 @@ services:
   units-dev:
     build:
       context: ../..
-      dockerfile: docker/hashblock-dev-units-tp
-    image: hashblock-dev-units-tp
+      dockerfile: docker/hashblock-dev-python
+    image: hashblock-dev-python
     container_name: hashblock-units-dev-shell
     volumes:
       - ../../:/project/sawtooth-eventchain  
