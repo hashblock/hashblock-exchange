@@ -281,7 +281,7 @@ def _create_propose_txn(signer, unit_key_value):
     unit_key, unit_value = unit_key_value
     nonce = str(datetime.datetime.utcnow().timestamp())
     proposal = UnitProposal(
-        unit=unit_key,
+        code=unit_key,
         value=unit_value,
         nonce=nonce)
     payload = UnitPayload(data=proposal.SerializeToString(),
