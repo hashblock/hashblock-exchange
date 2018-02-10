@@ -207,7 +207,7 @@ def _do_config_genesis(args):
 
     txns.append(_create_propose_txn(
         signer,
-        ('sawtooth.settings.vote.authorized_keys',
+        ('sawtooth.uom.vote.authorized_keys',
          ','.join(authorized_keys))))
 
     if args.approval_threshold is not None:
@@ -221,7 +221,7 @@ def _do_config_genesis(args):
 
         txns.append(_create_propose_txn(
             signer,
-            ('sawtooth.settings.vote.approval_threshold',
+            ('sawtooth.uom.vote.approval_threshold',
              str(args.approval_threshold))))
 
     batch = _create_batch(signer, txns)
