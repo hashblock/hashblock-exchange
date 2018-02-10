@@ -31,6 +31,9 @@ services:
       - 5678
     ports:
       - "5678:5678"
+    depends_on:
+      - validator
+      - rest-api      
     command: "bash -c \"\
         /project/sawtooth-core/bin/sawtooth keygen my_key && \
         /project/sawtooth-eventchain/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch && \
