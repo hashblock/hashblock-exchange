@@ -64,9 +64,10 @@ def add_config_parser(subparsers, parent_parser):
     """
     parser = subparsers.add_parser(
         'config',
-        help='Create, view, and vote on units proposals',
-        description='Provides subcommands to '
-                    'view, create, and vote on existing unit proposals.'
+        help='Changes genesis block units and create, view, and '
+        'vote on units proposals',
+        description='Provides subcommands to change genesis block settings '
+                    'and to view, create, and vote on existing proposals.'
     )
 
     config_parsers = parser.add_subparsers(title="subcommands",
@@ -192,9 +193,52 @@ def _do_config_proposal_vote(args):
     rest_client.send_batches(batch_list)
 
 
+
+def _do_config_genesis(args):
+    signer = _read_signer(args.key)
+    public_key = signer.get_public_key().as_hex()
+
+    authorized_keys = args.authorized_key if args.authorized_key else \
+        [public_key]
+    if public_key not in authorized_keys:
+        authorized_keys.append(public_key)
+
+    txns = []
+
+    txns.append(_create_propose_txn(
+        signer,
+        ('sawtooth.settings.vote.authorized_keys',
+         ','.join(authorized_keys))))
+
+    if args.approval_threshold is not None:
+        if args.approval_threshold < 1:
+            raise CliException('approval threshold must not be less than 1')
+
+        if args.approval_threshold > len(authorized_keys):
+            raise CliException(
+                'approval threshold must not be greater than the number of '
+                'authorized keys')
+
+        txns.append(_create_propose_txn(
+            signer,
+            ('sawtooth.settings.vote.approval_threshold',
+             str(args.approval_threshold))))
+
+    batch = _create_batch(signer, txns)
+    batch_list = BatchList(batches=[batch])
+
+    try:
+        with open(args.output, 'wb') as batch_file:
+            batch_file.write(batch_list.SerializeToString())
+        print('Generated {}'.format(args.output))
+    except IOError as e:
+        raise CliException(
+            'Unable to write to batch file: {}'.format(str(e)))
+
+
 def _get_proposals(rest_client):
     state_leaf = rest_client.get_leaf(
-        _key_to_address('hashbock.units.vote.proposals'))
+        _key_to_address('sawtooth.units.vote.proposals'))
 
     config_candidates = UnitCandidates()
 
@@ -205,7 +249,7 @@ def _get_proposals(rest_client):
 
         candidates_bytes = None
         for entry in unit.entries:
-            if entry.key == 'hashbock.units.vote.proposals':
+            if entry.key == 'sawtooth.units.vote.proposals':
                 candidates_bytes = entry.value
 
         if candidates_bytes is not None:
@@ -332,9 +376,9 @@ def _config_inputs(key):
     given unit key.
     """
     return [
-        _key_to_address('hashbock.units.vote.proposals'),
-        _key_to_address('hashbock.units.vote.authorized_keys'),
-        _key_to_address('hashbock.units.vote.approval_threshold'),
+        _key_to_address('sawtooth.units.vote.proposals'),
+        _key_to_address('sawtooth.units.vote.authorized_keys'),
+        _key_to_address('sawtooth.units.vote.approval_threshold'),
         _key_to_address(key)
     ]
 
@@ -344,7 +388,7 @@ def _config_outputs(key):
     given unit key.
     """
     return [
-        _key_to_address('hashbock.units.vote.proposals'),
+        _key_to_address('sawtooth.units.vote.proposals'),
         _key_to_address(key)
     ]
 
@@ -431,6 +475,40 @@ def create_parser(prog_name):
 
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
     subparsers.required = True
+
+    # The following parser is for the `genesis` subcommand.
+    # This command creates a batch that contains all of the initial
+    # transactions for units settings
+    genesis_parser = subparsers.add_parser(
+        'genesis',
+        help='Creates a genesis batch file of units transactions',
+        description='Creates a Batch of units proposals that can be '
+                    'consumed by "unitsadm genesis" and used '
+                    'during genesis hashblock construction.'
+    )
+    genesis_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='specify signing key for resulting batches '
+             'and initial authorized key')
+
+    genesis_parser.add_argument(
+        '-o', '--output',
+        type=str,
+        default='config-units.batch',
+        help='specify the output file for the resulting batches')
+
+    genesis_parser.add_argument(
+        '-T', '--approval-threshold',
+        type=int,
+        help='set the number of votes required to enable a setting change')
+
+    genesis_parser.add_argument(
+        '-A', '--authorized-key',
+        type=str,
+        action='append',
+        help='specify a public key for the user authorized to submit '
+             'config transactions')
 
     # The following parser is for the `proposal` subcommand group. These
     # commands allow the user to create proposals which may be applied
@@ -561,6 +639,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         _do_config_proposal_list(args)
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
         _do_config_proposal_vote(args)
+    elif args.subcommand == 'genesis':
+        _do_config_genesis(args)
     else:
         raise CliException(
             '"{}" is not a valid subcommand of "config"'.format(
@@ -584,4 +664,3 @@ def main_wrapper():
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
-main_wrapper()

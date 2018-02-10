@@ -33,6 +33,7 @@ services:
       - "5678:5678"
     command: "bash -c \"\
         /project/sawtooth-core/bin/sawtooth keygen my_key && \
+        /project/sawtooth-eventchain/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv && \
         tail -f /dev/null \
         \""
     stop_signal: SIGKILL
