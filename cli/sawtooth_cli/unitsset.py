@@ -548,7 +548,7 @@ def create_parser(prog_name):
         '--url',
         type=str,
         help="identify the URL of a validator's REST API",
-        default='http://localhost:8008')
+        default='http://rest-api:8008')
 
     prop_parser.add_argument(
         'unit',
@@ -568,7 +568,7 @@ def create_parser(prog_name):
         '--url',
         type=str,
         help="identify the URL of a validator's REST API",
-        default='http://localhost:8008')
+        default='http://rest-api:8008')
 
     proposal_list_parser.add_argument(
         '--public-key',
@@ -598,7 +598,7 @@ def create_parser(prog_name):
         '--url',
         type=str,
         help="identify the URL of a validator's REST API",
-        default='http://localhost:8008')
+        default='http://rest-api:8008')
 
     vote_parser.add_argument(
         '-k', '--key',

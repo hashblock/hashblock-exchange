@@ -66,7 +66,7 @@ def add_units_parser(subparsers, parent_parser):
         '--url',
         type=str,
         help="identify the URL of a validator's REST API",
-        default='http://localhost:8008')
+        default='http://rest-api:8008')
 
     list_parser.add_argument(
         '--filter',
