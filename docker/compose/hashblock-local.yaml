@@ -35,8 +35,6 @@ services:
       - validator
       - rest-api      
     command: "bash -c \"\
-        /project/sawtooth-core/bin/sawtooth keygen my_key && \
-        /project/sawtooth-eventchain/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch && \
         tail -f /dev/null \
         \""
     stop_signal: SIGKILL
@@ -77,6 +75,8 @@ services:
   validator:
     image: hyperledger/sawtooth-validator:1.0
     container_name: sawtooth-validator-default
+    volumes:
+      - ../../:/project/sawtooth-eventchain
     expose:
       - 4004
     ports:
@@ -85,8 +85,9 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth keygen my_key && \
-        sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
-        sawadm genesis config-genesis.batch && \
+        sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
+        /project/sawtooth-eventchain/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch && \
+        sawadm genesis /etc/config-settings.batch /etc/config-units.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
