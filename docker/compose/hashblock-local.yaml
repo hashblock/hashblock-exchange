@@ -24,13 +24,17 @@ services:
     image: hashblock-dev-python
     container_name: hashblock-shell
     volumes:
-      - ../../:/project/sawtooth-eventchain  
+      - ../../:/project/sawtooth-eventchain
+      - ../../../sawtooth-core/:/project/sawtooth-core  
      # Expose 5678 for remote debugging
     expose:
       - 5678
     ports:
       - "5678:5678"
-    command: ["tail", "-f", "/dev/null"]
+    command: "bash -c \"\
+        /project/sawtooth-core/bin/sawtooth keygen my_key && \
+        tail -f /dev/null \
+        \""
     stop_signal: SIGKILL
 
   units-processor:
