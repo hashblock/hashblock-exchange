@@ -77,10 +77,13 @@ services:
     container_name: sawtooth-validator-default
     volumes:
       - ../../:/project/sawtooth-eventchain
+    # Expose 5700 for remote debugging
     expose:
       - 4004
+      - 5700
     ports:
       - "4004:4004"
+      - "5700":"5700"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \

@@ -18,6 +18,7 @@
 import os
 import sys
 import sysconfig
+import ptvsd
 
 build_str = "lib.{}-{}.{}".format(
     sysconfig.get_platform(),
@@ -33,4 +34,6 @@ sys.path.insert(0, os.path.join(
 from sawtooth_cli.unitsset import main_wrapper
 
 if __name__ == '__main__':
+    ptvsd.enable_attach('alphabeta',('0.0.0.0',5678))
+    ptvsd.wait_for_attach()
     main_wrapper()
