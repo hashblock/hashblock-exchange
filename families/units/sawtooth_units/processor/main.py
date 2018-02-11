@@ -40,7 +40,7 @@ from processor.config.units import \
 from processor.config.units import \
     merge_unit_config
 
-DISTRIBUTION_NAME = 'hasblock-units'
+DISTRIBUTION_NAME = 'hashblock-units'
 
 
 def create_console_handler(verbose_level):

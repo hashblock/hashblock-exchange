@@ -119,7 +119,7 @@ def _do_config_proposal_list(args):
         # created it.
         has_pub_key = (not public_key
                        or candidate.votes[0].public_key == public_key)
-        has_prefix = candidate.proposal.unit.startswith(prefix)
+        has_prefix = candidate.proposal.code.startswith(prefix)
         return has_prefix and has_pub_key
 
     candidates_payload = _get_proposals(RestClient(args.url))
@@ -132,7 +132,7 @@ def _do_config_proposal_list(args):
         for candidate in candidates:
             print('{}: {} => {}'.format(
                 candidate.proposal_id,
-                candidate.proposal.unit,
+                candidate.proposal.code,
                 candidate.proposal.value))
     elif args.format == 'csv':
         writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
@@ -140,11 +140,11 @@ def _do_config_proposal_list(args):
         for candidate in candidates:
             writer.writerow([
                 candidate.proposal_id,
-                candidate.proposal.unit,
+                candidate.proposal.code,
                 candidate.proposal.value])
     elif args.format == 'json' or args.format == 'yaml':
         candidates_snapshot = \
-            {c.proposal_id: {c.proposal.unit: c.proposal.value}
+            {c.proposal_id: {c.proposal.code: c.proposal.value}
              for c in candidates}
 
         if args.format == 'json':
@@ -184,7 +184,7 @@ def _do_config_proposal_vote(args):
     txn = _create_vote_txn(
         signer,
         args.proposal_id,
-        proposal.proposal.unit,
+        proposal.proposal.code,
         args.vote_value)
     batch = _create_batch(signer, [txn])
 

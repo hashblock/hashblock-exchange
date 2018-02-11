@@ -65,7 +65,7 @@ class UnitTransactionHandler(TransactionHandler):
         auth_keys = _get_auth_keys(context)
         if auth_keys and public_key not in auth_keys:
             raise InvalidTransaction(
-                '{} is not authorized to change settings'.format(public_key))
+                '{} is not authorized to change units'.format(public_key))
 
         uom_payload = UnitPayload()
         uom_payload.ParseFromString(transaction.payload)

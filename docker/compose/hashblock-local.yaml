@@ -67,14 +67,14 @@ services:
 
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
-    container_name: sawtooth-settings-tp-default
+    container_name: sawtooth-settings-tp-latest
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
 
   validator:
     image: hyperledger/sawtooth-validator:latest
-    container_name: sawtooth-validator-default
+    container_name: sawtooth-validator-latest
     volumes:
       - ../../:/project/sawtooth-eventchain
     # Expose 5700 for remote debugging
@@ -83,13 +83,14 @@ services:
       - 5700
     ports:
       - "4004:4004"
-      - "5700":"5700"
+      - "5700:5700"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth keygen my_key && \
+        sawtooth keygen your_key && \
         sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
-        /project/sawtooth-eventchain/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch && \
+        /project/sawtooth-eventchain/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
         sawadm genesis /etc/config-settings.batch /etc/config-units.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
@@ -99,7 +100,7 @@ services:
 
   rest-api:
     image: sawtooth-rest-api:latest
-    container_name: sawtooth-rest-api-local
+    container_name: sawtooth-rest-api-latest
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core
     ports:
