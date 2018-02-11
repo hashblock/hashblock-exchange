@@ -66,14 +66,14 @@ services:
     stop_signal: SIGKILL
 
   settings-tp:
-    image: hyperledger/sawtooth-settings-tp:1.0
+    image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-default
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
 
   validator:
-    image: hyperledger/sawtooth-validator:1.0
+    image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-default
     volumes:
       - ../../:/project/sawtooth-eventchain
