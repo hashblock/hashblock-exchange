@@ -18,7 +18,7 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "hashblock.units.protobuf";
 
-// Unot Container for on-chain configuration key/value pairs
+// Unit Container for on-chain configuration key/value pairs
 message Unit {
     // Contains a unit entry (or entries, in the case of collisions).
     message Entry {

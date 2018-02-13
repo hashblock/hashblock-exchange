@@ -1,0 +1,61 @@
+// -----------------------------------------------------------------------------
+// Copyright 2018 Frank V. Castellucci
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "hashblock.chains.protobuf";
+
+// ChainUnit describes something???
+message ChainUnit {
+	string symbol = 1;
+	string label = 2;
+	bytes hash = 3;
+}
+
+// ChainQuantity
+message ChainQuantity {
+	bytes value = 1;
+	ChainUnit valueUnit = 2;
+	ChainUnit resourceUnit = 3;
+}
+
+// ChainRatio
+message ChainRatio {
+	ChainQuantity numerator = 1;
+	ChainQuantity denominator = 2;
+}
+
+// ChainTransaction
+message ChainTransaction {
+    // Contains a chain entry (or entries, in the case of collisions).
+    message Chain {
+        bytes metadata = 1;
+        bytes plus = 2;
+        bytes minus = 3;
+        ChainRatio ratio = 4;
+        ChainQuantity quantity = 5;
+    }
+
+    // List of transaction types
+    enum TransactionType {
+    	INITIATE = 0;
+    	RECIPROCATE = 1;
+    }
+
+    TransactionType type = 1;
+    // List of Chain entries - more than one implies a state key collision
+    repeated Chain chains = 2;
+}
