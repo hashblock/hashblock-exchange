@@ -31,16 +31,16 @@ from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from processor.handler import UnitTransactionHandler
-from processor.config.units import UnitConfig
-from processor.config.units import \
-    load_default_unit_config
-from processor.config.units import \
-    load_toml_unit_config
-from processor.config.units import \
-    merge_unit_config
+from processor.handler import ChainTransactionHandler
+from processor.config.chains import ChainConfig
+from processor.config.chains import \
+    load_default_chains_config
+from processor.config.chains import \
+    load_toml_chains_config
+from processor.config.chains import \
+    merge_chains_config
 
-DISTRIBUTION_NAME = 'hashblock-units'
+DISTRIBUTION_NAME = 'hashblock-chains'
 
 
 def create_console_handler(verbose_level):
@@ -72,11 +72,11 @@ def create_console_handler(verbose_level):
 
 
 def setup_loggers(verbose_level, processor):
-    log_config = get_log_config(filename="uom_log_config.toml")
+    log_config = get_log_config(filename="chain_log_config.toml")
 
     # If no toml, try loading yaml
     if log_config is None:
-        log_config = get_log_config(filename="uom_log_config.yaml")
+        log_config = get_log_config(filename="chain_log_config.yaml")
 
     if log_config is not None:
         log_configuration(log_config=log_config)
@@ -85,7 +85,7 @@ def setup_loggers(verbose_level, processor):
         # use the transaction processor zmq identity for filename
         log_configuration(
             log_dir=log_dir,
-            name="uom-" + str(processor.zmq_id)[2:-1])
+            name="chain-" + str(processor.zmq_id)[2:-1])
 
     init_console_logging(verbose_level=verbose_level)
 
@@ -93,9 +93,9 @@ def setup_loggers(verbose_level, processor):
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
         prog=prog_name,
-        description='Starts a sawtooth-uom transaction processor.',
+        description='Starts a hashblock-chain transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
-               'Unit used by the Sawtooth platform.',
+               'Chain used by the Sawtooth platform.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
@@ -117,7 +117,7 @@ def create_parser(prog_name):
     parser.add_argument(
         '-V', '--version',
         action='version',
-        version=(DISTRIBUTION_NAME + ' (Hashblock Sawtooth) version {}')
+        version=(DISTRIBUTION_NAME + ' (Hashblock Chain) version {}')
         .format(version),
         help='display version information')
 
@@ -126,17 +126,17 @@ def create_parser(prog_name):
 
 def load_settings_config(first_config):
     default_settings_config = \
-        load_default_unit_config()
-    conf_file = os.path.join(get_config_dir(), 'uom.toml')
+        load_default_chains_config()
+    conf_file = os.path.join(get_config_dir(), 'chain.toml')
 
-    toml_config = load_toml_unit_config(conf_file)
+    toml_config = load_toml_chains_config(conf_file)
 
-    return merge_unit_config(
+    return merge_chains_config(
         configs=[first_config, toml_config, default_settings_config])
 
 
 def create_settings_config(args):
-    return UnitConfig(connect=args.connect)
+    return ChainConfig(connect=args.connect)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
@@ -162,10 +162,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     # The prefix should eventually be looked up from the
     # validator's namespace registry.
-    units_prefix = \
-        hashlib.sha512('units'.encode("utf-8")).hexdigest()[0:6]
+    chains_prefix = \
+        hashlib.sha512('chains'.encode("utf-8")).hexdigest()[0:6]
     handler = \
-        UnitTransactionHandler(namespace_prefix=units_prefix)
+        ChainTransactionHandler(namespace_prefix=chains_prefix)
 
     processor.add_handler(handler)
 
