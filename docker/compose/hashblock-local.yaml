@@ -65,6 +65,32 @@ services:
       \""
     stop_signal: SIGKILL
 
+  chains-processor:
+    build:
+      context: ../..
+      dockerfile: docker/hashblock-dev-chains-tp
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: hashblock-dev-chains-tp
+    container_name: hashblock-dev-chains-tp
+    volumes:
+      - ../../:/project/sawtooth-eventchain
+    # Expose 5679 for remote debugging
+    expose:
+      - 5670
+    ports:
+      - "5670:5670"
+    depends_on:
+      - validator
+    command: "bash -c \"\
+        sleep 1 &&
+        chains-tp -v \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-latest
@@ -80,10 +106,10 @@ services:
     # Expose 5700 for remote debugging
     expose:
       - 4004
-      - 5700
+      - 5701
     ports:
       - "4004:4004"
-      - "5700:5700"
+      - "5701:5701"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \
