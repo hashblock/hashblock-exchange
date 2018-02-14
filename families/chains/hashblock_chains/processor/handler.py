@@ -25,7 +25,7 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from protobuf.chains_pb2 import ChainTransaction
+from protobuf.chain_pb2 import ChainPayload
 
 LOGGER = logging.getLogger(__name__)
 ADDRESS = ''
@@ -57,20 +57,20 @@ class ChainTransactionHandler(TransactionHandler):
         txn_header = transaction.header
         public_key = txn_header.signer_public_key
 
-        chain_transaction = ChainTransaction()
+        chain_transaction = ChainPayload()
         chain_transaction.ParseFromString(transaction.payload)
 
-        if chain_transaction.type == ChainTransaction.INITIATE:
+        if chain_transaction.type == ChainPayload.INITIATE_EVENT:
             return self._apply_initiate(
                 public_key, chain_transaction.data, context)
-        elif chain_transaction.action == ChainTransaction.RECIPROCATE:
+        elif chain_transaction.action == ChainPayload.RECIPROCATE_EVENT:
             return self._apply_reciprocate(
                 public_key,
                 chain_transaction.data,
                 context)
         else:
             raise InvalidTransaction(
-                "'type' must be one of {INITIATE, RECIPROCATE}")
+                "'type' must be one of {INITIATE_EVENT, RECIPROCATE_EVENT}")
 
     def _apply_initiate(self, public_key, chain_initiate_data, context):
         pass

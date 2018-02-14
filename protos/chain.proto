@@ -47,3 +47,14 @@ message ReciprocateEvent {
     Quantity quantity = 5;
     bytes InitiateEvent = 6;
 }
+
+message ChainPayload {
+    enum Action {
+        INITIATE_EVENT = 0;
+        RECIPROCATE_EVENT = 1;
+    }
+
+    Action action = 1;
+    InitiateEvent initiate_event = 2;
+    ReciprocateEvent reciprocate_event = 3;
+}
