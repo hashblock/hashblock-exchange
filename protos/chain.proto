@@ -18,44 +18,32 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "hashblock.chains.protobuf";
 
-// ChainUnit describes something???
-message ChainUnit {
-	string symbol = 1;
-	string label = 2;
-	bytes hash = 3;
-}
-
-// ChainQuantity
-message ChainQuantity {
+// Resource quantity
+message Quantity {
 	bytes value = 1;
-	ChainUnit valueUnit = 2;
-	ChainUnit resourceUnit = 3;
+	bytes valueUnit = 2;
+	bytes resourceUnit = 3;
 }
 
-// ChainRatio
-message ChainRatio {
-	ChainQuantity numerator = 1;
-	ChainQuantity denominator = 2;
+// Quantity ratio
+message Ratio {
+    Quantity numerator = 1;
+    Quantity denominator = 2;
 }
 
-// ChainTransaction
-message ChainTransaction {
-    // Contains a chain entry (or entries, in the case of collisions).
-    message Chain {
-        bytes metadata = 1;
-        bytes plus = 2;
-        bytes minus = 3;
-        ChainRatio ratio = 4;
-        ChainQuantity quantity = 5;
-    }
+// Economic event with plus/minus duality
+message InitiateEvent {
+    string version = 1;
+    bytes plus = 2;
+    bytes minus = 3;
+    Quantity quantity = 4;
+}
 
-    // List of transaction types
-    enum TransactionType {
-    	INITIATE = 0;
-    	RECIPROCATE = 1;
-    }
-
-    TransactionType type = 1;
-    // List of Chain entries - more than one implies a state key collision
-    repeated Chain chains = 2;
+message ReciprocateEvent {
+    string version = 1;
+    bytes plus = 2;
+    bytes minus = 3;
+    Ratio ratio = 4;
+    Quantity quantity = 5;
+    bytes InitiateEvent = 6;
 }
