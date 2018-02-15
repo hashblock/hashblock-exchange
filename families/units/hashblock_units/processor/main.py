@@ -72,11 +72,11 @@ def create_console_handler(verbose_level):
 
 
 def setup_loggers(verbose_level, processor):
-    log_config = get_log_config(filename="uom_log_config.toml")
+    log_config = get_log_config(filename="units_log_config.toml")
 
     # If no toml, try loading yaml
     if log_config is None:
-        log_config = get_log_config(filename="uom_log_config.yaml")
+        log_config = get_log_config(filename="units_log_config.yaml")
 
     if log_config is not None:
         log_configuration(log_config=log_config)
@@ -85,7 +85,7 @@ def setup_loggers(verbose_level, processor):
         # use the transaction processor zmq identity for filename
         log_configuration(
             log_dir=log_dir,
-            name="uom-" + str(processor.zmq_id)[2:-1])
+            name="units-" + str(processor.zmq_id)[2:-1])
 
     init_console_logging(verbose_level=verbose_level)
 
@@ -93,7 +93,7 @@ def setup_loggers(verbose_level, processor):
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
         prog=prog_name,
-        description='Starts a sawtooth-uom transaction processor.',
+        description='Starts a hashblock-units transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
                'Unit used by the Sawtooth platform.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -127,7 +127,7 @@ def create_parser(prog_name):
 def load_settings_config(first_config):
     default_settings_config = \
         load_default_unit_config()
-    conf_file = os.path.join(get_config_dir(), 'uom.toml')
+    conf_file = os.path.join(get_config_dir(), 'units.toml')
 
     toml_config = load_toml_unit_config(conf_file)
 
@@ -147,8 +147,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     args = parser.parse_args(args)
 
     arg_config = create_settings_config(args)
-    uom_config = load_settings_config(arg_config)
-    processor = TransactionProcessor(url=uom_config.connect)
+    units_config = load_settings_config(arg_config)
+    processor = TransactionProcessor(url=units_config.connect)
 
     if with_loggers is True:
         if args.verbose is None:

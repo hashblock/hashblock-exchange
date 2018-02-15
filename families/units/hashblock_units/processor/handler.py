@@ -67,80 +67,80 @@ class UnitTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 '{} is not authorized to change units'.format(public_key))
 
-        uom_payload = UnitPayload()
-        uom_payload.ParseFromString(transaction.payload)
+        units_payload = UnitPayload()
+        units_payload.ParseFromString(transaction.payload)
 
-        if uom_payload.action == UnitPayload.PROPOSE:
+        if units_payload.action == UnitPayload.PROPOSE:
             return self._apply_proposal(
-                auth_keys, public_key, uom_payload.data, context)
-        elif uom_payload.action == UnitPayload.VOTE:
-            return self._apply_vote(public_key, uom_payload.data,
+                auth_keys, public_key, units_payload.data, context)
+        elif units_payload.action == UnitPayload.VOTE:
+            return self._apply_vote(public_key, units_payload.data,
                                     auth_keys, context)
         else:
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
 
     def _apply_proposal(self, auth_keys, public_key,
-                        uom_proposal_data, context):
-        uom_proposal = UnitProposal()
-        uom_proposal.ParseFromString(uom_proposal_data)
+                        units_proposal_data, context):
+        units_proposal = UnitProposal()
+        units_proposal.ParseFromString(units_proposal_data)
 
-        proposal_id = hashlib.sha256(uom_proposal_data).hexdigest()
+        proposal_id = hashlib.sha256(units_proposal_data).hexdigest()
 
         approval_threshold = _get_approval_threshold(context)
 
-        _validate_uom(
+        _validate_units(
             auth_keys,
-            uom_proposal.code,
-            uom_proposal.value)
+            units_proposal.code,
+            units_proposal.value)
 
         if approval_threshold > 1:
-            uom_candidates = _get_uom_candidates(context)
+            units_candidates = _get_units_candidates(context)
 
             existing_candidate = _first(
-                uom_candidates.candidates,
+                units_candidates.candidates,
                 lambda candidate: candidate.proposal_id == proposal_id)
 
             if existing_candidate is not None:
                 raise InvalidTransaction(
                     'Duplicate proposal for {}'.format(
-                        uom_proposal.code))
+                        units_proposal.code))
 
             record = UnitCandidate.VoteRecord(
                 public_key=public_key,
                 vote=UnitVote.ACCEPT)
-            uom_candidates.candidates.add(
+            units_candidates.candidates.add(
                 proposal_id=proposal_id,
-                proposal=uom_proposal,
+                proposal=units_proposal,
                 votes=[record]
             )
 
             LOGGER.debug('Proposal made to set %s to %s',
-                         uom_proposal.code,
-                         uom_proposal.value)
-            _save_uom_candidates(context, uom_candidates)
+                         units_proposal.code,
+                         units_proposal.value)
+            _save_units_candidates(context, units_candidates)
         else:
-            _set_uom_value(
+            _set_units_value(
                 context,
-                uom_proposal.code,
-                uom_proposal.value)
+                units_proposal.code,
+                units_proposal.value)
 
     def _apply_vote(self, public_key,
-                    uom_vote_data, authorized_keys, context):
-        uom_vote = UnitVote()
-        uom_vote.ParseFromString(uom_vote_data)
-        proposal_id = uom_vote.proposal_id
+                    units_vote_data, authorized_keys, context):
+        units_vote = UnitVote()
+        units_vote.ParseFromString(units_vote_data)
+        proposal_id = units_vote.proposal_id
 
-        uom_candidates = _get_uom_candidates(context)
+        units_candidates = _get_units_candidates(context)
         candidate = _first(
-            uom_candidates.candidates,
+            units_candidates.candidates,
             lambda candidate: candidate.proposal_id == proposal_id)
 
         if candidate is None:
             raise InvalidTransaction(
                 "Proposal {} does not exist.".format(proposal_id))
 
-        candidate_index = _index_of(uom_candidates.candidates, candidate)
+        candidate_index = _index_of(units_candidates.candidates, candidate)
 
         approval_threshold = _get_approval_threshold(context)
 
@@ -152,7 +152,7 @@ class UnitTransactionHandler(TransactionHandler):
 
         candidate.votes.add(
             public_key=public_key,
-            vote=uom_vote.vote)
+            vote=units_vote.vote)
 
         accepted_count = 0
         rejected_count = 0
@@ -163,25 +163,25 @@ class UnitTransactionHandler(TransactionHandler):
                 rejected_count += 1
 
         if accepted_count >= approval_threshold:
-            _set_uom_value(
+            _set_units_value(
                 context,
                 candidate.proposal.code,
                 candidate.proposal.value)
-            del uom_candidates.candidates[candidate_index]
+            del units_candidates.candidates[candidate_index]
         elif rejected_count >= approval_threshold or \
                 (rejected_count + accepted_count) == len(authorized_keys):
             LOGGER.debug('Proposal for %s was rejected',
                          candidate.proposal.code)
-            del uom_candidates.candidates[candidate_index]
+            del units_candidates.candidates[candidate_index]
         else:
             LOGGER.debug('Vote recorded for %s',
                          candidate.proposal.code)
 
-        _save_uom_candidates(context, uom_candidates)
+        _save_units_candidates(context, units_candidates)
 
 
-def _get_uom_candidates(context):
-    value = _get_uom_value(context, 'sawtooth.uom.vote.proposals')
+def _get_units_candidates(context):
+    value = _get_units_value(context, 'sawtooth.units.vote.proposals')
     if not value:
         return UnitCandidates(candidates={})
 
@@ -190,21 +190,21 @@ def _get_uom_candidates(context):
     return unit_candidates
 
 
-def _save_uom_candidates(context, uom_candidates):
-    _set_uom_value(
+def _save_units_candidates(context, units_candidates):
+    _set_units_value(
         context,
-        'sawtooth.uom.vote.proposals',
-        base64.b64encode(uom_candidates.SerializeToString()))
+        'sawtooth.units.vote.proposals',
+        base64.b64encode(units_candidates.SerializeToString()))
 
 
 def _get_approval_threshold(context):
-    return int(_get_uom_value(
-        context, 'sawtooth.uom.vote.approval_threshold', 1))
+    return int(_get_units_value(
+        context, 'sawtooth.units.vote.approval_threshold', 1))
 
 
 def _get_auth_keys(context):
-    value = _get_uom_value(
-        context, 'sawtooth.uom.vote.authorized_keys', '')
+    value = _get_units_value(
+        context, 'sawtooth.units.vote.authorized_keys', '')
     return _split_ignore_empties(value)
 
 
@@ -212,17 +212,17 @@ def _split_ignore_empties(value):
     return [v.strip() for v in value.split(',') if v]
 
 
-def _validate_uom(auth_keys, uom_code, value):
+def _validate_units(auth_keys, units_code, value):
     if not auth_keys and \
-            uom_code != 'sawtooth.uom.vote.authorized_keys':
+            units_code != 'sawtooth.units.vote.authorized_keys':
         raise InvalidTransaction(
-            'Cannot set {} until authorized_keys is set.'.format(uom_code))
+            'Cannot set {} until authorized_keys is set.'.format(units_code))
 
-    if uom_code == 'sawtooth.uom.vote.authorized_keys':
+    if units_code == 'sawtooth.units.vote.authorized_keys':
         if not _split_ignore_empties(value):
             raise InvalidTransaction('authorized_keys must not be empty.')
 
-    if uom_code == 'sawtooth.uom.vote.approval_threshold':
+    if units_code == 'sawtooth.units.vote.approval_threshold':
         threshold = None
         try:
             threshold = int(value)
@@ -234,24 +234,24 @@ def _validate_uom(auth_keys, uom_code, value):
                 'approval_threshold must be less than or equal to number of '
                 'authorized_keys')
 
-    if uom_code == 'sawtooth.uom.vote.proposals':
+    if units_code == 'sawtooth.units.vote.proposals':
         raise InvalidTransaction(
-            'Setting sawtooth.uom.vote.proposals is read-only')
+            'Setting sawtooth.units.vote.proposals is read-only')
 
 
-def _get_uom_value(context, key, default_value=None):
-    address = _make_uom_key(key)
-    uom_entry = _get_uom_entry(context, address)
-    for entry in uom_entry.entries:
+def _get_units_value(context, key, default_value=None):
+    address = _make_units_key(key)
+    units_entry = _get_units_entry(context, address)
+    for entry in units_entry.entries:
         if key == entry.key:
             return entry.value
 
     return default_value
 
 
-def _set_uom_value(context, key, value):
-    address = _make_uom_key(key)
-    setting = _get_uom_entry(context, address)
+def _set_units_value(context, key, value):
+    address = _make_units_key(key)
+    setting = _get_units_entry(context, address)
 
     old_value = None
     old_entry_index = None
@@ -279,16 +279,16 @@ def _set_uom_value(context, key, value):
             'Failed to save value on address %s', address)
         raise InternalError(
             'Unable to save config value {}'.format(key))
-    if setting != 'sawtooth.uom.vote.proposals':
+    if setting != 'sawtooth.units.vote.proposals':
         LOGGER.info('Unit setting %s changed from %s to %s',
                     key, old_value, value)
     context.add_event(
-        event_type="uom/update",
+        event_type="units/update",
         attributes=[("updated", key)])
 
 
-def _get_uom_entry(context, address):
-    uom_setting = Unit()
+def _get_units_entry(context, address):
+    units_setting = Unit()
 
     try:
         entries_list = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
@@ -297,9 +297,9 @@ def _get_uom_entry(context, address):
         raise InternalError('Unable to get {}'.format(address))
 
     if entries_list:
-        uom_setting.ParseFromString(entries_list[0].data)
+        units_setting.ParseFromString(entries_list[0].data)
 
-    return uom_setting
+    return units_setting
 
 
 def _to_hash(value):
@@ -320,7 +320,7 @@ _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
 
 
 @lru_cache(maxsize=128)
-def _make_uom_key(key):
+def _make_units_key(key):
     # split the key into 4 parts, maximum
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     # compute the short hash of each part

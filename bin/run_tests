@@ -112,6 +112,9 @@ main() {
                 units)
                     test_units
                     ;;
+                events)
+                    test_events
+                    ;;
                 *)
                     echo "Module '$module' not found."
                     ;;
@@ -122,6 +125,13 @@ main() {
 
 test_units() {
     run_docker_test ./families/units/tests/test_tp_units.yaml
+    copy_coverage .coverage.config
+    run_docker_test test_config_smoke
+    copy_coverage .coverage.test_config_smoke
+}
+
+test_units() {
+    run_docker_test ./families/events/tests/test_tp_events.yaml
     copy_coverage .coverage.config
     run_docker_test test_config_smoke
     copy_coverage .coverage.test_config_smoke

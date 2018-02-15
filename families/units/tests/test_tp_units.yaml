@@ -44,7 +44,7 @@ services:
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/devprj/sawtooth-eventchain/families/units/sawtooth_units:\
+        PYTHONPATH: "/devprj/sawtooth-eventchain/families/units/hashblock_units:\
             /devprj/sawtooth-eventchain/families/units/tests:\
             /devprj/sawtooth-eventchain/sdk/python:\
             /project/sawtooth-core/sdk/python:\

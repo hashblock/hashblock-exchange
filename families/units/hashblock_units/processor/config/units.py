@@ -87,7 +87,7 @@ def merge_unit_config(configs):
     (first has highest priority).
 
     Args:
-        config (list of UnitConfigs): The list of uom configs that
+        config (list of UnitConfigs): The list of units configs that
             must be merged together
 
     Returns:

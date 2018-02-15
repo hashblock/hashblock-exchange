@@ -99,7 +99,7 @@ def _do_units_list(args):
     head = state['head']
     state_values = state['data']
     printable_units = []
-    proposals_address = _key_to_address('sawtooth.units.vote.proposals')
+    proposals_address = _key_to_address('hashblock.units.vote.proposals')
     for state_value in state_values:
         if state_value['address'] == proposals_address:
             # This is completely internal unit and we won't list it here

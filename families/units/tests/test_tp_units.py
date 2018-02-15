@@ -22,10 +22,10 @@ from protobuf.unit_pb2 import UnitVote
 from protobuf.unit_pb2 import UnitCandidate
 from protobuf.unit_pb2 import UnitCandidates
 
-from sawtooth_units_test.units_message_factory \
+from hashblock_units_test.units_message_factory \
     import UnitMessageFactory
 
-from sawtooth_processor_test.transaction_processor_test_case \
+from hashblock_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
 
 
@@ -93,11 +93,11 @@ class TestUnit(TransactionProcessorTestCase):
         """
         Tests setting an invalid approval_threshold.
         """
-        self._propose("sawtooth.uom.vote.approval_threshold", "foo")
+        self._propose("hashblock.units.vote.approval_threshold", "foo")
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key)
-        self._expect_get('sawtooth.uom.vote.approval_threshold')
+        self._expect_get('hashblock.units.vote.approval_threshold')
 
         self._expect_invalid_transaction()
 
@@ -106,11 +106,11 @@ class TestUnit(TransactionProcessorTestCase):
         Tests setting an approval_threshold that is larger than the set of
         authorized keys.  This should return an invalid transaction.
         """
-        self._propose("sawtooth.uom.vote.approval_threshold", "2")
+        self._propose("hashblock.units.vote.approval_threshold", "2")
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key)
-        self._expect_get('sawtooth.uom.vote.approval_threshold')
+        self._expect_get('hashblock.units.vote.approval_threshold')
 
         self._expect_invalid_transaction()
 
@@ -120,29 +120,29 @@ class TestUnit(TransactionProcessorTestCase):
 
         Empty authorized keys should result in an invalid transaction.
         """
-        self._propose("sawtooth.uom.vote.authorized_keys", "")
+        self._propose("hashblock.units.vote.authorized_keys", "")
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key)
-        self._expect_get('sawtooth.uom.vote.approval_threshold')
+        self._expect_get('hashblock.units.vote.approval_threshold')
 
         self._expect_invalid_transaction()
 
     def test_allow_set_authorized_keys_when_initially_empty(self):
         """Tests that the authorized keys may be set if initially empty.
         """
-        self._propose("sawtooth.uom.vote.authorized_keys",
+        self._propose("hashblock.units.vote.authorized_keys",
                       self._public_key)
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys')
-        self._expect_get('sawtooth.uom.vote.approval_threshold')
+        self._expect_get('hashblock.units.vote.authorized_keys')
+        self._expect_get('hashblock.units.vote.approval_threshold')
 
         # Check that it is set
-        self._expect_get('sawtooth.uom.vote.authorized_keys')
-        self._expect_set('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys')
+        self._expect_set('hashblock.units.vote.authorized_keys',
                          self._public_key)
 
-        self._expect_add_event('sawtooth.uom.vote.authorized_keys')
+        self._expect_add_event('hashblock.units.vote.authorized_keys')
 
         self._expect_ok()
 
@@ -151,21 +151,21 @@ class TestUnit(TransactionProcessorTestCase):
         """
         self._propose('my.config.unit', 'myvalue')
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys')
-        self._expect_get('sawtooth.uom.vote.approval_threshold')
+        self._expect_get('hashblock.units.vote.authorized_keys')
+        self._expect_get('hashblock.units.vote.approval_threshold')
 
         self._expect_invalid_transaction()
 
     def test_set_value_proposals(self):
         """
-        Tests setting the unit of sawtooth.uom.vote.proposals, which is
+        Tests setting the unit of hashblock.units.vote.proposals, which is
         only an internally set structure.
         """
-        self._propose('sawtooth.uom.vote.proposals', EMPTY_CANDIDATES)
+        self._propose('hashblock.units.vote.proposals', EMPTY_CANDIDATES)
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key)
-        self._expect_get('sawtooth.uom.vote.approval_threshold')
+        self._expect_get('hashblock.units.vote.approval_threshold')
 
         self._expect_invalid_transaction()
 
@@ -175,10 +175,10 @@ class TestUnit(TransactionProcessorTestCase):
         """
         self._propose('my.config.unit', 'myvalue')
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key)
-        self._expect_get('sawtooth.uom.vote.approval_threshold', '2')
-        self._expect_get('sawtooth.uom.vote.proposals')
+        self._expect_get('hashblock.units.vote.approval_threshold', '2')
+        self._expect_get('hashblock.units.vote.proposals')
 
         proposal = UnitProposal(
             code='my.config.unit',
@@ -197,11 +197,11 @@ class TestUnit(TransactionProcessorTestCase):
         candidates = UnitCandidates(candidates=[candidate])
 
         # Get's again to update the entry
-        self._expect_get('sawtooth.uom.vote.proposals')
-        self._expect_set('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals')
+        self._expect_set('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
 
-        self._expect_add_event('sawtooth.uom.vote.proposals')
+        self._expect_add_event('hashblock.units.vote.proposals')
 
         self._expect_ok()
 
@@ -227,11 +227,11 @@ class TestUnit(TransactionProcessorTestCase):
 
         self._vote(proposal_id, 'my.config.unit', UnitVote.ACCEPT)
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key + ',some_other_public_key')
-        self._expect_get('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        self._expect_get('sawtooth.uom.vote.approval_threshold', '2')
+        self._expect_get('hashblock.units.vote.approval_threshold', '2')
 
         # the vote should pass
         self._expect_get('my.config.unit')
@@ -240,12 +240,12 @@ class TestUnit(TransactionProcessorTestCase):
         self._expect_add_event("my.config.unit")
 
         # expect to update the proposals
-        self._expect_get('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        self._expect_set('sawtooth.uom.vote.proposals',
+        self._expect_set('hashblock.units.vote.proposals',
                          base64.b64encode(EMPTY_CANDIDATES))
 
-        self._expect_add_event('sawtooth.uom.vote.proposals')
+        self._expect_add_event('hashblock.units.vote.proposals')
 
         self._expect_ok()
 
@@ -271,15 +271,15 @@ class TestUnit(TransactionProcessorTestCase):
 
         self._vote(proposal_id, 'my.config.unit', UnitVote.ACCEPT)
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key +
                          ',some_other_public_key,third_public_key')
-        self._expect_get('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        self._expect_get('sawtooth.uom.vote.approval_threshold', '3')
+        self._expect_get('hashblock.units.vote.approval_threshold', '3')
 
         # expect to update the proposals
-        self._expect_get('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
 
         record = UnitCandidate.VoteRecord(
@@ -295,10 +295,10 @@ class TestUnit(TransactionProcessorTestCase):
 
         updated_candidates = UnitCandidates(candidates=[candidate])
         self._expect_set(
-            'sawtooth.uom.vote.proposals',
+            'hashblock.units.vote.proposals',
             base64.b64encode(updated_candidates.SerializeToString()))
 
-        self._expect_add_event('sawtooth.uom.vote.proposals')
+        self._expect_add_event('hashblock.units.vote.proposals')
 
         self._expect_ok()
 
@@ -329,19 +329,19 @@ class TestUnit(TransactionProcessorTestCase):
         self._vote(proposal_id, 'my.config.unit', UnitVote.REJECT)
 
         self._expect_get(
-            'sawtooth.uom.vote.authorized_keys',
+            'hashblock.units.vote.authorized_keys',
             self._public_key + ',some_other_public_key,a_rejectors_public_key')
-        self._expect_get('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        self._expect_get('sawtooth.uom.vote.approval_threshold', '2')
+        self._expect_get('hashblock.units.vote.approval_threshold', '2')
 
         # expect to update the proposals
-        self._expect_get('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        self._expect_set('sawtooth.uom.vote.proposals',
+        self._expect_set('hashblock.units.vote.proposals',
                          base64.b64encode(EMPTY_CANDIDATES))
 
-        self._expect_add_event('sawtooth.uom.vote.proposals')
+        self._expect_add_event('hashblock.units.vote.proposals')
 
         self._expect_ok()
 
@@ -369,19 +369,19 @@ class TestUnit(TransactionProcessorTestCase):
 
         self._vote(proposal_id, 'my.config.unit', UnitVote.REJECT)
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key + ',some_other_public_key')
-        self._expect_get('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        self._expect_get('sawtooth.uom.vote.approval_threshold', '2')
+        self._expect_get('hashblock.units.vote.approval_threshold', '2')
 
         # expect to update the proposals
-        self._expect_get('sawtooth.uom.vote.proposals',
+        self._expect_get('hashblock.units.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
-        self._expect_set('sawtooth.uom.vote.proposals',
+        self._expect_set('hashblock.units.vote.proposals',
                          base64.b64encode(EMPTY_CANDIDATES))
 
-        self._expect_add_event('sawtooth.uom.vote.proposals')
+        self._expect_add_event('hashblock.units.vote.proposals')
 
         self._expect_ok()
 
@@ -391,9 +391,9 @@ class TestUnit(TransactionProcessorTestCase):
         """
         self._propose("foo.bar.count", "1")
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          'some_key,' + self._public_key)
-        self._expect_get('sawtooth.uom.vote.approval_threshold')
+        self._expect_get('hashblock.units.vote.approval_threshold')
 
         # check the old unit and set the new one
         self._expect_get('foo.bar.count')
@@ -409,7 +409,7 @@ class TestUnit(TransactionProcessorTestCase):
         """
         self._propose("foo.bar.count", "1")
 
-        self._expect_get('sawtooth.uom.vote.authorized_keys',
+        self._expect_get('hashblock.units.vote.authorized_keys',
                          'some_key,some_other_key')
 
         self._expect_invalid_transaction()

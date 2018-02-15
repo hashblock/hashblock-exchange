@@ -207,7 +207,7 @@ def _do_config_genesis(args):
 
     txns.append(_create_propose_txn(
         signer,
-        ('sawtooth.uom.vote.authorized_keys',
+        ('hashblock.units.vote.authorized_keys',
          ','.join(authorized_keys))))
 
     if args.approval_threshold is not None:
@@ -221,7 +221,7 @@ def _do_config_genesis(args):
 
         txns.append(_create_propose_txn(
             signer,
-            ('sawtooth.uom.vote.approval_threshold',
+            ('hashblock.units.vote.approval_threshold',
              str(args.approval_threshold))))
 
     batch = _create_batch(signer, txns)
@@ -238,7 +238,7 @@ def _do_config_genesis(args):
 
 def _get_proposals(rest_client):
     state_leaf = rest_client.get_leaf(
-        _key_to_address('sawtooth.uom.vote.proposals'))
+        _key_to_address('hashblock.units.vote.proposals'))
 
     config_candidates = UnitCandidates()
 
@@ -249,7 +249,7 @@ def _get_proposals(rest_client):
 
         candidates_bytes = None
         for entry in unit.entries:
-            if entry.key == 'sawtooth.uom.vote.proposals':
+            if entry.key == 'hashblock.units.vote.proposals':
                 candidates_bytes = entry.value
 
         if candidates_bytes is not None:
@@ -376,9 +376,9 @@ def _config_inputs(key):
     given unit key.
     """
     return [
-        _key_to_address('sawtooth.uom.vote.proposals'),
-        _key_to_address('sawtooth.uom.vote.authorized_keys'),
-        _key_to_address('sawtooth.uom.vote.approval_threshold'),
+        _key_to_address('hashblock.units.vote.proposals'),
+        _key_to_address('hashblock.units.vote.authorized_keys'),
+        _key_to_address('hashblock.units.vote.approval_threshold'),
         _key_to_address(key)
     ]
 
@@ -388,7 +388,7 @@ def _config_outputs(key):
     given unit key.
     """
     return [
-        _key_to_address('sawtooth.uom.vote.proposals'),
+        _key_to_address('hashblock.units.vote.proposals'),
         _key_to_address(key)
     ]
 

@@ -58,14 +58,14 @@ class UnitMessageFactory(object):
 
     def _create_tp_process_request(self, code, payload):
         inputs = [
-            self._key_to_address('sawtooth.uom.vote.proposals'),
-            self._key_to_address('sawtooth.uom.vote.authorized_keys'),
-            self._key_to_address('sawtooth.uom.vote.approval_threshold'),
+            self._key_to_address('hashblock.units.vote.proposals'),
+            self._key_to_address('hashblock.units.vote.authorized_keys'),
+            self._key_to_address('hashblock.units.vote.approval_threshold'),
             self._key_to_address(code)
         ]
 
         outputs = [
-            self._key_to_address('sawtooth.uom.vote.proposals'),
+            self._key_to_address('hashblock.units.vote.proposals'),
             self._key_to_address(code)
         ]
 
@@ -120,7 +120,7 @@ class UnitMessageFactory(object):
 
     def create_add_event_request(self, key):
         return self._factory.create_add_event_request(
-            "uom/update",
+            "units/update",
             [("updated", key)])
 
     def create_add_event_response(self):

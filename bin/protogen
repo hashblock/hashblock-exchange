@@ -39,13 +39,13 @@ def main(args=None):
     # 1. Generate and distribute top-level protos
     proto_dir = JOIN(TOP_DIR, "protos")
     protoc_python(proto_dir, "cli", "sawtooth_cli/protobuf")
-    protoc_python(proto_dir, "families/units", "sawtooth_units/protobuf")
+    protoc_python(proto_dir, "families/units", "hashblock_units/protobuf")
     protoc_python(proto_dir, "families/events", "hashblock_events/protobuf")
 
     # 2. Generate config protos
     proto_dir = JOIN(TOP_DIR, "families/units/protos")
     protoc_python(proto_dir, "cli", "sawtooth_cli/protobuf")
-    protoc_python(proto_dir, "families/units", "sawtooth_units/protobuf")
+    protoc_python(proto_dir, "families/units", "hashblock_units/protobuf")
     protoc_python(proto_dir, "families/events", "hashblock_events/protobuf")
 
 
