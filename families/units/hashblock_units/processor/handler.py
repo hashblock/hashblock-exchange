@@ -181,7 +181,7 @@ class UnitTransactionHandler(TransactionHandler):
 
 
 def _get_units_candidates(context):
-    value = _get_units_value(context, 'sawtooth.units.vote.proposals')
+    value = _get_units_value(context, 'hashblock.units.vote.proposals')
     if not value:
         return UnitCandidates(candidates={})
 
@@ -193,18 +193,18 @@ def _get_units_candidates(context):
 def _save_units_candidates(context, units_candidates):
     _set_units_value(
         context,
-        'sawtooth.units.vote.proposals',
+        'hashblock.units.vote.proposals',
         base64.b64encode(units_candidates.SerializeToString()))
 
 
 def _get_approval_threshold(context):
     return int(_get_units_value(
-        context, 'sawtooth.units.vote.approval_threshold', 1))
+        context, 'hashblock.units.vote.approval_threshold', 1))
 
 
 def _get_auth_keys(context):
     value = _get_units_value(
-        context, 'sawtooth.units.vote.authorized_keys', '')
+        context, 'hashblock.units.vote.authorized_keys', '')
     return _split_ignore_empties(value)
 
 
@@ -214,15 +214,15 @@ def _split_ignore_empties(value):
 
 def _validate_units(auth_keys, units_code, value):
     if not auth_keys and \
-            units_code != 'sawtooth.units.vote.authorized_keys':
+            units_code != 'hashblock.units.vote.authorized_keys':
         raise InvalidTransaction(
             'Cannot set {} until authorized_keys is set.'.format(units_code))
 
-    if units_code == 'sawtooth.units.vote.authorized_keys':
+    if units_code == 'hashblock.units.vote.authorized_keys':
         if not _split_ignore_empties(value):
             raise InvalidTransaction('authorized_keys must not be empty.')
 
-    if units_code == 'sawtooth.units.vote.approval_threshold':
+    if units_code == 'hashblock.units.vote.approval_threshold':
         threshold = None
         try:
             threshold = int(value)
@@ -234,9 +234,9 @@ def _validate_units(auth_keys, units_code, value):
                 'approval_threshold must be less than or equal to number of '
                 'authorized_keys')
 
-    if units_code == 'sawtooth.units.vote.proposals':
+    if units_code == 'hashblock.units.vote.proposals':
         raise InvalidTransaction(
-            'Setting sawtooth.units.vote.proposals is read-only')
+            'Setting hashblock.units.vote.proposals is read-only')
 
 
 def _get_units_value(context, key, default_value=None):
@@ -279,7 +279,7 @@ def _set_units_value(context, key, value):
             'Failed to save value on address %s', address)
         raise InternalError(
             'Unable to save config value {}'.format(key))
-    if setting != 'sawtooth.units.vote.proposals':
+    if setting != 'hashblock.units.vote.proposals':
         LOGGER.info('Unit setting %s changed from %s to %s',
                     key, old_value, value)
     context.add_event(
