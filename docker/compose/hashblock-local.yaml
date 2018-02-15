@@ -65,16 +65,16 @@ services:
       \""
     stop_signal: SIGKILL
 
-  chains-processor:
+  events-processor:
     build:
       context: ../..
-      dockerfile: docker/hashblock-dev-chains-tp
+      dockerfile: docker/hashblock-dev-events-tp
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: hashblock-dev-chains-tp
-    container_name: hashblock-dev-chains-tp
+    image: hashblock-dev-events-tp
+    container_name: hashblock-dev-events-tp
     volumes:
       - ../../:/project/sawtooth-eventchain
     # Expose 5679 for remote debugging
@@ -86,7 +86,7 @@ services:
       - validator
     command: "bash -c \"\
         sleep 1 &&
-        chains-tp -v \
+        events-tp -v \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL

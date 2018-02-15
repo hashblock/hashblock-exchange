@@ -25,7 +25,7 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from protobuf.chain_pb2 import ChainPayload
+from protobuf.events_pb2 import EventPayload
 
 LOGGER = logging.getLogger(__name__)
 ADDRESS = ''
@@ -35,7 +35,7 @@ ADDRESS = ''
 STATE_TIMEOUT_SEC = 10
 
 
-class ChainTransactionHandler(TransactionHandler):
+class EventTransactionHandler(TransactionHandler):
     def __init__(self, namespace_prefix):
         global ADDRESS
         ADDRESS = namespace_prefix
@@ -43,7 +43,7 @@ class ChainTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
-        return 'hashblock_chains'
+        return 'hashblock_events'
 
     @property
     def family_versions(self):
@@ -57,25 +57,25 @@ class ChainTransactionHandler(TransactionHandler):
         txn_header = transaction.header
         public_key = txn_header.signer_public_key
 
-        chain_transaction = ChainPayload()
-        chain_transaction.ParseFromString(transaction.payload)
+        event_transaction = EventPayload()
+        event_transaction.ParseFromString(transaction.payload)
 
-        if chain_transaction.type == ChainPayload.INITIATE_EVENT:
+        if event_transaction.type == EventPayload.INITIATE_EVENT:
             return self._apply_initiate(
-                public_key, chain_transaction.data, context)
-        elif chain_transaction.action == ChainPayload.RECIPROCATE_EVENT:
+                public_key, event_transaction.data, context)
+        elif event_transaction.action == EventPayload.RECIPROCATE_EVENT:
             return self._apply_reciprocate(
                 public_key,
-                chain_transaction.data,
+                event_transaction.data,
                 context)
         else:
             raise InvalidTransaction(
                 "'type' must be one of {INITIATE_EVENT, RECIPROCATE_EVENT}")
 
-    def _apply_initiate(self, public_key, chain_initiate_data, context):
+    def _apply_initiate(self, public_key, event_initiate_data, context):
         pass
 
-    def _apply_reciprocate(self, public_key, chain_reciprocate_data, context):
+    def _apply_reciprocate(self, public_key, event_reciprocate_data, context):
         pass
 
 
@@ -89,7 +89,7 @@ _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
 
 
 @lru_cache(maxsize=128)
-def _make_chain_key(key):
+def _make_event_key(key):
     # split the key into 4 parts, maximum
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     # compute the short hash of each part

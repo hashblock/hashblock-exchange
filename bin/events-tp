@@ -20,7 +20,7 @@ import sys
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'families/chains/hashblock_chains'))
+    'families/events/hashblock_events'))
 
 
 from processor.main import main

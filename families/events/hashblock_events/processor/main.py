@@ -31,16 +31,16 @@ from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from processor.handler import ChainTransactionHandler
-from processor.config.chains import ChainConfig
-from processor.config.chains import \
-    load_default_chains_config
-from processor.config.chains import \
-    load_toml_chains_config
-from processor.config.chains import \
-    merge_chains_config
+from processor.handler import EventTransactionHandler
+from processor.config.events import EventsConfig
+from processor.config.events import \
+    load_default_events_config
+from processor.config.events import \
+    load_toml_events_config
+from processor.config.events import \
+    merge_events_config
 
-DISTRIBUTION_NAME = 'hashblock-chains'
+DISTRIBUTION_NAME = 'hashblock-events'
 
 
 def create_console_handler(verbose_level):
@@ -72,11 +72,11 @@ def create_console_handler(verbose_level):
 
 
 def setup_loggers(verbose_level, processor):
-    log_config = get_log_config(filename="chain_log_config.toml")
+    log_config = get_log_config(filename="events_log_config.toml")
 
     # If no toml, try loading yaml
     if log_config is None:
-        log_config = get_log_config(filename="chain_log_config.yaml")
+        log_config = get_log_config(filename="events_log_config.yaml")
 
     if log_config is not None:
         log_configuration(log_config=log_config)
@@ -85,7 +85,7 @@ def setup_loggers(verbose_level, processor):
         # use the transaction processor zmq identity for filename
         log_configuration(
             log_dir=log_dir,
-            name="chain-" + str(processor.zmq_id)[2:-1])
+            name="events-" + str(processor.zmq_id)[2:-1])
 
     init_console_logging(verbose_level=verbose_level)
 
@@ -93,9 +93,9 @@ def setup_loggers(verbose_level, processor):
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
         prog=prog_name,
-        description='Starts a hashblock-chain transaction processor.',
+        description='Starts a hashblock-events transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
-               'Chain used by the Sawtooth platform.',
+               'Events used by the Sawtooth platform.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
@@ -117,7 +117,7 @@ def create_parser(prog_name):
     parser.add_argument(
         '-V', '--version',
         action='version',
-        version=(DISTRIBUTION_NAME + ' (Hashblock Chain) version {}')
+        version=(DISTRIBUTION_NAME + ' (Hashblock Event) version {}')
         .format(version),
         help='display version information')
 
@@ -126,17 +126,17 @@ def create_parser(prog_name):
 
 def load_settings_config(first_config):
     default_settings_config = \
-        load_default_chains_config()
-    conf_file = os.path.join(get_config_dir(), 'chain.toml')
+        load_default_events_config()
+    conf_file = os.path.join(get_config_dir(), 'events.toml')
 
-    toml_config = load_toml_chains_config(conf_file)
+    toml_config = load_toml_events_config(conf_file)
 
-    return merge_chains_config(
+    return merge_events_config(
         configs=[first_config, toml_config, default_settings_config])
 
 
 def create_settings_config(args):
-    return ChainConfig(connect=args.connect)
+    return EventsConfig(connect=args.connect)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
@@ -147,8 +147,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     args = parser.parse_args(args)
 
     arg_config = create_settings_config(args)
-    uom_config = load_settings_config(arg_config)
-    processor = TransactionProcessor(url=uom_config.connect)
+    events_config = load_settings_config(arg_config)
+    processor = TransactionProcessor(url=events_config.connect)
 
     if with_loggers is True:
         if args.verbose is None:
@@ -162,10 +162,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     # The prefix should eventually be looked up from the
     # validator's namespace registry.
-    chains_prefix = \
-        hashlib.sha512('chains'.encode("utf-8")).hexdigest()[0:6]
+    events_prefix = \
+        hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
     handler = \
-        ChainTransactionHandler(namespace_prefix=chains_prefix)
+        EventTransactionHandler(namespace_prefix=events_prefix)
 
     processor.add_handler(handler)
 

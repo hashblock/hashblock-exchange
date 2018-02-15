@@ -48,7 +48,7 @@ message ReciprocateEvent {
     bytes InitiateEvent = 6;
 }
 
-message ChainPayload {
+message EventPayload {
     enum Action {
         INITIATE_EVENT = 0;
         RECIPROCATE_EVENT = 1;
