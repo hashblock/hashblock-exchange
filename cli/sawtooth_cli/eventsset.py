@@ -32,11 +32,11 @@ from colorlog import ColoredFormatter
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 
-from sawtooth_cli.protobuf.unit_pb2 import UnitPayload
-from sawtooth_cli.protobuf.unit_pb2 import UnitProposal
-from sawtooth_cli.protobuf.unit_pb2 import UnitVote
-from sawtooth_cli.protobuf.unit_pb2 import UnitCandidates
-from sawtooth_cli.protobuf.units_pb2 import Unit
+from sawtooth_cli.protobuf.events_pb2 import EventPayload
+from sawtooth_cli.protobuf.events_pb2 import InitiateEvent
+from sawtooth_cli.protobuf.events_pb2 import ReciprocateEvent
+from sawtooth_cli.protobuf.events_pb2 import Quantity
+from sawtooth_cli.protobuf.events_pb2 import Ratio
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
@@ -48,10 +48,10 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
-DISTRIBUTION_NAME = 'unitsset'
+DISTRIBUTION_NAME = 'eventsset'
 
 
-UNITS_NAMESPACE = hashlib.sha512('units'.encode("utf-8")).hexdigest()[0:6]
+UNITS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
 
 _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
@@ -64,8 +64,8 @@ def add_config_parser(subparsers, parent_parser):
     """
     parser = subparsers.add_parser(
         'config',
-        help='Changes genesis block units and create, view, and '
-        'vote on units proposals',
+        help='Changes genesis block events and create, view, and '
+        'vote on events proposals',
         description='Provides subcommands to change genesis block settings '
                     'and to view, create, and vote on existing proposals.'
     )
@@ -75,18 +75,18 @@ def add_config_parser(subparsers, parent_parser):
     config_parsers.required = True
 
 
-def _do_config_proposal_create(args):
+def _do_event_initiate(args):
     """Executes the 'proposal create' subcommand.  Given a key file, and a
-    series of code/value pairs, it generates batches of hashblock_units
+    series of code/value pairs, it generates batches of hashblock_events
     transactions in a BatchList instance.  The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
-    units = [s.split('=', 1) for s in args.unit]
+    events = [s.split('=', 1) for s in args.event]
 
     signer = _read_signer(args.key)
 
-    txns = [_create_propose_txn(signer, unit)
-            for unit in units]
+    txns = [_create_propose_txn(signer, event)
+            for event in events]
 
     batch = _create_batch(signer, txns)
 
@@ -106,11 +106,11 @@ def _do_config_proposal_create(args):
         raise AssertionError('No target for create set.')
 
 
-def _do_config_proposal_list(args):
+def _do_event_list(args):
     """Executes the 'proposal list' subcommand.
 
     Given a url, optional filters on prefix and public key, this command lists
-    the current pending proposals for units changes.
+    the current pending proposals for events changes.
     """
 
     def _accept(candidate, public_key, prefix):
@@ -156,9 +156,9 @@ def _do_config_proposal_list(args):
         raise AssertionError('Unknown format {}'.format(args.format))
 
 
-def _do_config_proposal_vote(args):
+def _do_event_reciprocate(args):
     """Executes the 'proposal vote' subcommand.  Given a key file, a proposal
-    id and a vote value, it generates a batch of hashblock_units transactions
+    id and a vote value, it generates a batch of hashblock_events transactions
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
@@ -207,7 +207,7 @@ def _do_config_genesis(args):
 
     txns.append(_create_propose_txn(
         signer,
-        ('hashblock.units.vote.authorized_keys',
+        ('hashblock.events.vote.authorized_keys',
          ','.join(authorized_keys))))
 
     if args.approval_threshold is not None:
@@ -221,7 +221,7 @@ def _do_config_genesis(args):
 
         txns.append(_create_propose_txn(
             signer,
-            ('hashblock.units.vote.approval_threshold',
+            ('hashblock.events.vote.approval_threshold',
              str(args.approval_threshold))))
 
     batch = _create_batch(signer, txns)
@@ -238,18 +238,18 @@ def _do_config_genesis(args):
 
 def _get_proposals(rest_client):
     state_leaf = rest_client.get_leaf(
-        _key_to_address('hashblock.units.vote.proposals'))
+        _key_to_address('hashblock.events.vote.proposals'))
 
-    config_candidates = UnitCandidates()
+    config_candidates = EventCandidates()
 
     if state_leaf is not None:
-        unit_bytes = b64decode(state_leaf['data'])
-        unit = Unit()
-        unit.ParseFromString(unit_bytes)
+        event_bytes = b64decode(state_leaf['data'])
+        event = Event()
+        event.ParseFromString(event_bytes)
 
         candidates_bytes = None
-        for entry in unit.entries:
-            if entry.key == 'hashblock.units.vote.proposals':
+        for entry in event.entries:
+            if entry.key == 'hashblock.events.vote.proposals':
                 candidates_bytes = entry.value
 
         if candidates_bytes is not None:
@@ -318,48 +318,48 @@ def _create_batch(signer, transactions):
         transactions=transactions)
 
 
-def _create_propose_txn(signer, unit_key_value):
-    """Creates an individual hashblock_units transaction for the given key and
+def _create_propose_txn(signer, event_key_value):
+    """Creates an individual hashblock_events transaction for the given key and
     value.
     """
-    unit_key, unit_value = unit_key_value
+    event_key, event_value = event_key_value
     nonce = str(datetime.datetime.utcnow().timestamp())
-    proposal = UnitProposal(
-        code=unit_key,
-        value=unit_value,
+    proposal = EventProposal(
+        code=event_key,
+        value=event_value,
         nonce=nonce)
-    payload = UnitPayload(data=proposal.SerializeToString(),
-                              action=UnitPayload.PROPOSE)
+    payload = EventPayload(data=proposal.SerializeToString(),
+                              action=EventPayload.PROPOSE)
 
-    return _make_txn(signer, unit_key, payload)
+    return _make_txn(signer, event_key, payload)
 
 
-def _create_vote_txn(signer, proposal_id, unit_key, vote_value):
-    """Creates an individual hashblock_units transaction for voting on a
-    proposal for a particular unit key.
+def _create_vote_txn(signer, proposal_id, event_key, vote_value):
+    """Creates an individual hashblock_events transaction for voting on a
+    proposal for a particular event key.
     """
     if vote_value == 'accept':
-        vote_id = UnitVote.ACCEPT
+        vote_id = EventVote.ACCEPT
     else:
-        vote_id = UnitVote.REJECT
+        vote_id = EventVote.REJECT
 
-    vote = UnitVote(proposal_id=proposal_id, vote=vote_id)
-    payload = UnitPayload(data=vote.SerializeToString(),
-                              action=UnitPayload.VOTE)
+    vote = EventVote(proposal_id=proposal_id, vote=vote_id)
+    payload = EventPayload(data=vote.SerializeToString(),
+                              action=EventPayload.VOTE)
 
-    return _make_txn(signer, unit_key, payload)
+    return _make_txn(signer, event_key, payload)
 
 
-def _make_txn(signer, unit_key, payload):
-    """Creates and signs a hashblock_units transaction with with a payload.
+def _make_txn(signer, event_key, payload):
+    """Creates and signs a hashblock_events transaction with with a payload.
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
         signer_public_key=signer.get_public_key().as_hex(),
-        family_name='hashblock_units',
+        family_name='hashblock_events',
         family_version='0.1.0',
-        inputs=_config_inputs(unit_key),
-        outputs=_config_outputs(unit_key),
+        inputs=_config_inputs(event_key),
+        outputs=_config_outputs(event_key),
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex()
@@ -372,23 +372,23 @@ def _make_txn(signer, unit_key, payload):
 
 
 def _config_inputs(key):
-    """Creates the list of inputs for a hashblock_units transaction, for a
-    given unit key.
+    """Creates the list of inputs for a hashblock_events transaction, for a
+    given event key.
     """
     return [
-        _key_to_address('hashblock.units.vote.proposals'),
-        _key_to_address('hashblock.units.vote.authorized_keys'),
-        _key_to_address('hashblock.units.vote.approval_threshold'),
+        _key_to_address('hashblock.events.vote.proposals'),
+        _key_to_address('hashblock.events.vote.authorized_keys'),
+        _key_to_address('hashblock.events.vote.approval_threshold'),
         _key_to_address(key)
     ]
 
 
 def _config_outputs(key):
-    """Creates the list of outputs for a hashblock_units transaction, for a
-    given unit key.
+    """Creates the list of outputs for a hashblock_events transaction, for a
+    given event key.
     """
     return [
-        _key_to_address('hashblock.units.vote.proposals'),
+        _key_to_address('hashblock.events.vote.proposals'),
         _key_to_address(key)
     ]
 
@@ -398,7 +398,7 @@ def _short_hash(in_str):
 
 
 def _key_to_address(key):
-    """Creates the state address for a given unit key.
+    """Creates the state address for a given event key.
     """
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
@@ -406,7 +406,7 @@ def _key_to_address(key):
     return UNITS_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)
 
 
-def unit_key_to_address(key):
+def event_key_to_address(key):
     return _key_to_address(key)
 
 
@@ -469,76 +469,40 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        description='Provides subcommands to change genesis block units '
-        'and to view, create, and vote on units proposals.',
+        description='Provides subcommands to '
+        'to list unmatched initating events, to create initiating '
+        'events, and to create reciprocating events.',
         parents=[parent_parser])
 
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
     subparsers.required = True
 
-    # The following parser is for the `genesis` subcommand.
-    # This command creates a batch that contains all of the initial
-    # transactions for units settings
-    genesis_parser = subparsers.add_parser(
-        'genesis',
-        help='Creates a genesis batch file of units transactions',
-        description='Creates a Batch of units proposals that can be '
-                    'consumed by "unitsadm genesis" and used '
-                    'during genesis hashblock construction.'
-    )
-    genesis_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='specify signing key for resulting batches '
-             'and initial authorized key')
+    # The following parser is for the `event` subcommand group. These
+    # commands allow the user to create initiating events.
 
-    genesis_parser.add_argument(
-        '-o', '--output',
-        type=str,
-        default='config-units.batch',
-        help='specify the output file for the resulting batches')
-
-    genesis_parser.add_argument(
-        '-T', '--approval-threshold',
-        type=int,
-        help='set the number of votes required to enable a setting change')
-
-    genesis_parser.add_argument(
-        '-A', '--authorized-key',
-        type=str,
-        action='append',
-        help='specify a public key for the user authorized to submit '
-             'config transactions')
-
-    # The following parser is for the `proposal` subcommand group. These
-    # commands allow the user to create proposals which may be applied
-    # immediately or placed in ballot mode, depending on the current on-chain
-    # units.
-
-    proposal_parser = subparsers.add_parser(
-        'proposal',
-        help='Views, creates, or votes on units change proposals',
-        description='Provides subcommands to view, create, or vote on '
-                    'proposed units')
-    proposal_parsers = proposal_parser.add_subparsers(
+    event_parser = subparsers.add_parser(
+        'event',
+        help='Lists unmatched initiating events, creates initating events, '
+        'or creates reciprocating events',
+        description='Provides subcommands to ist unmatched initiating events, '
+        ' to creates initating events, and to create reciprocating events')
+    event_parsers = event_parser.add_subparsers(
         title='subcommands',
-        dest='proposal_cmd')
-    proposal_parsers.required = True
+        dest='event_cmd')
+    event_parsers.required = True
 
-    prop_parser = proposal_parsers.add_parser(
-        'create',
-        help='Creates proposals for unit changes',
-        description='Create proposals for units changes. The change '
-                    'may be applied immediately or after a series of votes, '
-                    'depending on the vote threshold unit.'
+    initiate_parser = event_parsers.add_parser(
+        'initiate',
+        help='Creates initiating events',
+        description='Create initiating events.'
     )
 
-    prop_parser.add_argument(
+    initiate_parser.add_argument(
         '-k', '--key',
         type=str,
         help='specify a signing key for the resulting batches')
 
-    prop_target_group = prop_parser.add_mutually_exclusive_group()
+    prop_target_group = initiate_parser.add_mutually_exclusive_group()
     prop_target_group.add_argument(
         '-o', '--output',
         type=str,
@@ -550,71 +514,79 @@ def create_parser(prog_name):
         help="identify the URL of a validator's REST API",
         default='http://rest-api:8008')
 
-    prop_parser.add_argument(
-        'unit',
+    initiate_parser.add_argument(
+        'quantity',
         type=str,
         nargs='+',
-        help='configuration unit as key/value pair with the '
-        'format <code>=<value>')
+        help='Initiating event as quantity vector with the '
+        'format [<value>][<unit_hash>][<resource_hash>] where '
+        'unit and resource hashes are prime numbers or 1.')
 
-    proposal_list_parser = proposal_parsers.add_parser(
+    event_list_parser = event_parsers.add_parser(
         'list',
-        help='Lists the currently proposed (not active) units',
-        description='Lists the currently proposed (not active) units. '
-                    'Use this list of proposals to find proposals to '
-                    'vote on.')
+        help='Lists the unmatched initiating events',
+        description='Lists the initiating events. '
+                    'Use this list of initiating events to '
+                    'match with reciprocating events.')
 
-    proposal_list_parser.add_argument(
+    event_list_parser.add_argument(
         '--url',
         type=str,
         help="identify the URL of a validator's REST API",
         default='http://rest-api:8008')
 
-    proposal_list_parser.add_argument(
+    event_list_parser.add_argument(
         '--public-key',
         type=str,
         default='',
         help='filter proposals from a particular public key')
 
-    proposal_list_parser.add_argument(
+    event_list_parser.add_argument(
         '--filter',
         type=str,
         default='',
         help='filter codes that begin with this value')
 
-    proposal_list_parser.add_argument(
+    event_list_parser.add_argument(
         '--format',
         default='default',
         choices=['default', 'csv', 'json', 'yaml'],
         help='choose the output format')
 
-    vote_parser = proposal_parsers.add_parser(
-        'vote',
-        help='Votes for specific unit change proposals',
-        description='Votes for a specific units change proposal. Use '
-                    '"unitsset proposal list" to find the proposal id.')
+    reciprocate_parser = event_parsers.add_parser(
+        'reciprocate',
+        help='Create reciprocating events',
+        description='Create reciprocating events that  that match '
+        'with initiating events. Use "eventsset event list" to '
+        'find the initiating event id.')
 
-    vote_parser.add_argument(
+    reciprocate_parser.add_argument(
         '--url',
         type=str,
         help="identify the URL of a validator's REST API",
         default='http://rest-api:8008')
 
-    vote_parser.add_argument(
+    reciprocate_parser.add_argument(
         '-k', '--key',
         type=str,
         help='specify a signing key for the resulting transaction batch')
 
-    vote_parser.add_argument(
-        'proposal_id',
+    reciprocate_parser.add_argument(
+        'event_id',
         type=str,
-        help='identify the proposal to vote on')
+        help='identify the initiating event to match')
 
-    vote_parser.add_argument(
-        'vote_value',
+    reciprocate_parser.add_argument(
+        'quantity_ratio',
         type=str,
-        choices=['accept', 'reject'],
-        help='specify the value of the vote')
+        nargs='+',
+        help='Reciprocating event as quantity and ratio vectors with the '
+        'format [<value>][<unit_hash>][<resource_hash>], '
+        '[<value>][<unit_hash>][<resource_hash>], '
+        '[<value>][<unit_hash>][<resource_hash>] where the first quanity '
+        'vector is the reciprocating quanity of resource, the second '
+        'vector is the ratio numerator, and the third vector is the '
+        'ratio denominator. The unit and resource hashes are prime numbers or 1.')
 
     return parser
 
@@ -633,17 +605,15 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.subcommand == 'proposal' and args.proposal_cmd == 'create':
-        _do_config_proposal_create(args)
-    elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
-        _do_config_proposal_list(args)
-    elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
-        _do_config_proposal_vote(args)
-    elif args.subcommand == 'genesis':
-        _do_config_genesis(args)
+    if args.subcommand == 'event' and args.proposal_cmd == 'initiate':
+        _do_event_initiate(args)
+    elif args.subcommand == 'event' and args.proposal_cmd == 'list':
+        _do_event_list(args)
+    elif args.subcommand == 'event' and args.proposal_cmd == 'reciprocate':
+        _do_event_reciprocate(args)
     else:
         raise CliException(
-            '"{}" is not a valid subcommand of "config"'.format(
+            '"{}" is not a valid subcommand of "event"'.format(
                 args.subcommand))
 
 
