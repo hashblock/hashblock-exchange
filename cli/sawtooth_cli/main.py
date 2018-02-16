@@ -28,6 +28,8 @@ from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.cli_config import load_cli_config
 from sawtooth_cli.units import add_units_parser
 from sawtooth_cli.units import do_units
+from sawtooth_cli.events import add_events_parser
+from sawtooth_cli.events import do_events
 
 
 DISTRIBUTION_NAME = 'hashblock-cli'
@@ -100,7 +102,7 @@ def create_parser(prog_name):
     subparsers.required = True
 
     add_units_parser(subparsers, parent_parser)
-
+    add_events_parser(subparsers, parent_parser)
     return parser
 
 
@@ -122,6 +124,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     if args.command == 'units':
         do_units(args)
+    elif args.command == 'events':
+        do_events(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
