@@ -45,7 +45,7 @@ message ReciprocateEvent {
     bytes minus = 3;
     Ratio ratio = 4;
     Quantity quantity = 5;
-    bytes InitiateEvent = 6;
+    InitiateEvent InitiateEvent = 6;
 }
 
 message EventPayload {
