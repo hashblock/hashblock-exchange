@@ -60,7 +60,7 @@ services:
       - validator
     command: "bash -c \"\
         sleep 1 &&
-        units-tp -v \
+        units-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL
@@ -86,7 +86,7 @@ services:
       - validator
     command: "bash -c \"\
         sleep 1 &&
-        events-tp -v \
+        events-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL

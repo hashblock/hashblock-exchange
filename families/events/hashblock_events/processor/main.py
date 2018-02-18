@@ -14,7 +14,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 import argparse
 import logging
 import os
@@ -95,7 +94,7 @@ def create_parser(prog_name):
         prog=prog_name,
         description='Starts a hashblock-events transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
-               'Events used by the Sawtooth platform.',
+               'hashblock-events used by the Sawtooth platform.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
@@ -159,16 +158,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     my_logger = logging.getLogger(__name__)
     my_logger.debug("Processor loaded")
-
-    # The prefix should eventually be looked up from the
-    # validator's namespace registry.
-    events_prefix = \
-        hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
-    handler = \
-        EventTransactionHandler(namespace_prefix=events_prefix)
-
+    handler = EventTransactionHandler()
     processor.add_handler(handler)
-
     my_logger.debug("Handler instantiated, starting processor thread...")
 
     try:

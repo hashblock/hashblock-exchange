@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
-
-# Copyright 2017 Intel Corporation
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,23 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
-import os
-import sys
-import sysconfig
-
-build_str = "lib.{}-{}.{}".format(
-    sysconfig.get_platform(),
-    sys.version_info.major, sys.version_info.minor)
-
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'cli'))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'signing'))
-
-from sawtooth_cli.eventsset import main_wrapper
-
-if __name__ == '__main__':
-    main_wrapper()

@@ -130,7 +130,7 @@ test_units() {
     copy_coverage .coverage.test_config_smoke
 }
 
-test_units() {
+test_events() {
     run_docker_test ./families/events/tests/test_tp_events.yaml
     copy_coverage .coverage.config
     run_docker_test test_config_smoke
