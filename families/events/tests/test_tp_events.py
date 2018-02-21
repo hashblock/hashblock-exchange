@@ -49,14 +49,12 @@ class TestEvent(TransactionProcessorTestCase):
     def _expect_set(self, key, expected_value):
         received = self.validator.expect(
             self.factory.create_set_request(key, expected_value))
-        print('sending set response...')
         self.validator.respond(
             self.factory.create_set_response(key), received)
 
     def _expect_add_event(self, key):
         received = self.validator.expect(
             self.factory.create_add_event_request(key))
-
         self.validator.respond(
             self.factory.create_add_event_response(),
             received)

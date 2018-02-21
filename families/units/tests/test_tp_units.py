@@ -25,7 +25,7 @@ from protobuf.unit_pb2 import UnitCandidates
 from hashblock_units_test.units_message_factory \
     import UnitMessageFactory
 
-from hashblock_processor_test.transaction_processor_test_case \
+from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
 
 
@@ -53,7 +53,6 @@ class TestUnit(TransactionProcessorTestCase):
     def _expect_set(self, key, expected_value):
         received = self.validator.expect(
             self.factory.create_set_request(key, expected_value))
-        print('sending set response...')
         self.validator.respond(
             self.factory.create_set_response(key), received)
 
@@ -77,7 +76,6 @@ class TestUnit(TransactionProcessorTestCase):
             self.factory.create_tp_response("INTERNAL_ERROR"))
 
     def _propose(self, key, value):
-        print('sending propose...')
         self.validator.send(self.factory.create_proposal_transaction(
             key, value, "somenonce"))
 
