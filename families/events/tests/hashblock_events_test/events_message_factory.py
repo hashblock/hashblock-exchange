@@ -17,10 +17,12 @@
 import logging
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from protobuf.unit_pb2 import UnitPayload
-from protobuf.unit_pb2 import UnitProposal
-from protobuf.unit_pb2 import UnitVote
-from protobuf.units_pb2 import Unit
+from protobuf.events_pb2 import EventPayload
+from protobuf.events_pb2 import InitiateEvent
+from protobuf.events_pb2 import ReciprocateEvent
+
+from hashblock_events.processor import FAMILY_NAME
+from hashblock_events.processor import EVENTS_ADDRESS_PREFIX
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,12 +30,12 @@ _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 
-class UnitMessageFactory(object):
+class EventMessageFactory(object):
     def __init__(self, signer=None):
         self._factory = MessageFactory(
-            family_name="hashblock_units",
+            family_name=FAMILY_NAME,
             family_version="0.1.0",
-            namespace=[MessageFactory.sha512('units'.encode("utf-8"))[0:6]],
+            namespace=[EVENTS_ADDRESS_PREFIX],
             signer=signer)
 
     @property
@@ -58,32 +60,36 @@ class UnitMessageFactory(object):
 
     def _create_tp_process_request(self, code, payload):
         inputs = [
-            self._key_to_address('hashblock.units.vote.proposals'),
-            self._key_to_address('hashblock.units.vote.authorized_keys'),
-            self._key_to_address('hashblock.units.vote.approval_threshold'),
+            self._key_to_address('hashblock.events.initiate'),
+            self._key_to_address('hashblock.events.reciprocate'),
             self._key_to_address(code)
         ]
 
         outputs = [
-            self._key_to_address('hashblock.units.vote.proposals'),
+            self._key_to_address('hashblock.events.initiate'),
+            self._key_to_address('hashblock.events.reciprocate'),
             self._key_to_address(code)
         ]
 
         return self._factory.create_tp_process_request(
             payload.SerializeToString(), inputs, outputs, [])
 
-    def create_proposal_transaction(self, code, value, nonce):
-        proposal = UnitProposal(code=code, value=value, nonce=nonce)
-        payload = UnitPayload(
-            action=UnitPayload.PROPOSE,
-            data=proposal.SerializeToString())
+    def create_initiate_transaction(
+        self, code, version, plus,
+            minus, quantity, nonce):
+        initiate = InitiateEvent(
+            version=version, plus=plus,
+            minus=minus, nonce=nonce)
+        payload = EventPayload(
+            action=EventPayload.INITIATE_EVENT,
+            data=initiate.SerializeToString())
 
         return self._create_tp_process_request(code, payload)
 
-    def create_vote_proposal(self, proposal_id, code, vote):
-        vote = UnitVote(proposal_id=proposal_id, vote=vote)
-        payload = UnitPayload(
-            action=UnitPayload.VOTE,
+    def create_reciprocate_transaction(self, proposal_id, code, vote):
+        vote = ReciprocateEvent(proposal_id=proposal_id, vote=vote)
+        payload = EventPayload(
+            action=EventPayload.RECIPROCATE_EVENT,
             data=vote.SerializeToString())
 
         return self._create_tp_process_request(code, payload)
@@ -120,7 +126,7 @@ class UnitMessageFactory(object):
 
     def create_add_event_request(self, key):
         return self._factory.create_add_event_request(
-            "units/update",
+            "events/update",
             [("updated", key)])
 
     def create_add_event_response(self):

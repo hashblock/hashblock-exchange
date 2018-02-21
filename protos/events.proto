@@ -20,32 +20,48 @@ option java_package = "hashblock.events.protobuf";
 
 // Resource quantity
 message Quantity {
+
+    //  Quantity amount? - Fixed width integer
 	bytes value = 1;
+
+    //  Address of unit of measure (e.g. bag) prime numbers
 	bytes valueUnit = 2;
+
+    //  Address of resource (e.g. peanuts) prime numbers
 	bytes resourceUnit = 3;
 }
 
 // Quantity ratio
 message Ratio {
+
+    //  Transaction quantity of unit and resource 
     Quantity numerator = 1;
+
+    //  Transaction quantity of unit and resource 
     Quantity denominator = 2;
 }
 
 // Economic event with plus/minus duality
 message InitiateEvent {
-    string version = 1;
-    bytes plus = 2;
-    bytes minus = 3;
-    Quantity quantity = 4;
+    //  Keys of resource inc.
+    bytes plus = 1;
+    //  Keys of resource dec.
+    bytes minus = 2;
+    //  Transaction quantity of unit and resource 
+    Quantity quantity = 3;
 }
 
 message ReciprocateEvent {
-    string version = 1;
-    bytes plus = 2;
-    bytes minus = 3;
-    Ratio ratio = 4;
-    Quantity quantity = 5;
-    InitiateEvent InitiateEvent = 6;
+    //  Keys of transaction inc. has to jive with IE minus
+    bytes plus = 1;
+    //  Keys of resource dec. has to jive with IE plus
+    bytes minus = 2;
+    //  Don't know how this is used
+    Ratio ratio = 3;
+    //  Transaction quantity of unit and resource
+    Quantity quantity = 4;
+    //  Address of initiating event - maybe
+    bytes initiate_event = 5;
 }
 
 message EventPayload {
@@ -54,7 +70,11 @@ message EventPayload {
         RECIPROCATE_EVENT = 1;
     }
 
+    //  See enum above
     Action action = 1;
-    InitiateEvent initiate_event = 2;
-    ReciprocateEvent reciprocate_event = 3;
+    //  The sig (e.g. hashblock.event.reciprocate.UUID)
+    string state = 2;
+
+    InitiateEvent initiate_event = 3;
+    ReciprocateEvent reciprocate_event = 4;
 }

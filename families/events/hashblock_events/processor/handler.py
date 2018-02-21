@@ -31,11 +31,13 @@ from protobuf.events_pb2 import ReciprocateEvent
 
 LOGGER = logging.getLogger(__name__)
 
-FAMILY_NAME = 'events'
-GROUP_NAME = 'hashblock_events'
+ADDRESS_PREFIX = 'events'
+FAMILY_NAME = 'hashblock_events'
 
 EVENTS_ADDRESS_PREFIX = hashlib.sha512(
-    FAMILY_NAME.encode('utf-8')).hexdigest()[0:6]
+    ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
+
+_MAX_KEY_PARTS = 4
 
 
 def make_events_address(data):
@@ -51,7 +53,7 @@ class EventTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
-        return GROUP_NAME
+        return FAMILY_NAME
 
     @property
     def family_versions(self):
@@ -66,11 +68,16 @@ class EventTransactionHandler(TransactionHandler):
             EventPayload.INITIATE_EVENT: _apply_initiate,
             EventPayload.RECIPROCATE_EVENT: _apply_reciprocate,
         }
+        signer_key = transaction.header.signer_public_key
         event_transaction = EventPayload()
         event_transaction.ParseFromString(transaction.payload)
+        stateUUID = EventPayload.state.split(
+            '.', maxsplit=_MAX_KEY_PARTS - 1)[-1]
 
         try:
-            return verbs[EventPayload.action](event_transaction.data, context)
+            return verbs[EventPayload.action](
+                stateUUID, event_transaction.data,
+                context, signer_key)
         except KeyError:
             return _apply_invalid()
 
@@ -85,25 +92,29 @@ def _timeout_error(basemsg, data):
     raise InternalError('Unable to get {}'.format(data))
 
 
-def _apply_initiate(event_payload, context):
+def _apply_initiate(stateUUID, event_payload, context, signer_key):
     event_initiate = InitiateEvent()
     event_initiate.ParseFromString(event_payload)
-    _check_initiate(event_initiate)
-    myevent = _get_initiate_event(context, 'hashblock_event.initiate.1')
+    myevent = _get_initiate_event(context, stateUUID)
     if myevent:
         raise InvalidTransaction(
-            'Initiate already set {} .'.format(myevent))
-    return _set_initiate_event(context, 'hashblock_event.initiate.1')
+            'Initiate already set for UUID {} .'.stateUUID)
+    _check_initiate(event_initiate)
+    return _set_initiate_event(context, event_initiate, stateUUID)
 
 
-def _apply_reciprocate(event_payload, context):
+def _apply_reciprocate(stateUUID, event_payload, context, signer_key):
     event_reciprocate = ReciprocateEvent()
     event_reciprocate.ParseFromString(event_payload)
+    myevent = _get_initiate_event(context, stateUUID)
+    if not myevent:
+        raise InvalidTransaction(
+            'Reciprocate: no matching state for UUID {} .'.stateUUID)
     _check_reciprocate(event_reciprocate)
-    pass
+    return _complete_reciprocate_event(context, stateUUID)
 
 
-def _complete_initiate_event(context, address_key):
+def _complete_reciprocate_event(context, address_key):
     mykey = _make_events_key(address_key)
     myevent = _get_initiate_event(context, address_key)
     if not myevent:
@@ -119,17 +130,17 @@ def _complete_initiate_event(context, address_key):
         raise InternalError(
             'Unable to save config value {}'.format(address_key))
     context.add_event(
-        event_type="events/reciprocate",
+        event_type="events/reciprocated",
         attributes=[("reciprocated", address_key)])
 
 
-def _get_initiate_event(context, address_key):
+def _get_initiate_event(context, uuid_key):
     initiate_event = InitiateEvent()
-    mykey = _make_events_key(address_key)
+    mykey = _make_events_key(uuid_key)
     try:
         entries_list = context.get_state([mykey], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
-        _timeout_error('context.get_state', address_key)
+        _timeout_error('context.get_state', uuid_key)
 
     if entries_list:
         initiate_event.ParseFromString(entries_list[0].data)
@@ -137,27 +148,27 @@ def _get_initiate_event(context, address_key):
     return initiate_event
 
 
-def _set_initiate_event(context, address_key):
-    mykey = _make_events_key(address_key)
+def _set_initiate_event(context, event_initiate, uuid_key):
+    mykey = _make_events_key(uuid_key)
     try:
         addresses = list(context.set_state(
-            {mykey: address_key.SerializeToString()},
+            {mykey: event_initiate.SerializeToString()},
             timeout=STATE_TIMEOUT_SEC))
     except FutureTimeoutError:
         LOGGER.warning(
-            'Timeout occured on context.set_state([%s, <value>])', address_key)
+            'Timeout occured on context.set_state([%s, <value>])', uuid_key)
         raise InternalError('Unable to set {}'.format(mykey))
 
     if len(addresses) != 1:
         LOGGER.warning(
-            'Failed to save value on address %s', address_key)
+            'Failed to save value on address %s', uuid_key)
         raise InternalError(
-            'Unable to save config value {}'.format(address_key))
+            'Unable to save config value {}'.format(uuid_key))
         LOGGER.info('Event setting %s changed from NIL to %s',
-                    address_key, address_key)
+                    uuid_key, event_initiate)
     context.add_event(
-        event_type="events/initiate",
-        attributes=[("initiated", address_key)])
+        event_type="events/initiated",
+        attributes=[("initiated", uuid_key)])
 
 
 def _check_initiate(event_initiate):
@@ -172,6 +183,7 @@ def _check_reciprocate(event_reciprocate):
     _check_plus(event_reciprocate)
     _check_minus(event_reciprocate)
     _check_quanity(event_reciprocate)
+    _check_ratio(event_reciprocate)
 
 
 def _check_version(event_payload):
@@ -261,7 +273,6 @@ def _to_hash(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
 
-_MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
 
@@ -274,5 +285,4 @@ def _make_events_key(key):
     addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
     # pad the parts with the empty hash, if needed
     addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-
     return make_events_address(''.join(addr_parts))
