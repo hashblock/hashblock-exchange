@@ -99,10 +99,10 @@ def _do_events_list(args):
     head = state['head']
     state_values = state['data']
     printable_events = []
-    proposals_address = _key_to_address('hashblock.events.vote.proposals')
+    initiate_address = _key_to_address('hashblock.events.initiate')
     for state_value in state_values:
-        if state_value['address'] == proposals_address:
-            # This is completely internal event and we won't list it here
+        if state_value['address'] == initiate_address:
+            # This is an initiate event and we won't list it here
             continue
 
         decoded = b64decode(state_value['data'])
