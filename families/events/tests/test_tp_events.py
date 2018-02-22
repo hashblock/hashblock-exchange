@@ -16,6 +16,7 @@
 
 import hashlib
 import base64
+import uuid
 
 from protobuf.events_pb2 import EventPayload
 from protobuf.events_pb2 import InitiateEvent
@@ -24,7 +25,7 @@ from protobuf.events_pb2 import ReciprocateEvent
 from hashblock_events_test.events_message_factory \
     import EventMessageFactory
 
-from hashblock_processor_test.transaction_processor_test_case \
+from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
 
 
@@ -83,3 +84,11 @@ class TestEvent(TransactionProcessorTestCase):
     @property
     def _public_key(self):
         return self.factory.public_key
+
+    def test_initate_event(self):
+        self._initiate(uuid.uuid4())
+        self._expect_ok()
+        pass
+
+    def test_reciprocate_event():
+        pass

@@ -19,6 +19,7 @@
 # Quicker tests should run before slower ones.
 MODULE_LIST="
     units
+    events
 "
 
 usage() {
@@ -87,10 +88,10 @@ MODULES="$INCLUDE $MODULES"
 main() {
 
 # Start in project directory
-    cd $PROJECT_DIR
+    cd $PROJECT_DIR    
 
     for module in $MODULES
-    do
+    do        
 
 # Check if we are skipping this module
         skip=0
@@ -109,6 +110,9 @@ main() {
         else
             echo "[---Running $module tests---]"
             case $module in
+                all)
+                    test_all
+                    ;;
                 units)
                     test_units
                     ;;
@@ -125,16 +129,19 @@ main() {
 
 test_units() {
     run_docker_test ./families/units/tests/test_tp_units.yaml
-    copy_coverage .coverage.config
-    run_docker_test test_config_smoke
-    copy_coverage .coverage.test_config_smoke
+    # copy_coverage .coverage.units.config
 }
 
 test_events() {
     run_docker_test ./families/events/tests/test_tp_events.yaml
-    copy_coverage .coverage.config
-    run_docker_test test_config_smoke
-    copy_coverage .coverage.test_config_smoke
+    copy_coverage .coverage.events.python
+}
+
+test_all() {
+    run_docker_test ./families/units/tests/test_tp_units.yaml
+    # copy_coverage .coverage.units.python
+    run_docker_test ./families/events/tests/test_tp_events.yaml
+    # copy_coverage .coverage.events.python
 }
 
 

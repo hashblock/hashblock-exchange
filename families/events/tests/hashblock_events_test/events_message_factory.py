@@ -21,8 +21,8 @@ from protobuf.events_pb2 import EventPayload
 from protobuf.events_pb2 import InitiateEvent
 from protobuf.events_pb2 import ReciprocateEvent
 
-from hashblock_events.processor import FAMILY_NAME
-from hashblock_events.processor import EVENTS_ADDRESS_PREFIX
+from hashblock_events.processor.handler import FAMILY_NAME
+from hashblock_events.processor.handler import EVENTS_ADDRESS_PREFIX
 
 LOGGER = logging.getLogger(__name__)
 
