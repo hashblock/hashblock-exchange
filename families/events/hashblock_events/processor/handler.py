@@ -285,10 +285,15 @@ _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
 
 @lru_cache(maxsize=128)
 def _make_events_key(key):
-    # split the key into 4 parts, maximum
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+    key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
+
+    return EVENTS_ADDRESS_PREFIX + ''.join(_to_hash(x) for x in key_parts)
+
+    # split the key into 4 parts, maximum
+    # key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     # compute the short hash of each part
-    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
+    # addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
     # pad the parts with the empty hash, if needed
-    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-    return make_events_address(''.join(addr_parts))
+    # addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
+    # return make_events_address(''.join(addr_parts))
