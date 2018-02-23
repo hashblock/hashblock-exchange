@@ -24,6 +24,7 @@ import logging
 import os
 import sys
 import traceback
+import uuid
 import yaml
 
 import pkg_resources
@@ -58,35 +59,17 @@ _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 
-def add_config_parser(subparsers, parent_parser):
-    """Creates the arg parsers needed for the config command and
-    its subcommands.
-    """
-    parser = subparsers.add_parser(
-        'config',
-        help='Changes genesis block events and create, view, and '
-        'vote on events proposals',
-        description='Provides subcommands to change genesis block settings '
-                    'and to view, create, and vote on existing proposals.'
-    )
-
-    config_parsers = parser.add_subparsers(title="subcommands",
-                                           dest="subcommand")
-    config_parsers.required = True
-
-
 def _do_event_initiate(args):
-    """Executes the 'proposal create' subcommand.  Given a key file, and a
-    series of code/value pairs, it generates batches of hashblock_events
+    """Executes the 'event initiate' subcommand.  Given a signing private key file, an
+    assignment public key file, and a quanity, it generates batches of hashblock_events
     transactions in a BatchList instance.  The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
-    events = [s.split('=', 1) for s in args.event]
+    quantities = [s.split(':', 2) for s in args.quantities]
 
     signer = _read_signer(args.key)
-
-    txns = [_create_propose_txn(signer, event)
-            for event in events]
+    txns = [_create_initiate_txn(signer, quantity)
+            for quantity in quantities]
 
     batch = _create_batch(signer, txns)
 
@@ -162,7 +145,7 @@ def _do_event_reciprocate(args):
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
-    signer = _read_signer(args.key)
+    signer = _read_signer(args.plus)
     rest_client = RestClient(args.url)
 
     proposals = _get_proposals(rest_client)
@@ -191,49 +174,6 @@ def _do_event_reciprocate(args):
     batch_list = BatchList(batches=[batch])
 
     rest_client.send_batches(batch_list)
-
-
-
-def _do_config_genesis(args):
-    signer = _read_signer(args.key)
-    public_key = signer.get_public_key().as_hex()
-
-    authorized_keys = args.authorized_key if args.authorized_key else \
-        [public_key]
-    if public_key not in authorized_keys:
-        authorized_keys.append(public_key)
-
-    txns = []
-
-    txns.append(_create_propose_txn(
-        signer,
-        ('hashblock.events.vote.authorized_keys',
-         ','.join(authorized_keys))))
-
-    if args.approval_threshold is not None:
-        if args.approval_threshold < 1:
-            raise CliException('approval threshold must not be less than 1')
-
-        if args.approval_threshold > len(authorized_keys):
-            raise CliException(
-                'approval threshold must not be greater than the number of '
-                'authorized keys')
-
-        txns.append(_create_propose_txn(
-            signer,
-            ('hashblock.events.vote.approval_threshold',
-             str(args.approval_threshold))))
-
-    batch = _create_batch(signer, txns)
-    batch_list = BatchList(batches=[batch])
-
-    try:
-        with open(args.output, 'wb') as batch_file:
-            batch_file.write(batch_list.SerializeToString())
-        print('Generated {}'.format(args.output))
-    except IOError as e:
-        raise CliException(
-            'Unable to write to batch file: {}'.format(str(e)))
 
 
 def _get_proposals(rest_client):
@@ -294,6 +234,34 @@ def _read_signer(key_filename):
     crypto_factory = CryptoFactory(context)
     return crypto_factory.new_signer(private_key)
 
+def _read_key(key_filename):
+    """Reads the given file as a hex key.
+
+    Args:
+        key_filename: The filename where the key is stored. If None,
+            defaults to the default key for the current user.
+
+    Returns:
+        Key: the public key
+
+    Raises:
+        CliException: If unable to read the file.
+    """
+    filename = key_filename
+    if filename is None:
+        filename = os.path.join(os.path.expanduser('~'),
+                                '.sawtooth',
+                                'keys',
+                                getpass.getuser() + '.pub')
+
+    try:
+        with open(filename, 'r') as key_file:
+            public_key = key_file.read().strip()
+    except IOError as e:
+        raise CliException('Unable to read key file: {}'.format(str(e)))
+
+    return public_key
+
 
 def _create_batch(signer, transactions):
     """Creates a batch from a list of transactions and a public key, and signs
@@ -318,34 +286,23 @@ def _create_batch(signer, transactions):
         transactions=transactions)
 
 
-def _create_propose_txn(signer, event_key_value):
+def _create_initiate_txn(signer, quantity_value_unit_resource):
     """Creates an individual hashblock_events transaction for the given key and
-    value.
+    value.quantity_value_unit_resource
     """
-    event_key, event_value = event_key_value
-    nonce = str(datetime.datetime.utcnow().timestamp())
-    proposal = EventProposal(
-        code=event_key,
-        value=event_value,
-        nonce=nonce)
-    payload = EventPayload(data=proposal.SerializeToString(),
-                              action=EventPayload.PROPOSE)
-
-    return _make_txn(signer, event_key, payload)
-
-
-def _create_vote_txn(signer, proposal_id, event_key, vote_value):
-    """Creates an individual hashblock_events transaction for voting on a
-    proposal for a particular event key.
-    """
-    if vote_value == 'accept':
-        vote_id = EventVote.ACCEPT
-    else:
-        vote_id = EventVote.REJECT
-
-    vote = EventVote(proposal_id=proposal_id, vote=vote_id)
-    payload = EventPayload(data=vote.SerializeToString(),
-                              action=EventPayload.VOTE)
+    value, unit, resource = quantity_value_unit_resource
+    quantity = Quantity(
+        value=value,
+        valueUnit=unit,
+        resourceUnit=resource)
+    initiateEvent = InitiateEvent(
+        plus=b'plus_public_key',
+        minus=b'minus_public_key',
+        quantity=quantity)
+    event_key = str(uuid.uuid4())
+    payload = EventPayload(data=initiateEvent.SerializeToString(),
+                           key=event_key
+                           action=EventPayload.INITIATE_EVENT)
 
     return _make_txn(signer, event_key, payload)
 
@@ -376,9 +333,6 @@ def _config_inputs(key):
     given event key.
     """
     return [
-        _key_to_address('hashblock.events.vote.proposals'),
-        _key_to_address('hashblock.events.vote.authorized_keys'),
-        _key_to_address('hashblock.events.vote.approval_threshold'),
         _key_to_address(key)
     ]
 
@@ -388,7 +342,6 @@ def _config_outputs(key):
     given event key.
     """
     return [
-        _key_to_address('hashblock.events.vote.proposals'),
         _key_to_address(key)
     ]
 
@@ -500,7 +453,13 @@ def create_parser(prog_name):
     initiate_parser.add_argument(
         '-k', '--key',
         type=str,
-        help='specify a signing key for the resulting batches')
+        help='specify a private signing key for the resulting batches, '
+        'and the plus public key assignment.')
+
+    initiate_parser.add_argument(
+        '-m', '--minus',
+        type=str,
+        help='specify the minus public key assignment.')
 
     prop_target_group = initiate_parser.add_mutually_exclusive_group()
     prop_target_group.add_argument(
@@ -515,11 +474,11 @@ def create_parser(prog_name):
         default='http://rest-api:8008')
 
     initiate_parser.add_argument(
-        'quantity',
+        'quantities',
         type=str,
         nargs='+',
-        help='Initiating event as quantity vector with the '
-        'format [<value>][<unit_hash>][<resource_hash>] where '
+        help='Quantity vectors with the '
+        'format <value>:<unit_hash>:<resource_hash> where '
         'unit and resource hashes are prime numbers or 1.')
 
     event_list_parser = event_parsers.add_parser(
@@ -567,9 +526,10 @@ def create_parser(prog_name):
         default='http://rest-api:8008')
 
     reciprocate_parser.add_argument(
-        '-k', '--key',
+        '-p', '--plus',
         type=str,
-        help='specify a signing key for the resulting transaction batch')
+        help='specify a signing private key for the resulting transaction batch, '
+        'and the resource increment assignment\'s public key')
 
     reciprocate_parser.add_argument(
         'event_id',
@@ -581,9 +541,9 @@ def create_parser(prog_name):
         type=str,
         nargs='+',
         help='Reciprocating event as quantity and ratio vectors with the '
-        'format [<value>][<unit_hash>][<resource_hash>], '
-        '[<value>][<unit_hash>][<resource_hash>], '
-        '[<value>][<unit_hash>][<resource_hash>] where the first quanity '
+        'format <value>:<unit_hash>:<resource_hash>, '
+        '<value>:<unit_hash>:<resource_hash>, '
+        '<value>:<unit_hash>:<resource_hash> where the first quanity '
         'vector is the reciprocating quanity of resource, the second '
         'vector is the ratio numerator, and the third vector is the '
         'ratio denominator. The unit and resource hashes are prime numbers or 1.')

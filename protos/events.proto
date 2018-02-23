@@ -72,9 +72,10 @@ message EventPayload {
 
     //  See enum above
     Action action = 1;
-    //  The sig (e.g. hashblock.event.reciprocate.UUID)
-    string state = 2;
 
-    InitiateEvent initiate_event = 3;
-    ReciprocateEvent reciprocate_event = 4;
+    //  The event key
+    string key = 2;
+
+    // The content of this payload
+    bytes data = 3;
 }
