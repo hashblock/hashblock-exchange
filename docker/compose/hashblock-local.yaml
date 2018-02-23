@@ -106,10 +106,10 @@ services:
     # Expose 5700 for remote debugging
     expose:
       - 4004
-      - 5701
+      - 5700
     ports:
       - "4004:4004"
-      - "5701:5701"
+      - "5700:5700"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \

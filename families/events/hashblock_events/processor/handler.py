@@ -45,7 +45,7 @@ def make_events_address(data):
         data.encode('utf-8')).hexdigest()[-64:]
 
 
-# Number of seconds to wait for state operations to succeed
+# Number of seconds to wait for key operations to succeed
 STATE_TIMEOUT_SEC = 10
 
 
@@ -71,12 +71,12 @@ class EventTransactionHandler(TransactionHandler):
         signer_key = transaction.header.signer_public_key
         event_transaction = EventPayload()
         event_transaction.ParseFromString(transaction.payload)
-        stateUUID = EventPayload.state.split(
+        keyUUID = event_transaction.key.split(
             '.', maxsplit=_MAX_KEY_PARTS - 1)[-1]
 
         try:
-            return verbs[EventPayload.action](
-                stateUUID, event_transaction.data,
+            return verbs[event_transaction.action](
+                keyUUID, event_transaction.data,
                 context, signer_key)
         except KeyError:
             return _apply_invalid()
@@ -92,26 +92,26 @@ def _timeout_error(basemsg, data):
     raise InternalError('Unable to get {}'.format(data))
 
 
-def _apply_initiate(stateUUID, payload_data, context, signer_key):
+def _apply_initiate(keyUUID, payload_data, context, signer_key):
     event_initiate = InitiateEvent()
     event_initiate.ParseFromString(payload_data)
-    myevent = _get_initiate_event(context, stateUUID)
+    myevent = _get_initiate_event(context, keyUUID)
     if myevent:
         raise InvalidTransaction(
-            'Initiate already set for UUID {} .'.stateUUID)
+            'Initiate already set for UUID {} .'.keyUUID)
     _check_initiate(event_initiate)
-    return _set_initiate_event(context, event_initiate, stateUUID)
+    return _set_initiate_event(context, event_initiate, keyUUID)
 
 
-def _apply_reciprocate(stateUUID, payload_data, context, signer_key):
+def _apply_reciprocate(keyUUID, payload_data, context, signer_key):
     event_reciprocate = ReciprocateEvent()
     event_reciprocate.ParseFromString(payload_data)
-    myevent = _get_initiate_event(context, stateUUID)
+    myevent = _get_initiate_event(context, keyUUID)
     if not myevent:
         raise InvalidTransaction(
-            'Reciprocate: no matching state for UUID {} .'.stateUUID)
+            'Reciprocate: no matching key for UUID {} .'.keyUUID)
     _check_reciprocate(event_reciprocate)
-    return _complete_reciprocate_event(context, stateUUID)
+    return _complete_reciprocate_event(context, keyUUID)
 
 
 def _complete_reciprocate_event(context, address_key):

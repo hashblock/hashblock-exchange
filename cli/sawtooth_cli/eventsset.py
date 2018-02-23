@@ -292,16 +292,16 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
     """
     value, unit, resource = quantity_value_unit_resource
     quantity = Quantity(
-        value=value,
-        valueUnit=unit,
-        resourceUnit=resource)
+        value=bytes(int(value)),
+        valueUnit=bytes(int(unit)),
+        resourceUnit=bytes(int(resource)))
     initiateEvent = InitiateEvent(
         plus=b'plus_public_key',
         minus=b'minus_public_key',
         quantity=quantity)
     event_key = str(uuid.uuid4())
     payload = EventPayload(data=initiateEvent.SerializeToString(),
-                           key=event_key
+                           key=event_key,
                            action=EventPayload.INITIATE_EVENT)
 
     return _make_txn(signer, event_key, payload)
@@ -565,11 +565,11 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.subcommand == 'event' and args.proposal_cmd == 'initiate':
+    if args.subcommand == 'event' and args.event_cmd == 'initiate':
         _do_event_initiate(args)
-    elif args.subcommand == 'event' and args.proposal_cmd == 'list':
+    elif args.subcommand == 'event' and args.event_cmd == 'list':
         _do_event_list(args)
-    elif args.subcommand == 'event' and args.proposal_cmd == 'reciprocate':
+    elif args.subcommand == 'event' and args.event_cmd == 'reciprocate':
         _do_event_reciprocate(args)
     else:
         raise CliException(
