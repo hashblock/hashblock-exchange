@@ -19,11 +19,11 @@ import hashlib
 import base64
 from functools import lru_cache
 
-
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
+from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 from protobuf.events_pb2 import EventPayload
 from protobuf.events_pb2 import InitiateEvent
@@ -95,6 +95,7 @@ def _timeout_error(basemsg, data):
 def _apply_initiate(keyUUID, payload_data, context, signer_key):
     event_initiate = InitiateEvent()
     event_initiate.ParseFromString(payload_data)
+    LOGGER.debug(event_initiate)
     myevent = _get_initiate_event(context, keyUUID)
     if myevent:
         raise InvalidTransaction(
@@ -137,26 +138,41 @@ def _complete_reciprocate_event(context, address_key):
 def _get_initiate_event(context, uuid_key):
     initiate_event = InitiateEvent()
     mykey = _make_events_key(uuid_key)
+    LOGGER.debug(uuid_key)
+    LOGGER.debug(mykey)
+
     try:
         entries_list = context.get_state([mykey], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
         _timeout_error('context.get_state', uuid_key)
+    except AuthorizationException:
+        entries_list = None
+        LOGGER.error("State not found")
 
+    LOGGER.debug(entries_list)
     if entries_list:
         initiate_event.ParseFromString(entries_list[0].data)
+    else:
+        initiate_event = None
+
+    LOGGER.debug(initiate_event)
 
     return initiate_event
 
 
 def _set_initiate_event(context, event_initiate, uuid_key):
     mykey = _make_events_key(uuid_key)
+    # base64.b64encode()
+    LOGGER.debug(mykey)
+    LOGGER.debug(event_initiate)
+    LOGGER.debug(event_initiate.SerializeToString())
     try:
         addresses = list(context.set_state(
             {mykey: event_initiate.SerializeToString()},
             timeout=STATE_TIMEOUT_SEC))
     except FutureTimeoutError:
         LOGGER.warning(
-            'Timeout occured on context.set_state([%s, <value>])', uuid_key)
+            'Timeout occured on context.set_staten for %s', uuid_key)
         raise InternalError('Unable to set {}'.format(mykey))
 
     if len(addresses) != 1:
@@ -172,31 +188,21 @@ def _set_initiate_event(context, event_initiate, uuid_key):
 
 
 def _check_initiate(event_initiate):
-    _check_version(event_initiate)
     _check_plus(event_initiate)
     _check_minus(event_initiate)
     _check_quanity(event_initiate)
 
 
 def _check_reciprocate(event_reciprocate):
-    _check_version(event_reciprocate)
     _check_plus(event_reciprocate)
     _check_minus(event_reciprocate)
     _check_quanity(event_reciprocate)
     _check_ratio(event_reciprocate)
 
 
-def _check_version(event_payload):
-    try:
-        version = event_payload['version']
-    except AttributeError:
-        raise InvalidTransaction('Version is required')
-    return version
-
-
 def _check_plus(event_payload):
     try:
-        plus = event_payload['plus']
+        plus = event_payload.plus
     except AttributeError:
         raise InvalidTransaction('Plus is required')
     return plus
@@ -204,7 +210,7 @@ def _check_plus(event_payload):
 
 def _check_minus(event_payload):
     try:
-        minus = event_payload['minus']
+        minus = event_payload.minus
     except AttributeError:
         raise InvalidTransaction('Minus is required')
     return minus
@@ -212,7 +218,7 @@ def _check_minus(event_payload):
 
 def _check_quanity(event_payload):
     try:
-        quantity = event_payload['quantity']
+        quantity = event_payload.quantity
     except AttributeError:
         raise InvalidTransaction('Quantity is required')
     _check_value(quantity)
@@ -222,7 +228,7 @@ def _check_quanity(event_payload):
 
 def _check_value(event_payload):
     try:
-        value = event_payload['value']
+        value = event_payload.value
     except AttributeError:
         raise InvalidTransaction('Quantity.Value is required')
     return value
@@ -230,7 +236,7 @@ def _check_value(event_payload):
 
 def _check_valueUnit(event_payload):
     try:
-        valueUnit = event_payload['valueUnit']
+        valueUnit = event_payload.valueUnit
     except AttributeError:
         raise InvalidTransaction('Quanity.ValueUnit is required')
     return valueUnit
@@ -238,7 +244,7 @@ def _check_valueUnit(event_payload):
 
 def _check_resourceUnit(event_payload):
     try:
-        resourceUnit = event_payload['resourceUnit']
+        resourceUnit = event_payload.resourceUnit
     except AttributeError:
         raise InvalidTransaction('Quantity.ResourceUnit is required')
     return resourceUnit
@@ -246,7 +252,7 @@ def _check_resourceUnit(event_payload):
 
 def _check_ratio(event_payload):
     try:
-        ratio = event_payload['ratio']
+        ratio = event_payload.ratio
     except AttributeError:
         raise InvalidTransaction('Ratio is required')
     _check_numerator(ratio)
@@ -255,7 +261,7 @@ def _check_ratio(event_payload):
 
 def _check_numerator(event_payload):
     try:
-        numerator = event_payload['numerator']
+        numerator = event_payload.numerator
     except AttributeError:
         raise InvalidTransaction('Ratio.Numerator is required')
     return numerator
@@ -263,7 +269,7 @@ def _check_numerator(event_payload):
 
 def _check_denominator(event_payload):
     try:
-        denominator = event_payload['denominator']
+        denominator = event_payload.denominator
     except AttributeError:
         raise InvalidTransaction('Ratio.Denominator is required')
     return denominator
