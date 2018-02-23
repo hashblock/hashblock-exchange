@@ -92,9 +92,9 @@ def _timeout_error(basemsg, data):
     raise InternalError('Unable to get {}'.format(data))
 
 
-def _apply_initiate(stateUUID, event_payload, context, signer_key):
+def _apply_initiate(stateUUID, payload_data, context, signer_key):
     event_initiate = InitiateEvent()
-    event_initiate.ParseFromString(event_payload)
+    event_initiate.ParseFromString(payload_data)
     myevent = _get_initiate_event(context, stateUUID)
     if myevent:
         raise InvalidTransaction(
@@ -103,9 +103,9 @@ def _apply_initiate(stateUUID, event_payload, context, signer_key):
     return _set_initiate_event(context, event_initiate, stateUUID)
 
 
-def _apply_reciprocate(stateUUID, event_payload, context, signer_key):
+def _apply_reciprocate(stateUUID, payload_data, context, signer_key):
     event_reciprocate = ReciprocateEvent()
-    event_reciprocate.ParseFromString(event_payload)
+    event_reciprocate.ParseFromString(payload_data)
     myevent = _get_initiate_event(context, stateUUID)
     if not myevent:
         raise InvalidTransaction(
