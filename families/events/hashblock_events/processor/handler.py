@@ -71,8 +71,8 @@ class EventTransactionHandler(TransactionHandler):
         signer_key = transaction.header.signer_public_key
         event_transaction = EventPayload()
         event_transaction.ParseFromString(transaction.payload)
-        keyUUID = event_transaction.key.split(
-            '.', maxsplit=_MAX_KEY_PARTS - 1)[-1]
+        keyUUID = event_transaction.key
+        # .split( '.', maxsplit=_MAX_KEY_PARTS - 1)[-1]
 
         try:
             return verbs[event_transaction.action](
