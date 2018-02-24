@@ -58,6 +58,8 @@ _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
+ADDRESS_PREFIX = 'events'
+
 
 def _do_event_initiate(args):
     """Executes the 'event initiate' subcommand.  Given a signing private key file, an
@@ -178,7 +180,8 @@ def _do_event_reciprocate(args):
 
 def _get_proposals(rest_client):
     state_leaf = rest_client.get_leaf(
-        _key_to_address('hashblock.events.vote.proposals'))
+        _make_events_key('hashblock.events.vote.proposals'))
+    # _key_to_address('hashblock.events.vote.proposals'))
 
     config_candidates = EventCandidates()
 
@@ -233,6 +236,7 @@ def _read_signer(key_filename):
     context = create_context('secp256k1')
     crypto_factory = CryptoFactory(context)
     return crypto_factory.new_signer(private_key)
+
 
 def _read_key(key_filename):
     """Reads the given file as a hex key.
@@ -333,7 +337,7 @@ def _config_inputs(key):
     given event key.
     """
     return [
-        _key_to_address(key)
+        _make_events_key(key)
     ]
 
 
@@ -342,25 +346,36 @@ def _config_outputs(key):
     given event key.
     """
     return [
-        _key_to_address(key)
+        _make_events_key(key)
     ]
 
 
-def _short_hash(in_str):
-    return hashlib.sha256(in_str.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
+def _to_hash(value):
+    return hashlib.sha256(value.encode()).hexdigest()
 
 
-def _key_to_address(key):
-    """Creates the state address for a given event key.
-    """
-    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-    key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
-
-    return UNITS_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)
+_EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
+EVENTS_ADDRESS_PREFIX = hashlib.sha512(
+    ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
 
 
 def event_key_to_address(key):
     return _key_to_address(key)
+
+
+def make_events_address(data):
+    return EVENTS_ADDRESS_PREFIX + hashlib.sha512(
+        data.encode('utf-8')).hexdigest()[-64:]
+
+
+def _make_events_key(key):
+    # split the key into 4 parts, maximum
+    key_parts = key.split('-', maxsplit=_MAX_KEY_PARTS - 1)
+    # compute the short hash of each part
+    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
+    # pad the parts with the empty hash, if needed
+    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
+    return make_events_address(''.join(addr_parts))
 
 
 def create_console_handler(verbose_level):

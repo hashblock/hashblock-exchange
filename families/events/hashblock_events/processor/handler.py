@@ -23,11 +23,13 @@ from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
-from sawtooth_sdk.processor.exceptions import AuthorizationException
+# from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 from protobuf.events_pb2 import EventPayload
 from protobuf.events_pb2 import InitiateEvent
 from protobuf.events_pb2 import ReciprocateEvent
+
+# bin/eventsset event initiate -k /root/.sawtooth/keys/your_key.priv --url http://rest-api:8008 5:2:3
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,13 +38,6 @@ FAMILY_NAME = 'hashblock_events'
 
 EVENTS_ADDRESS_PREFIX = hashlib.sha512(
     ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
-
-_MAX_KEY_PARTS = 4
-
-
-def make_events_address(data):
-    return EVENTS_ADDRESS_PREFIX + hashlib.sha512(
-        data.encode('utf-8')).hexdigest()[-64:]
 
 
 # Number of seconds to wait for key operations to succeed
@@ -72,7 +67,6 @@ class EventTransactionHandler(TransactionHandler):
         event_transaction = EventPayload()
         event_transaction.ParseFromString(transaction.payload)
         keyUUID = event_transaction.key
-        # .split( '.', maxsplit=_MAX_KEY_PARTS - 1)[-1]
 
         try:
             return verbs[event_transaction.action](
@@ -95,11 +89,11 @@ def _timeout_error(basemsg, data):
 def _apply_initiate(keyUUID, payload_data, context, signer_key):
     event_initiate = InitiateEvent()
     event_initiate.ParseFromString(payload_data)
-    LOGGER.debug(event_initiate)
     myevent = _get_initiate_event(context, keyUUID)
+    LOGGER.debug("Get state in initiate = %s", myevent)
     if myevent:
         raise InvalidTransaction(
-            'Initiate already set for UUID {} .'.keyUUID)
+            'Initiate already set for UUID {} .', format(keyUUID))
     _check_initiate(event_initiate)
     return _set_initiate_event(context, event_initiate, keyUUID)
 
@@ -116,15 +110,16 @@ def _apply_reciprocate(keyUUID, payload_data, context, signer_key):
 
 
 def _complete_reciprocate_event(context, address_key):
-    mykey = _make_events_key(address_key)
+    address = _make_events_key(address_key)
     myevent = _get_initiate_event(context, address_key)
     if not myevent:
         raise InvalidTransaction(
             'Initiate does not exist {} .'.format(myevent))
     try:
-        entries_list = context.delete_state([mykey])
+        entries_list = context.delete_state([address])
     except FutureTimeoutError:
         _timeout_error('context.delete_state', address_key)
+
     if len(entries_list) != 1:
         LOGGER.warning(
             'Failed to remove value on address %s', address_key)
@@ -137,50 +132,42 @@ def _complete_reciprocate_event(context, address_key):
 
 def _get_initiate_event(context, uuid_key):
     initiate_event = InitiateEvent()
-    mykey = _make_events_key(uuid_key)
-    LOGGER.debug(uuid_key)
-    LOGGER.debug(mykey)
+    address = _make_events_key(uuid_key)
 
     try:
-        entries_list = context.get_state([mykey], timeout=STATE_TIMEOUT_SEC)
+        entries_list = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
         _timeout_error('context.get_state', uuid_key)
-    except AuthorizationException:
-        entries_list = None
-        LOGGER.error("State not found")
 
-    LOGGER.debug(entries_list)
     if entries_list:
         initiate_event.ParseFromString(entries_list[0].data)
     else:
+        LOGGER.debug("No state entry for %s", uuid_key)
         initiate_event = None
-
-    LOGGER.debug(initiate_event)
 
     return initiate_event
 
 
 def _set_initiate_event(context, event_initiate, uuid_key):
-    mykey = _make_events_key(uuid_key)
-    # base64.b64encode()
-    LOGGER.debug(mykey)
-    LOGGER.debug(event_initiate)
-    LOGGER.debug(event_initiate.SerializeToString())
+
+    address = _make_events_key(uuid_key)
+    event_data = event_initiate.SerializeToString()
+    state_dict = {address: event_data}
     try:
-        addresses = list(context.set_state(
-            {mykey: event_initiate.SerializeToString()},
-            timeout=STATE_TIMEOUT_SEC))
+        addresses = context.set_state(
+            state_dict,
+            timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
         LOGGER.warning(
             'Timeout occured on context.set_staten for %s', uuid_key)
-        raise InternalError('Unable to set {}'.format(mykey))
+        raise InternalError('Unable to set {}'.format(address))
 
     if len(addresses) != 1:
         LOGGER.warning(
-            'Failed to save value on address %s', uuid_key)
+            'Failed to save value for key %s', uuid_key)
         raise InternalError(
             'Unable to save config value {}'.format(uuid_key))
-        LOGGER.info('Event setting %s changed from NIL to %s',
+        LOGGER.info('Event setting %s changed to %s',
                     uuid_key, event_initiate)
     context.add_event(
         event_type="events/initiated",
@@ -279,21 +266,22 @@ def _to_hash(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+_MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
 
 
+def make_events_address(data):
+    return EVENTS_ADDRESS_PREFIX + hashlib.sha512(
+        data.encode('utf-8')).hexdigest()[-64:]
+
+
 @lru_cache(maxsize=128)
 def _make_events_key(key):
-    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-    key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
-
-    return EVENTS_ADDRESS_PREFIX + ''.join(_to_hash(x) for x in key_parts)
-
     # split the key into 4 parts, maximum
-    # key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+    key_parts = key.split('-', maxsplit=_MAX_KEY_PARTS - 1)
     # compute the short hash of each part
-    # addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
+    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
     # pad the parts with the empty hash, if needed
-    # addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-    # return make_events_address(''.join(addr_parts))
+    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
+    return make_events_address(''.join(addr_parts))

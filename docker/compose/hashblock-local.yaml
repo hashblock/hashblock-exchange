@@ -92,16 +92,20 @@ services:
     stop_signal: SIGKILL
 
   settings-tp:
-    image: hyperledger/sawtooth-settings-tp:latest
-    container_name: sawtooth-settings-tp-latest
+    image: sawtooth-settings-tp:latest
+    container_name: sawtooth-settings-tp-local
+    volumes:
+      - ~/sawtooth-core/:/project/sawtooth-core    
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
+    stop_signal: SIGKILL
 
   validator:
-    image: hyperledger/sawtooth-validator:latest
-    container_name: sawtooth-validator-latest
+    image: sawtooth-validator:latest
+    container_name: sawtooth-validator-local
     volumes:
+      - ~/sawtooth-core/:/project/sawtooth-core    
       - ../../:/project/sawtooth-eventchain
     # Expose 5700 for remote debugging
     expose:
@@ -126,7 +130,7 @@ services:
 
   rest-api:
     image: sawtooth-rest-api:latest
-    container_name: sawtooth-rest-api-latest
+    container_name: sawtooth-rest-api-local
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core
     ports:
