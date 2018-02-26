@@ -79,3 +79,7 @@ message EventPayload {
     // The content of this payload
     bytes data = 3;
 }
+
+message InitiateList {
+    repeated string entries = 1;
+}

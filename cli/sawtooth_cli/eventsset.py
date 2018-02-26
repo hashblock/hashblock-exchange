@@ -50,6 +50,8 @@ from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 DISTRIBUTION_NAME = 'eventsset'
+INITIATE_EVENT_KEY = 'hashblock.events.initiate.'
+INITIATE_EVENT_LIST_KEY = 'hashblock.events.list'
 
 
 UNITS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
@@ -296,9 +298,9 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
     """
     value, unit, resource = quantity_value_unit_resource
     quantity = Quantity(
-        value=(int(value)).to_bytes(),
-        valueUnit=(int(unit)).to_bytes(),
-        resourceUnit=(int(resource)).to_bytes())
+        value=(int(value)).to_bytes(2, byteorder='little'),
+        valueUnit=(int(unit)).to_bytes(2, byteorder='little'),
+        resourceUnit=(int(resource)).to_bytes(2, byteorder='little'))
     initiateEvent = InitiateEvent(
         plus=b'plus_public_key',
         minus=b'minus_public_key',
@@ -337,8 +339,8 @@ def _config_inputs(key):
     given event key.
     """
     return [
-        _make_events_key('hashblock.events.initiate')
-        _make_events_key(key)
+        _make_events_key(INITIATE_EVENT_LIST_KEY),
+        make_fqnaddress(key)
     ]
 
 
@@ -347,8 +349,8 @@ def _config_outputs(key):
     given event key.
     """
     return [
-        _make_events_key('hashblock.events.initiate')
-        _make_events_key(key)
+        _make_events_key(INITIATE_EVENT_LIST_KEY),
+        make_fqnaddress(key)
     ]
 
 
@@ -368,6 +370,10 @@ def event_key_to_address(key):
 def make_events_address(data):
     return EVENTS_ADDRESS_PREFIX + hashlib.sha512(
         data.encode('utf-8')).hexdigest()[-64:]
+
+
+def make_fqnaddress(keyUUID):
+    return _make_events_key(''.join([INITIATE_EVENT_KEY, keyUUID]))
 
 
 def _make_events_key(key):
