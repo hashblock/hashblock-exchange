@@ -24,8 +24,8 @@ services:
     image: hashblock-dev-python
     container_name: hashblock-shell
     volumes:
-      - ../../:/project/sawtooth-eventchain
-      - ../../../sawtooth-core/:/project/sawtooth-core  
+      - ~/sawtooth-eventchain/:/project/sawtooth-eventchain
+      - ~/sawtooth-core/:/project/sawtooth-core
      # Expose 5678 for remote debugging
     expose:
       - 5678
@@ -35,6 +35,7 @@ services:
       - validator
       - rest-api      
     command: "bash -c \"\
+        sawtooth keygen your_key && \
         tail -f /dev/null \
         \""
     stop_signal: SIGKILL
@@ -50,7 +51,7 @@ services:
     image: hashblock-dev-units-tp
     container_name: hashblock-dev-units-tp
     volumes:
-      - ../../:/project/sawtooth-eventchain
+      - ~/sawtooth-eventchain/:/project/sawtooth-eventchain
     # Expose 5679 for remote debugging
     expose:
       - 5679
@@ -76,7 +77,7 @@ services:
     image: hashblock-dev-events-tp
     container_name: hashblock-dev-events-tp
     volumes:
-      - ../../:/project/sawtooth-eventchain
+      - ~/sawtooth-eventchain/:/project/sawtooth-eventchain
     # Expose 5679 for remote debugging
     expose:
       - 5670
@@ -92,16 +93,20 @@ services:
     stop_signal: SIGKILL
 
   settings-tp:
-    image: hyperledger/sawtooth-settings-tp:latest
-    container_name: sawtooth-settings-tp-latest
+    image: sawtooth-settings-tp:latest
+    container_name: sawtooth-settings-tp-local
+    volumes:
+      - ~/sawtooth-core/:/project/sawtooth-core    
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
+    stop_signal: SIGKILL
 
   validator:
-    image: hyperledger/sawtooth-validator:latest
-    container_name: sawtooth-validator-latest
+    image: sawtooth-validator:latest
+    container_name: sawtooth-validator-local
     volumes:
+      - ~/sawtooth-core/:/project/sawtooth-core    
       - ../../:/project/sawtooth-eventchain
     # Expose 5700 for remote debugging
     expose:
@@ -126,7 +131,7 @@ services:
 
   rest-api:
     image: sawtooth-rest-api:latest
-    container_name: sawtooth-rest-api-latest
+    container_name: sawtooth-rest-api-local
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core
     ports:
