@@ -292,9 +292,9 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
     """
     value, unit, resource = quantity_value_unit_resource
     quantity = Quantity(
-        value=bytes(int(value)),
-        valueUnit=bytes(int(unit)),
-        resourceUnit=bytes(int(resource)))
+        value=(int(value)).to_bytes(),
+        valueUnit=(int(unit)).to_bytes(),
+        resourceUnit=(int(resource)).to_bytes())
     initiateEvent = InitiateEvent(
         plus=b'plus_public_key',
         minus=b'minus_public_key',
@@ -333,6 +333,7 @@ def _config_inputs(key):
     given event key.
     """
     return [
+        _key_to_address('hashblock.events.initiate'),
         _key_to_address(key)
     ]
 
@@ -342,6 +343,7 @@ def _config_outputs(key):
     given event key.
     """
     return [
+        _key_to_address('hashblock.events.initiate'),
         _key_to_address(key)
     ]
 

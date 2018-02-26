@@ -1,0 +1,138 @@
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: '2.1'
+
+services:
+  shell:
+    build:
+      context: ../..
+      dockerfile: docker/hashblock-dev-python
+    image: hashblock-dev-python
+    container_name: hashblock-shell
+    volumes:
+      - ../../:/project/sawtooth-eventchain
+      - ../../../sawtooth-core/:/project/sawtooth-core  
+     # Expose 5678 for remote debugging
+    expose:
+      - 5678
+    ports:
+      - "5678:5678"
+    depends_on:
+      - validator
+      - rest-api      
+    command: "bash -c \"\
+        tail -f /dev/null \
+        \""
+    stop_signal: SIGKILL
+
+  units-processor:
+    build:
+      context: ../..
+      dockerfile: docker/hashblock-dev-units-tp
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: hashblock-dev-units-tp
+    container_name: hashblock-dev-units-tp
+    volumes:
+      - ../../:/project/sawtooth-eventchain
+    # Expose 5679 for remote debugging
+    expose:
+      - 5679
+    ports:
+      - "5679:5679"
+    depends_on:
+      - validator
+    command: "bash -c \"\
+        sleep 1 &&
+        units-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
+  events-processor:
+    build:
+      context: ../..
+      dockerfile: docker/hashblock-dev-events-tp
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: hashblock-dev-events-tp
+    container_name: hashblock-dev-events-tp
+    volumes:
+      - ../../:/project/sawtooth-eventchain
+    # Expose 5679 for remote debugging
+    expose:
+      - 5670
+    ports:
+      - "5670:5670"
+    depends_on:
+      - validator
+    command: "bash -c \"\
+        sleep 1 &&
+        events-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
+  settings-tp:
+    image: hyperledger/sawtooth-settings-tp:latest
+    container_name: sawtooth-settings-tp-latest
+    depends_on:
+      - validator
+    entrypoint: settings-tp -vv -C tcp://validator:4004
+
+  validator:
+    image: sawtooth-validator-mounted:latest
+    container_name: sawtooth-validator-latest
+    volumes:
+      - ../../:/project/sawtooth-eventchain
+      - ../../../sawtooth-core/:/project/sawtooth-core      
+    # Expose 5700 for remote debugging
+    expose:
+      - 4004
+      - 5700
+    ports:
+      - "4004:4004"
+      - "5700:5700"
+    # start the validator with an empty genesis batch
+    entrypoint: "bash -c \"\
+        sawadm keygen && \
+        sawtooth keygen my_key && \
+        sawtooth keygen your_key && \
+        sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
+        /project/sawtooth-eventchain/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
+        sawadm genesis /etc/config-settings.batch /etc/config-units.batch && \
+        sawtooth-validator-dbg -vv \
+          --endpoint tcp://validator:8800 \
+          --bind component:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
+        \""
+
+  rest-api:
+    image: sawtooth-rest-api:latest
+    container_name: sawtooth-rest-api-latest
+    volumes:
+      - ../../../sawtooth-core/:/project/sawtooth-core
+    ports:
+      - "8008:8008"
+    depends_on:
+      - validator
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
+    stop_signal: SIGKILL
