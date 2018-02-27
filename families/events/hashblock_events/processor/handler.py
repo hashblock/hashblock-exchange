@@ -45,6 +45,7 @@ EVENTS_ADDRESS_PREFIX = hashlib.sha512(
     ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
 
 INITIATE_EVENT_KEY = 'hashblock.events.initiate.'
+RECIPROCATE_EVENT_KEY = 'hashblock.events.reciprocate.'
 INITIATE_EVENT_LIST_KEY = 'hashblock.events.list'
 
 # Number of seconds to wait for key operations to succeed
@@ -107,7 +108,7 @@ def _apply_reciprocate(reciprocateUUID, payload_data, context, signer_key):
     event_reciprocate = ReciprocateEvent()
     event_reciprocate.ParseFromString(payload_data)
     initiateFQNAddress = event_reciprocate.initiate_event_id
-    reciprocateFQNAddress = make_fqnaddress(reciprocateUUID)
+    reciprocateFQNAddress = make_fqnaddress(RECIPROCATE_EVENT_KEY, reciprocateUUID)
     _get_initiate_event(context, initiateFQNAddress)
     _check_reciprocate(event_reciprocate)
     return _complete_reciprocate_event(
@@ -121,7 +122,7 @@ def _ensure_initiate_not_exist(context, initiateUUID):
     not exist stadalone in state or in our hashblock.events.initiate
     collection
     """
-    initiateFQNAddress = make_fqnaddress(initiateUUID)
+    initiateFQNAddress = make_fqnaddress(INITIATE_EVENT_KEY, initiateUUID)
 
     # Get initiate event standalone
     try:
@@ -374,8 +375,8 @@ def make_events_address(data):
         data.encode('utf-8')).hexdigest()[-64:]
 
 
-def make_fqnaddress(keyUUID):
-    return _make_events_key(''.join([INITIATE_EVENT_KEY, keyUUID]))
+def make_fqnaddress(key, keyUUID):
+    return _make_events_key(''.join([key, keyUUID]))
 
 
 @lru_cache(maxsize=128)
