@@ -53,6 +53,7 @@ from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 DISTRIBUTION_NAME = 'eventsset'
 INITIATE_EVENT_KEY = 'hashblock.events.initiate.'
+RECIPROCATE_EVENT_KEY = 'hashblock.events.reciprocate.'
 INITIATE_EVENT_LIST_KEY = 'hashblock.events.list'
 
 
@@ -206,7 +207,6 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
                            action=EventPayload.RECIPROCATE_EVENT)
 
     return _make_txn(signer, event_key, payload)
-    
 
 
 def _get_unmatched_event_list(rest_client):
@@ -374,6 +374,7 @@ def _config_inputs(key):
     """
     return [
         _make_events_key(INITIATE_EVENT_LIST_KEY),
+        _make_events_key(RECIPROCATE_EVENT_KEY+key),
         make_fqnaddress(key)
     ]
 
@@ -384,6 +385,7 @@ def _config_outputs(key):
     """
     return [
         _make_events_key(INITIATE_EVENT_LIST_KEY),
+        _make_events_key(RECIPROCATE_EVENT_KEY+key),
         make_fqnaddress(key)
     ]
 
