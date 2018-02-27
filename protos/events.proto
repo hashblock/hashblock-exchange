@@ -61,7 +61,7 @@ message ReciprocateEvent {
     //  Transaction quantity of unit and resource
     Quantity quantity = 4;
     //  Address of initiating event - maybe
-    bytes initiate_event = 5;
+    string initiate_event_id = 5;
 }
 
 message EventPayload {
@@ -78,6 +78,21 @@ message EventPayload {
 
     // The content of this payload
     bytes data = 3;
+}
+
+message UnmatchedEvent {
+
+    //Address
+    string event_id = 1;
+ 
+    //Quanity value
+    bytes value = 2;
+
+    //  Quanity value unit
+	bytes valueUnit = 3;
+
+    //  Quantity resource unit
+	bytes resourceUnit = 4;
 }
 
 message InitiateList {

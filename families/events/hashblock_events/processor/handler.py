@@ -31,6 +31,10 @@ from protobuf.events_pb2 import ReciprocateEvent
 from protobuf.events_pb2 import InitiateList
 
 # eventsset event initiate -k /root/.sawtooth/keys/your_key.priv --url http://rest-api:8008 5:2:3
+# eventsset event initiate -k /root/.sawtooth/keys/your_key.priv --url http://rest-api:8008 10:7:13
+# eventsset event reciprocate -k /root/.sawtooth/keys/your_key.priv --url http://rest-api:8008 <event_id> 10:7:13 2:7:13 1:2:3
+
+
 
 LOGGER = logging.getLogger(__name__)
 

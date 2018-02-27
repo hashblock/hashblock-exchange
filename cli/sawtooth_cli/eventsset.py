@@ -38,6 +38,8 @@ from sawtooth_cli.protobuf.events_pb2 import InitiateEvent
 from sawtooth_cli.protobuf.events_pb2 import ReciprocateEvent
 from sawtooth_cli.protobuf.events_pb2 import Quantity
 from sawtooth_cli.protobuf.events_pb2 import Ratio
+from sawtooth_cli.protobuf.events_pb2 import UnmatchedEvent
+from sawtooth_cli.protobuf.events_pb2 import InitiateList
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
@@ -94,85 +96,93 @@ def _do_event_initiate(args):
 
 
 def _do_event_list(args):
-    """Executes the 'proposal list' subcommand.
+    """Executes the 'events list' subcommand.
 
-    Given a url, optional filters on prefix and public key, this command lists
-    the current pending proposals for events changes.
+    Given a url, optional filters on prefix, this command lists
+    the current unmatched initate events.
     """
 
-    def _accept(candidate, public_key, prefix):
-        # Check to see if the first public key matches the given public key
-        # (if it is not None).  This public key belongs to the user that
-        # created it.
-        has_pub_key = (not public_key
-                       or candidate.votes[0].public_key == public_key)
-        has_prefix = candidate.proposal.code.startswith(prefix)
-        return has_prefix and has_pub_key
-
-    candidates_payload = _get_proposals(RestClient(args.url))
-    candidates = [
-        c for c in candidates_payload.candidates
-        if _accept(c, args.public_key, args.filter)
-    ]
+    unmatched_event_list = _get_unmatched_event_list(RestClient(args.url))
 
     if args.format == 'default':
-        for candidate in candidates:
-            print('{}: {} => {}'.format(
-                candidate.proposal_id,
-                candidate.proposal.code,
-                candidate.proposal.value))
+        for unmatched_event in unmatched_event_list:
+            print('{} => {}:{}:{}'.format(
+                unmatched_event.event_id,
+                int.from_bytes(unmatched_event.value, byteorder='little'),
+                int.from_bytes(unmatched_event.valueUnit, byteorder='little'),
+                int.from_bytes(unmatched_event.resourceUnit, byteorder='little')))
     elif args.format == 'csv':
         writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
-        writer.writerow(['PROPOSAL_ID', 'CODE', 'VALUE'])
-        for candidate in candidates:
+        writer.writerow(['ADDESS', 'VALUE', 'VALUEUNIT', 'RESOURCEUNIT'])
+        for unmatched_event in unmatched_event_list:
             writer.writerow([
-                candidate.proposal_id,
-                candidate.proposal.code,
-                candidate.proposal.value])
+                unmatched_event.event_id,
+                int.from_bytes(unmatched_event.value, byteorder='little'),
+               int.from_bytes(unmatched_event.valueUnit, byteorder='little'),
+                int.from_bytes(unmatched_event.resourceUnit, byteorder='little')])
     elif args.format == 'json' or args.format == 'yaml':
-        candidates_snapshot = \
-            {c.proposal_id: {c.proposal.code: c.proposal.value}
-             for c in candidates}
+        unmatched_event_snapshot = \
+            {e.event_id: {int.from_bytes(e.value, byteorder='little'),
+                    int.from_bytes(e.valueUnit, byteorder='little'), 
+                    int.from_bytes(e.resourceUnit, byteorder='little') }
+             for e in unmatched_event_list}
 
         if args.format == 'json':
-            print(json.dumps(candidates_snapshot, indent=2, sort_keys=True))
+            print(json.dumps(unmatched_event_snapshot, indent=2, sort_keys=True))
         else:
-            print(yaml.dump(candidates_snapshot,
+            print(yaml.dump(unmatched_event_snapshot,
                             default_flow_style=False)[0:-1])
     else:
         raise AssertionError('Unknown format {}'.format(args.format))
 
 
 def _do_event_reciprocate(args):
-    """Executes the 'proposal vote' subcommand.  Given a key file, a proposal
-    id and a vote value, it generates a batch of hashblock_events transactions
+    """Executes the 'event reciprocate' subcommand.  Given a key file, an event
+    id, a quantity, and a ratop, it generates a batch of hashblock_events transactions
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
-    signer = _read_signer(args.plus)
+    signer = _read_signer(args.key)
     rest_client = RestClient(args.url)
 
-    proposals = _get_proposals(rest_client)
+    unmatched_events = _get_unmatched_event_list(rest_client)
 
-    proposal = None
-    for candidate in proposals.candidates:
-        if candidate.proposal_id == args.proposal_id:
-            proposal = candidate
+    initiate_event_id = None
+    for unmatched_event in unmatched_events:
+        if unmatched_event.event_id == args.event_id:
+            initiate_event_id = unmatched_event
             break
 
-    if proposal is None:
-        raise CliException('No proposal exists with the given id')
+    if initiate_event_id is None:
+        raise CliException('No unmatched initiating event exists with the given id:{}'.format(args.event_id))
 
-    for vote_record in proposal.votes:
-        if vote_record.public_key == signer.get_public_key().as_hex():
-            raise CliException(
-                'A vote has already been recorded with this signing key')
+    quantities = [s.split(':', 2) for s in args.quantities]
 
-    txn = _create_vote_txn(
+    value, unit, resource = quantities[0]
+    quantity = Quantity()
+    quantity.value=(int(value)).to_bytes(2, byteorder='little')
+    quantity.valueUnit=(int(unit)).to_bytes(2, byteorder='little')
+    quantity.resourceUnit=(int(resource)).to_bytes(2, byteorder='little')
+
+    value, unit, resource = quantities[1]
+    numerator = Quantity()
+    numerator.value=(int(value)).to_bytes(2, byteorder='little')
+    numerator.valueUnit=(int(unit)).to_bytes(2, byteorder='little')
+    numerator.resourceUnit=(int(resource)).to_bytes(2, byteorder='little')
+
+    value, unit, resource = quantities[2]
+    denominator = Quantity()
+    denominator.value=(int(value)).to_bytes(2, byteorder='little')
+    denominator.valueUnit=(int(unit)).to_bytes(2, byteorder='little')
+    denominator.resourceUnit=(int(resource)).to_bytes(2, byteorder='little')
+
+    ratio=Ratio(numerator=numerator, denominator=denominator)
+
+    txn = _create_reciprocate_txn(
         signer,
-        args.proposal_id,
-        proposal.proposal.code,
-        args.vote_value)
+        args.event_id,
+        quantity,
+        ratio)
     batch = _create_batch(signer, [txn])
 
     batch_list = BatchList(batches=[batch])
@@ -180,28 +190,52 @@ def _do_event_reciprocate(args):
     rest_client.send_batches(batch_list)
 
 
-def _get_proposals(rest_client):
-    state_leaf = rest_client.get_leaf(
-        _make_events_key('hashblock.events.vote.proposals'))
-    # _key_to_address('hashblock.events.vote.proposals'))
+def _create_reciprocate_txn(signer, event_id, quantity, ratio):
+    """Creates an individual hashblock_units transaction for creating
+    a reciprocate event that matches with an initate event.
+    """
+    reciprocate_event = ReciprocateEvent(
+        plus=b'public key',
+        minus=b'minus',
+        ratio=ratio,
+        quantity=quantity,
+        initiate_event_id=event_id)
+    event_key = str(uuid.uuid4())
+    payload = EventPayload(data=reciprocate_event.SerializeToString(),
+                           key=event_key,
+                           action=EventPayload.RECIPROCATE_EVENT)
 
-    config_candidates = EventCandidates()
+    return _make_txn(signer, event_key, payload)
+    
+
+
+def _get_unmatched_event_list(rest_client):
+    state_leaf = rest_client.get_leaf(
+        _make_events_key(INITIATE_EVENT_LIST_KEY))
+
+    unmatched_events = []
 
     if state_leaf is not None:
-        event_bytes = b64decode(state_leaf['data'])
-        event = Event()
-        event.ParseFromString(event_bytes)
+        initiate_list_bytes = b64decode(state_leaf['data'])
+        initiate_list = InitiateList()
+        initiate_list.ParseFromString(initiate_list_bytes)
 
-        candidates_bytes = None
-        for entry in event.entries:
-            if entry.key == 'hashblock.events.vote.proposals':
-                candidates_bytes = entry.value
+        initiate_event_bytes = None
+        for entry in initiate_list.entries:
+            event_state_leaf = rest_client.get_leaf(entry)
+            if event_state_leaf is not None:
+                initiate_event_bytes = b64decode(event_state_leaf['data'])
+                if initiate_event_bytes is not None:
+                    initiate_event = InitiateEvent()
+                    initiate_event.ParseFromString(initiate_event_bytes)
+                    unmatched_event = UnmatchedEvent()
+                    unmatched_event.event_id = entry
+                    unmatched_event.value = initiate_event.quantity.value
+                    unmatched_event.valueUnit = initiate_event.quantity.valueUnit
+                    unmatched_event.resourceUnit = initiate_event.quantity.resourceUnit
+                    unmatched_events.append(unmatched_event)
 
-        if candidates_bytes is not None:
-            decoded = b64decode(candidates_bytes)
-            config_candidates.ParseFromString(decoded)
-
-    return config_candidates
+    return unmatched_events
 
 
 def _read_signer(key_filename):
@@ -302,7 +336,7 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
         valueUnit=(int(unit)).to_bytes(2, byteorder='little'),
         resourceUnit=(int(resource)).to_bytes(2, byteorder='little'))
     initiateEvent = InitiateEvent(
-        plus=b'plus_public_key',
+        plus=b'public key',
         minus=b'minus_public_key',
         quantity=quantity)
     event_key = str(uuid.uuid4())
@@ -549,7 +583,7 @@ def create_parser(prog_name):
         default='http://rest-api:8008')
 
     reciprocate_parser.add_argument(
-        '-p', '--plus',
+        '-k', '--key',
         type=str,
         help='specify a signing private key for the resulting transaction batch, '
         'and the resource increment assignment\'s public key')
@@ -560,7 +594,7 @@ def create_parser(prog_name):
         help='identify the initiating event to match')
 
     reciprocate_parser.add_argument(
-        'quantity_ratio',
+        'quantities',
         type=str,
         nargs='+',
         help='Reciprocating event as quantity and ratio vectors with the '
