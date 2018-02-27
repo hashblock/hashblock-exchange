@@ -60,8 +60,8 @@ message ReciprocateEvent {
     Ratio ratio = 3;
     //  Transaction quantity of unit and resource
     Quantity quantity = 4;
-    //  Address of initiating event - maybe
-    string initiate_event_id = 5;
+    //  Initiating event - maybe
+    InitiateEvent initiateEvent = 5;
 }
 
 message EventPayload {
@@ -73,11 +73,14 @@ message EventPayload {
     //  See enum above
     Action action = 1;
 
-    //  The event key
-    string key = 2;
+    //  The initiate event key
+    string ikey = 2;
+
+    //  The reciprocate event key
+    string rkey = 3;
 
     // The content of this payload
-    bytes data = 3;
+    bytes data = 4;
 }
 
 message UnmatchedEvent {
@@ -93,8 +96,4 @@ message UnmatchedEvent {
 
     //  Quantity resource unit
 	bytes resourceUnit = 4;
-}
-
-message InitiateList {
-    repeated string entries = 1;
 }
