@@ -94,6 +94,7 @@ def _timeout_error(basemsg, data):
 
 
 def _apply_initiate(initiateUUID, payload_data, context, signer_key):
+    LOGGER.debug("Executing initiate event")
     event_initiate = InitiateEvent()
     event_initiate.ParseFromString(payload_data)
     initiateFQNAddress = _ensure_initiate_not_exist(context, initiateUUID)
@@ -101,12 +102,17 @@ def _apply_initiate(initiateUUID, payload_data, context, signer_key):
     return _set_initiate_event(context, event_initiate, initiateFQNAddress)
 
 
-def _apply_reciprocate(keyUUID, payload_data, context, signer_key):
+def _apply_reciprocate(reciprocateUUID, payload_data, context, signer_key):
+    LOGGER.debug("Executing reciprocate event")
     event_reciprocate = ReciprocateEvent()
     event_reciprocate.ParseFromString(payload_data)
-    _get_initiate_event(context, keyUUID)
+    initiateFQNAddress = event_reciprocate.initiate_event_id
+    reciprocateFQNAddress = make_fqnaddress(reciprocateUUID)
+    _get_initiate_event(context, initiateFQNAddress)
     _check_reciprocate(event_reciprocate)
-    return _complete_reciprocate_event(context, keyUUID)
+    return _complete_reciprocate_event(
+        context, reciprocateFQNAddress,
+        event_reciprocate, initiateFQNAddress)
 
 
 def _ensure_initiate_not_exist(context, initiateUUID):
@@ -144,47 +150,55 @@ def _ensure_initiate_not_exist(context, initiateUUID):
     return initiateFQNAddress
 
 
-def _complete_reciprocate_event(context, address_key):
-    address = _make_events_key(address_key)
-    myevent = _get_initiate_event(context, address_key)
-    if not myevent:
-        raise InvalidTransaction(
-            'Initiate does not exist {} .'.format(myevent))
-    try:
-        entries_list = context.delete_state([address])
-    except FutureTimeoutError:
-        _timeout_error('context.delete_state', address_key)
+def _complete_reciprocate_event(
+    context,
+    reciprocateFQNAddress,
+    event_reciprocate,
+        initiateFQNAddress):
+    """
+    Completes reciprocation by removing the initiate address
+    from our initiate address list and posts the reciprocate
+    data to state
+    """
+    entries_list = _get_initiate_list(context)
+    ilist = InitiateList()
+    if len(entries_list) != 0:
+        ilist.ParseFromString(entries_list[0].data)
+        if initiateFQNAddress not in ilist.entries:
+            raise InternalError(
+                'Initiate event does not exist for {}'
+                .format(initiateFQNAddress))
+    else:
+        raise InternalError('Empty initiation list')
 
-    if len(entries_list) != 1:
-        LOGGER.warning(
-            'Failed to remove value on address %s', address_key)
-        raise InternalError(
-            'Unable to save config value {}'.format(address_key))
+    # Remove the intiate address from the list
+    ilist.entries.remove(initiateFQNAddress)
+    _set_initiate_list(context, ilist)
+    LOGGER.debug("Removed initiate %s from list", initiateFQNAddress)
+
+    # Add the reciprocate to the state
+    _set_event(context, event_reciprocate, reciprocateFQNAddress)
+    LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
+
     context.add_event(
         event_type="events/reciprocated",
-        attributes=[("reciprocated", address_key)])
+        attributes=[("reciprocated", reciprocateFQNAddress)])
 
 
-def _get_initiate_event(context, initiateUUID):
+def _get_initiate_event(context, initiateFQNAddress):
     """
     Gets an initiate event address from our
     hashblock.events.initiate list
     """
 
-    initiateFQNAddress = make_fqnaddress(initiateUUID)
-
     # Get initiate event list
-    try:
-        entries_list = context.get_state(
-            [INITIATE_EVENT_LIST_ADDRESS], timeout=STATE_TIMEOUT_SEC)
-    except FutureTimeoutError:
-        _timeout_error('context.get_state', INITIATE_EVENT_LIST_KEY)
+    entries_list = _get_initiate_list(context)
 
     ilist = InitiateList()
     ilist.ParseFromString(entries_list[0].data)
     if initiateFQNAddress not in ilist.entries:
         raise InternalError(
-            'Event does not exist in list for {}'.format(initiateUUID))
+            'Event does not exist in list for {}'.format(initiateFQNAddress))
 
     return initiateFQNAddress
 
@@ -194,40 +208,68 @@ def _set_initiate_event(context, event_initiate, initiateFQNAddress):
     Creates an iniitate event in state and stores
     its address in our initiate list
     """
-    event_data = event_initiate.SerializeToString()
-    state_dict = {initiateFQNAddress: event_data}
+
+    # Sets the event structure to state
+    _set_event(context, event_initiate, initiateFQNAddress)
+    LOGGER.debug("Added initiate %s to state", initiateFQNAddress)
+
+    # Get initiate event list
+    entries_list = _get_initiate_list(context)
+
+    # Append my initiate address to list
+    ilist = InitiateList()
+    if len(entries_list) != 0:
+        ilist.ParseFromString(entries_list[0].data)
+    ilist.entries.append(initiateFQNAddress)
+    _set_initiate_list(context, ilist)
+    LOGGER.debug("Added initiate %s to list", initiateFQNAddress)
+
+    context.add_event(
+        event_type="events/initiated",
+        attributes=[("initiated", initiateFQNAddress)])
+
+
+def _set_event(context, event, eventFQNAddress):
+    """
+    Sets an event state
+    """
+    event_data = event.SerializeToString()
+    state_dict = {eventFQNAddress: event_data}
     try:
         addresses = context.set_state(
             state_dict,
             timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
-        raise InternalError('Unable to set {}'.format(initiateFQNAddress))
-
+        raise InternalError('Unable to set {}'.format(eventFQNAddress))
     if len(addresses) != 1:
         raise InternalError(
-            'Unable to save initiate value {}'.format(initiateFQNAddress))
-    # Get initiate event list
+            'Unable to save initiate value {}'.format(eventFQNAddress))
+
+    return eventFQNAddress
+
+
+def _set_initiate_list(context, ilist):
+    """
+    Sets the initiation list in state
+    """
+    try:
+        context.set_state(
+            {INITIATE_EVENT_LIST_ADDRESS: ilist.SerializeToString()},
+            timeout=STATE_TIMEOUT_SEC)
+    except FutureTimeoutError:
+        raise InternalError('Unable to set initiatelist')
+
+
+def _get_initiate_list(context):
+    """
+    Get the main unrecpiprocated list of initiate events
+    """
     try:
         entries_list = context.get_state(
             [INITIATE_EVENT_LIST_ADDRESS], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
         _timeout_error('context.get_state', INITIATE_EVENT_LIST_KEY)
-
-    ilist = InitiateList()
-    if len(entries_list) != 0:
-        ilist.ParseFromString(entries_list[0].data)
-    ilist.entries.append(initiateFQNAddress)
-
-    try:
-        addresses = context.set_state(
-            {INITIATE_EVENT_LIST_ADDRESS: ilist.SerializeToString()},
-            timeout=STATE_TIMEOUT_SEC)
-    except FutureTimeoutError:
-        raise InternalError('Unable to set {}'.format(initiateFQNAddress))
-
-    context.add_event(
-        event_type="events/initiated",
-        attributes=[("initiated", initiateFQNAddress)])
+    return entries_list
 
 
 def _check_initiate(event_initiate):
