@@ -29,6 +29,8 @@ from sawtooth_cli.protobuf.events_pb2 import ReciprocateEvent
 
 
 EVENTS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
+RECIPROCATE_EVENT_KEY = 'hashblock.events.reciprocate.'
+INITIATE_EVENT_KEY = 'hashblock.events.initiate.'
 
 _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
@@ -99,19 +101,16 @@ def _do_events_list(args):
     head = state['head']
     state_values = state['data']
     printable_events = []
-    initiate_address = _key_to_address('hashblock.events.initiate')
+    reciprocate_address = _make_events_key(RECIPROCATE_EVENT_KEY)
     for state_value in state_values:
-        if state_value['address'] == initiate_address:
-            # This is an initiate event and we won't list it here
-            continue
+        if state_value['address'] == reciprocate_address:
+            decoded = b64decode(state_value['data'])
+            events = ReciprocateEvent()
+            events.ParseFromString(decoded)
 
-        decoded = b64decode(state_value['data'])
-        events = ReciprocateEvent()
-        events.ParseFromString(decoded)
-
-        for entry in events.entries:
-            if entry.key.startswith(prefix):
-                printable_events.append(entry)
+            for entry in events.entries:
+                if entry.key.startswith(prefix):
+                    printable_events.append(entry)
 
     printable_events.sort(key=lambda s: s.key)
 
@@ -158,3 +157,12 @@ def _key_to_address(key):
 
 def _short_hash(in_str):
     return hashlib.sha256(in_str.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
+
+def _make_events_key(key):
+    # split the key into 4 parts, maximum
+    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+    # compute the short hash of each part
+    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
+    # pad the parts with the empty hash, if needed
+    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
+    return make_events_address(''.join(addr_parts))
