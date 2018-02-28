@@ -99,13 +99,18 @@ def _apply_reciprocate(payload, context):
     LOGGER.debug("Executing reciprocate event")
     event_reciprocate = ReciprocateEvent()
     event_reciprocate.ParseFromString(payload.data)
-    event_reciprocate.initiateEvent = _get_event(
-        context, InitiateEvent(), payload.ikey)
-    LOGGER.debug("Reciprocate hydrated with Initiate")
     _check_reciprocate(event_reciprocate)
+    event_initiate = _get_event(context, InitiateEvent(), payload.ikey)
+    new_reciprocate = ReciprocateEvent(
+        plus=event_reciprocate.plus,
+        minus=event_reciprocate.minus,
+        ratio=event_reciprocate.ratio,
+        quantity=event_reciprocate.quantity,
+        initiateEvent=event_initiate)
+    LOGGER.debug("Reciprocate hydrated with Initiate")
     return _complete_reciprocate_event(
         context, payload.rkey,
-        event_reciprocate, payload.ikey)
+        new_reciprocate, payload.ikey)
 
 
 def _complete_reciprocate_event(
