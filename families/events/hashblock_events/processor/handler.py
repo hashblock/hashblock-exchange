@@ -133,12 +133,14 @@ def _complete_reciprocate_event(
     LOGGER.debug("Removed initiate %s from state", initiateFQNAddress)
 
     # Add the reciprocate to the state
-    _set_event(context, event_reciprocate, reciprocateFQNAddress)
+    set_event = _set_event(context, event_reciprocate, reciprocateFQNAddress)
     LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
 
     context.add_event(
         event_type="events/reciprocated",
         attributes=[("reciprocated", reciprocateFQNAddress)])
+    
+    return set_event
 
 
 def _get_event(context, event, eventFQNAddress):
