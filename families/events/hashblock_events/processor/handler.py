@@ -150,7 +150,8 @@ def _get_event(context, event, eventFQNAddress):
     if len(event_list) != 1:
         raise InternalError(
             'Event does not exists for {}'.format(eventFQNAddress))
-    return event.ParseFromString(event_list[0].data)
+    event.ParseFromString(event_list[0].data)
+    return event
 
 
 def _set_event(context, event, eventFQNAddress):
