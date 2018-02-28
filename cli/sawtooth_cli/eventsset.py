@@ -39,7 +39,6 @@ from sawtooth_cli.protobuf.events_pb2 import ReciprocateEvent
 from sawtooth_cli.protobuf.events_pb2 import Quantity
 from sawtooth_cli.protobuf.events_pb2 import Ratio
 from sawtooth_cli.protobuf.events_pb2 import UnmatchedEvent
-from sawtooth_cli.protobuf.events_pb2 import InitiateList
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
@@ -52,10 +51,8 @@ from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 DISTRIBUTION_NAME = 'eventsset'
-INITIATE_EVENT_KEY = 'hashblock.events.initiate.'
-RECIPROCATE_EVENT_KEY = 'hashblock.events.reciprocate.'
-INITIATE_EVENT_LIST_KEY = 'hashblock.events.list'
-
+INITIATE_EVENT_KEY = 'initiate.'
+RECIPROCATE_EVENT_KEY = 'reciprocate.'
 
 UNITS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
 
@@ -102,7 +99,6 @@ def _do_event_list(args):
     Given a url, optional filters on prefix, this command lists
     the current unmatched initate events.
     """
-
     unmatched_event_list = _get_unmatched_event_list(RestClient(args.url))
 
     if args.format == 'default':
@@ -201,28 +197,24 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
         ratio=ratio,
         quantity=quantity,
         initiate_event_id=event_id)
-    event_key = str(uuid.uuid4())
+    event_key = _make_events_key(RECIPROCATE_EVENT_KEY+str(uuid.uuid4()))
+    event_keys = [event_key, event_id]
     payload = EventPayload(data=reciprocate_event.SerializeToString(),
-                           key=event_key,
+                           ikey = event_id,
+                           rkey=event_key,
                            action=EventPayload.RECIPROCATE_EVENT)
 
-    return _make_txn(signer, event_key, payload)
+    return _make_txn(signer, event_keys, payload)
 
 
 def _get_unmatched_event_list(rest_client):
-    state_leaf = rest_client.get_leaf(
-        _make_events_key(INITIATE_EVENT_LIST_KEY))
+    state_leaf = rest_client.get_leaf(make_events_key(INITIATE_EVENT_KEY))
 
     unmatched_events = []
 
     if state_leaf is not None:
-        initiate_list_bytes = b64decode(state_leaf['data'])
-        initiate_list = InitiateList()
-        initiate_list.ParseFromString(initiate_list_bytes)
-
         initiate_event_bytes = None
-        for entry in initiate_list.entries:
-            event_state_leaf = rest_client.get_leaf(entry)
+        for event_state_leaf in state_leaf:
             if event_state_leaf is not None:
                 initiate_event_bytes = b64decode(event_state_leaf['data'])
                 if initiate_event_bytes is not None:
@@ -339,15 +331,16 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
         plus=b'public key',
         minus=b'minus_public_key',
         quantity=quantity)
-    event_key = str(uuid.uuid4())
+    event_key = _make_events_key(INITIATE_EVENT_KEY+str(uuid.uuid4()))
+    event_keys = [event_key]
     payload = EventPayload(data=initiateEvent.SerializeToString(),
-                           key=event_key,
+                           ikey=event_key,
                            action=EventPayload.INITIATE_EVENT)
 
-    return _make_txn(signer, event_key, payload)
+    return _make_txn(signer, event_keys, payload)
 
 
-def _make_txn(signer, event_key, payload):
+def _make_txn(signer, event_keys, payload):
     """Creates and signs a hashblock_events transaction with with a payload.
     """
     serialized_payload = payload.SerializeToString()
@@ -355,8 +348,8 @@ def _make_txn(signer, event_key, payload):
         signer_public_key=signer.get_public_key().as_hex(),
         family_name='hashblock_events',
         family_version='0.1.0',
-        inputs=_config_inputs(event_key),
-        outputs=_config_outputs(event_key),
+        inputs=event_keys,
+        outputs=event_keys,
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex()
@@ -368,28 +361,6 @@ def _make_txn(signer, event_key, payload):
         payload=serialized_payload)
 
 
-def _config_inputs(key):
-    """Creates the list of inputs for a hashblock_events transaction, for a
-    given event key.
-    """
-    return [
-        _make_events_key(INITIATE_EVENT_LIST_KEY),
-        _make_events_key(RECIPROCATE_EVENT_KEY+key),
-        make_fqnaddress(key)
-    ]
-
-
-def _config_outputs(key):
-    """Creates the list of outputs for a hashblock_events transaction, for a
-    given event key.
-    """
-    return [
-        _make_events_key(INITIATE_EVENT_LIST_KEY),
-        _make_events_key(RECIPROCATE_EVENT_KEY+key),
-        make_fqnaddress(key)
-    ]
-
-
 def _to_hash(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
@@ -399,17 +370,10 @@ EVENTS_ADDRESS_PREFIX = hashlib.sha512(
     ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
 
 
-def event_key_to_address(key):
-    return _key_to_address(key)
-
-
-def make_events_address(data):
-    return EVENTS_ADDRESS_PREFIX + hashlib.sha512(
-        data.encode('utf-8')).hexdigest()[-64:]
-
-
-def make_fqnaddress(keyUUID):
-    return _make_events_key(''.join([INITIATE_EVENT_KEY, keyUUID]))
+def make_events_address(sublist, data):
+    return EVENTS_ADDRESS_PREFIX + 
+        hashlib.sha512(sublist.encode('utf-8')).hexdigest()[0:6] +
+        hashlib.sha512(data.encode('utf-8')).hexdigest()[-58:]
 
 
 def _make_events_key(key):
@@ -419,7 +383,7 @@ def _make_events_key(key):
     addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
     # pad the parts with the empty hash, if needed
     addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-    return make_events_address(''.join(addr_parts))
+    return make_events_address(addr_parts[0], ''.join(addr_parts[0:3]))
 
 
 def create_console_handler(verbose_level):

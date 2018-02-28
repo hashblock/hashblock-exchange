@@ -27,10 +27,16 @@ from sawtooth_cli import tty
 
 from sawtooth_cli.protobuf.events_pb2 import ReciprocateEvent
 
+ADDRESS_PREFIX = 'events'
+FAMILY_NAME = 'hashblock_events'
+
+EVENTS_ADDRESS_PREFIX = hashlib.sha512(
+    ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
+
 
 EVENTS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
-RECIPROCATE_EVENT_KEY = 'hashblock.events.reciprocate.'
-INITIATE_EVENT_KEY = 'hashblock.events.initiate.'
+RECIPROCATE_EVENT_KEY = 'reciprocate'
+INITIATE_EVENT_KEY = 'initiate'
 
 _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
@@ -96,23 +102,16 @@ def _do_events_list(args):
     rest_client = RestClient(args.url)
     state = rest_client.list_state(subtree=EVENTS_NAMESPACE)
 
-    prefix = args.filter
-
     head = state['head']
     state_values = state['data']
+    receprocate_address = _key_to_address(RECIPROCATE_EVENT_KEY)
     printable_events = []
-    reciprocate_address = _make_events_key(RECIPROCATE_EVENT_KEY)
     for state_value in state_values:
-        if state_value['address'] == reciprocate_address:
+        if state_value['address'].startswith(proposals_address):
             decoded = b64decode(state_value['data'])
-            events = ReciprocateEvent()
-            events.ParseFromString(decoded)
-
-            for entry in events.entries:
-                if entry.key.startswith(prefix):
-                    printable_events.append(entry)
-
-    printable_events.sort(key=lambda s: s.key)
+            event = ReciprocateEvent()
+            event.ParseFromString(decoded)
+            printable_events.append(event)
 
     if args.format == 'default':
         tty_width = tty.width()
@@ -158,11 +157,6 @@ def _key_to_address(key):
 def _short_hash(in_str):
     return hashlib.sha256(in_str.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
 
-def _make_events_key(key):
-    # split the key into 4 parts, maximum
-    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-    # compute the short hash of each part
-    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
-    # pad the parts with the empty hash, if needed
-    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-    return make_events_address(''.join(addr_parts))
+
+
+
