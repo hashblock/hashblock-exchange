@@ -24,10 +24,10 @@ message Quantity {
     //  Quantity amount? - Fixed width integer
 	bytes value = 1;
 
-    //  Address of unit of measure (e.g. bag) prime numbers
+    //  Big number
 	bytes valueUnit = 2;
 
-    //  Address of resource (e.g. peanuts) prime numbers
+    //  Big number
 	bytes resourceUnit = 3;
 }
 
