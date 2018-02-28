@@ -55,12 +55,16 @@ INITIATE_EVENT_KEY = 'initiate.'
 RECIPROCATE_EVENT_KEY = 'reciprocate.'
 
 UNITS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
+INITIATE_LIST_ADDRESS = UNITS_NAMESPACE + \
+    hashlib.sha512(INITIATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 
 _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 ADDRESS_PREFIX = 'events'
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _do_event_initiate(args):
@@ -208,7 +212,7 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
 
 
 def _get_unmatched_event_list(rest_client):
-    state_leaf = rest_client.get_leaf(make_events_key(INITIATE_EVENT_KEY))
+    state_leaf = rest_client.list_state(INITIATE_LIST_ADDRESS)
 
     unmatched_events = []
 
@@ -371,12 +375,14 @@ EVENTS_ADDRESS_PREFIX = hashlib.sha512(
 
 
 def make_events_address(sublist, data):
-    return EVENTS_ADDRESS_PREFIX + 
-        hashlib.sha512(sublist.encode('utf-8')).hexdigest()[0:6] +
+    print("Making address from {} and {}".format(sublist, data))
+    return EVENTS_ADDRESS_PREFIX + \
+        hashlib.sha512(sublist.encode('utf-8')).hexdigest()[0:6] + \
         hashlib.sha512(data.encode('utf-8')).hexdigest()[-58:]
 
 
 def _make_events_key(key):
+    print("Making events key from {}".format(key))
     # split the key into 4 parts, maximum
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     # compute the short hash of each part
