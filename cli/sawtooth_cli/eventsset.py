@@ -218,7 +218,7 @@ def _get_unmatched_event_list(rest_client):
 
     if state_leaf is not None:
         initiate_event_bytes = None
-        for event_state_leaf in state_leaf:
+        for event_state_leaf in state_leaf['data']:
             if event_state_leaf is not None:
                 initiate_event_bytes = b64decode(event_state_leaf['data'])
                 if initiate_event_bytes is not None:
