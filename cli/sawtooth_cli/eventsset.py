@@ -199,8 +199,8 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
         plus=b'public key',
         minus=b'minus',
         ratio=ratio,
-        quantity=quantity,
-        initiate_event_id=event_id)
+        quantity=quantity)
+    # initiate_event_id=event_id)
     event_key = make_events_address(RECIPROCATE_EVENT_KEY, str(uuid.uuid4()))
     event_keys = [event_key, event_id]
     payload = EventPayload(data=reciprocate_event.SerializeToString(),
