@@ -100,13 +100,12 @@ def _apply_reciprocate(payload, context):
     event_reciprocate = ReciprocateEvent()
     event_reciprocate.ParseFromString(payload.data)
     _check_reciprocate(event_reciprocate)
-    event_initiate = _get_event(context, InitiateEvent(), payload.ikey)
     new_reciprocate = ReciprocateEvent(
         plus=event_reciprocate.plus,
         minus=event_reciprocate.minus,
         ratio=event_reciprocate.ratio,
         quantity=event_reciprocate.quantity,
-        initiateEvent=event_initiate)
+        initiateEvent=_get_event(context, InitiateEvent(), payload.ikey))
     LOGGER.debug("Reciprocate hydrated with Initiate")
     return _complete_reciprocate_event(
         context, payload.rkey,
@@ -120,6 +119,11 @@ def _complete_reciprocate_event(
     Completes reciprocation by removing the initiate address
     from merkle trie posts the reciprocate data to trie
     """
+    LOGGER.debug(
+        "Reciprocate address given = {}".format(reciprocateFQNAddress))
+    # Add the reciprocate to the merkle trie
+    set_event = _set_event(context, event_reciprocate, reciprocateFQNAddress)
+    LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
 
     # Remove the intiate address merkle trie
     try:
@@ -132,14 +136,10 @@ def _complete_reciprocate_event(
             'Event not deleted for {}'.format(initiateFQNAddress))
     LOGGER.debug("Removed initiate %s from state", initiateFQNAddress)
 
-    # Add the reciprocate to the state
-    set_event = _set_event(context, event_reciprocate, reciprocateFQNAddress)
-    LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
-
     context.add_event(
         event_type="events/reciprocated",
         attributes=[("reciprocated", reciprocateFQNAddress)])
-    
+
     return set_event
 
 
