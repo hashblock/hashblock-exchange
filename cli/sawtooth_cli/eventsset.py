@@ -201,10 +201,10 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
         ratio=ratio,
         quantity=quantity,
         initiate_event_id=event_id)
-    event_key = _make_events_key(RECIPROCATE_EVENT_KEY+str(uuid.uuid4()))
+    event_key = make_events_address(RECIPROCATE_EVENT_KEY, str(uuid.uuid4()))
     event_keys = [event_key, event_id]
     payload = EventPayload(data=reciprocate_event.SerializeToString(),
-                           ikey = event_id,
+                           ikey=event_id,
                            rkey=event_key,
                            action=EventPayload.RECIPROCATE_EVENT)
 
@@ -213,7 +213,6 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
 
 def _get_unmatched_event_list(rest_client):
     state_leaf = rest_client.list_state(INITIATE_LIST_ADDRESS)
-
     unmatched_events = []
 
     if state_leaf is not None:
@@ -225,7 +224,7 @@ def _get_unmatched_event_list(rest_client):
                     initiate_event = InitiateEvent()
                     initiate_event.ParseFromString(initiate_event_bytes)
                     unmatched_event = UnmatchedEvent()
-                    unmatched_event.event_id = entry
+                    unmatched_event.event_id = event_state_leaf['address']
                     unmatched_event.value = initiate_event.quantity.value
                     unmatched_event.valueUnit = initiate_event.quantity.valueUnit
                     unmatched_event.resourceUnit = initiate_event.quantity.resourceUnit
@@ -335,7 +334,7 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
         plus=b'public key',
         minus=b'minus_public_key',
         quantity=quantity)
-    event_key = _make_events_key(INITIATE_EVENT_KEY+str(uuid.uuid4()))
+    event_key = make_events_address(INITIATE_EVENT_KEY, str(uuid.uuid4()))
     event_keys = [event_key]
     payload = EventPayload(data=initiateEvent.SerializeToString(),
                            ikey=event_key,
@@ -375,7 +374,6 @@ EVENTS_ADDRESS_PREFIX = hashlib.sha512(
 
 
 def make_events_address(sublist, data):
-    print("Making address from {} and {}".format(sublist, data))
     return EVENTS_ADDRESS_PREFIX + \
         hashlib.sha512(sublist.encode('utf-8')).hexdigest()[0:6] + \
         hashlib.sha512(data.encode('utf-8')).hexdigest()[-58:]
