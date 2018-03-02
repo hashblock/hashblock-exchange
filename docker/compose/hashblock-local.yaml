@@ -35,6 +35,9 @@ services:
       - validator
       - rest-api      
     command: "bash -c \"\
+        python3 ./sdk/python/get-pip.py && \
+        pip3 install ptvsd==3.0.0.0 && \
+        pip3 install ply && \
         sawtooth keygen your_key && \
         tail -f /dev/null \
         \""
