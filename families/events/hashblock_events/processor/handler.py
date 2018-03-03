@@ -71,12 +71,27 @@ class EventTransactionHandler(TransactionHandler):
         try:
             verbs[event_payload.action](event_payload, context)
         except KeyError:
-            return _apply_invalid()
+            return throw_invalid(
+                "'action' must be one of {INITIATE_EVENT, RECIPROCATE_EVENT}")
+
+# Module functions
 
 
-def _apply_invalid():
-    raise InvalidTransaction(
-        "'type' must be one of {INITIATE_EVENT, RECIPROCATE_EVENT}")
+def compose(*functions):
+    """
+    Fancy construction of a composition
+    """
+    return functools.reduce(
+        lambda f, g: lambda x: f(g(x)),
+        functions,
+        lambda x: x)
+
+
+def throw_invalid(msg):
+    """
+    Generic invalid stringaction
+    """
+    raise InvalidTransaction(msg)
 
 
 def _timeout_error(basemsg, data):
@@ -84,61 +99,69 @@ def _timeout_error(basemsg, data):
     raise InternalError('Unable to get {}'.format(data))
 
 
+INITIATE_VSET = {'plus', 'minus', 'quantity'}
+RECIPROCATE_VSET = INITIATE_VSET.union({'ratio'})
+
+
+def __check_existence(event, eventset):
+    return eventset == set([f[0].name for f in event.ListFields()])
+
+
 def apply_initiate(payload, context):
     LOGGER.debug("Executing initiate event")
-    __event_initiate = InitiateEvent()
-    __event_initiate.ParseFromString(payload.data)
-    _check_initiate(__event_initiate)
-    LOGGER.debug("Adding initiate %s to state", payload.ikey)
-    __set_event(context, __event_initiate, payload.ikey)
+    event_initiate = InitiateEvent()
+    event_initiate.ParseFromString(payload.data)
+    if __check_existence(event_initiate, INITIATE_VSET):
+        LOGGER.debug("Adding initiate %s to state", payload.ikey)
+        __set_event(context, event_initiate, payload.ikey)
+    else:
+        throw_invalid('Initiate not well formed')
 
 
 def apply_reciprocate(payload, context):
     LOGGER.debug("Executing reciprocate event")
-    _event_reciprocate = ReciprocateEvent()
-    _event_reciprocate.ParseFromString(payload.data)
-    _event_initiate = InitiateEvent()
-    __get_event(context, _event_initiate, payload.ikey)
-    try:
-        _check_reciprocate(_event_reciprocate, _event_initiate)
-    except InvalidTransaction:
-        LOGGER.error("Initiate and Reciprocate DO NOT BALANCE")
-        raise
+    event_reciprocate = ReciprocateEvent()
+    event_reciprocate.ParseFromString(payload.data)
+    event_initiate = InitiateEvent()
+    __get_event(context, event_initiate, payload.ikey)
+    if __check_existence(event_reciprocate, RECIPROCATE_VSET):
+        try:
+            __check_reciprocate(event_reciprocate, event_initiate)
+        except InvalidTransaction:
+            LOGGER.error("Initiate and Reciprocate DO NOT BALANCE")
+            raise
+    else:
+        throw_invalid('Reciprocate not well formed')
 
     LOGGER.info("Initiate and Reciprocate Balance!")
-    _event_reciprocate.initiateEvent.CopyFrom(_event_initiate)
+    event_reciprocate.initiateEvent.CopyFrom(event_initiate)
     LOGGER.debug("Reciprocate hydrated with Initiate")
     __complete_reciprocate_event(
         context, payload.rkey,
-        _event_reciprocate, payload.ikey)
+        event_reciprocate, payload.ikey)
 
 
-def __complete_reciprocate_event(
-    context, reciprocateFQNAddress,
-        event_reciprocate, initiateFQNAddress):
+def __check_reciprocate(reciprocate, initiate):
+    __check_balance(reciprocate, initiate, 'value')
+    __check_balance(reciprocate, initiate, 'valueUnit')
+    __check_balance(reciprocate, initiate, 'resourceUnit')
+
+
+def __check_balance(reciprocate, initiate, key):
     """
-    Completes reciprocation by removing the initiate address
-    from merkle trie posts the reciprocate data to trie
+    Check rqv == (iqv*rrnqv)/rrdqv
     """
-    # Add the reciprocate to the merkle trie
-    __set_event(context, event_reciprocate, reciprocateFQNAddress)
-    LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
-
-    # Remove the intiate address merkle trie
-    # try:
-    #     event_list = context.delete_state(
-    #         [initiateFQNAddress], timeout=STATE_TIMEOUT_SEC)
-    # except FutureTimeoutError:
-    #     _timeout_error('context._delete_state', initiateFQNAddress)
-
-    # if len(event_list) != 1:
-    #     raise InternalError(
-    #         'Event not deleted for {}'.format(initiateFQNAddress))
-    LOGGER.debug("Removed initiate %s from state", initiateFQNAddress)
-
-    context.add_event(
-        event_type="events/reciprocated",
-        attributes=[("reciprocated", reciprocateFQNAddress)])
+    iqv = int.from_bytes(
+        getattr(initiate.quantity, key), byteorder='little')
+    rqv = int.from_bytes(
+        getattr(reciprocate.quantity, key), byteorder='little')
+    rrnqv = int.from_bytes(
+        getattr(reciprocate.ratio.numerator, key), byteorder='little')
+    rrdqv = int.from_bytes(
+        getattr(reciprocate.ratio.denominator, key), byteorder='little')
+    if rqv != (iqv * rrnqv) / rrdqv:
+        throw_invalid("".join([key, ' is not in balance']))
+    return True
 
 
 def __get_event(context, event, eventFQNAddress):
@@ -170,107 +193,32 @@ def __set_event(context, event, eventFQNAddress):
             'Unable to save event for address {}'.format(eventFQNAddress))
 
 
-def compose(*functions):
-    return functools.reduce(
-        lambda f, g: lambda x: f(g(x)),
-        functions,
-        lambda x: x)
-
-
-def _check_initiate(initiate):
-    check = compose(_check_plus, _check_minus, _check_quanity)
-    check(initiate)
-
-
-def _check_reciprocate(reciprocate, initiate):
-    check = compose(_check_plus, _check_minus, _check_quanity, _check_ratio)
-    check(reciprocate)
-    _check_balance(reciprocate, initiate, 'value')
-    _check_balance(reciprocate, initiate, 'valueUnit')
-    _check_balance(reciprocate, initiate, 'resourceUnit')
-
-
-def _check_balance(reciprocate, initiate, key):
+def __complete_reciprocate_event(
+    context, reciprocateFQNAddress,
+        event_reciprocate, initiateFQNAddress):
     """
-    Check rqv == (iqv*rrnqv)/rrdqv
+    Completes reciprocation by removing the initiate address
+    from merkle trie posts the reciprocate data to trie
     """
-    iqv = int.from_bytes(
-        getattr(initiate.quantity, key), byteorder='little')
-    rqv = int.from_bytes(
-        getattr(reciprocate.quantity, key), byteorder='little')
-    rrnqv = int.from_bytes(
-        getattr(reciprocate.ratio.numerator, key), byteorder='little')
-    rrdqv = int.from_bytes(
-        getattr(reciprocate.ratio.denominator, key), byteorder='little')
-    if rqv != (iqv * rrnqv) / rrdqv:
-        raise InvalidTransaction("".join([key, ' is not in balance']))
-    return True
+    # Add the reciprocate to the merkle trie
+    __set_event(context, event_reciprocate, reciprocateFQNAddress)
+    LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
 
+    # Remove the intiate address merkle trie
+    # try:
+    #     event_list = context.delete_state(
+    #         [initiateFQNAddress], timeout=STATE_TIMEOUT_SEC)
+    # except FutureTimeoutError:
+    #     _timeout_error('context._delete_state', initiateFQNAddress)
 
-def _check_plus(event_payload):
-    """
-    Validate the plus entity exists on the payload
-    """
-    try:
-        event_payload.plus
-    except AttributeError:
-        raise InvalidTransaction('Plus is required')
-    return event_payload
+    # if len(event_list) != 1:
+    #     raise InternalError(
+    #         'Event not deleted for {}'.format(initiateFQNAddress))
+    LOGGER.debug("Removed initiate %s from state", initiateFQNAddress)
 
-
-def _check_minus(event_payload):
-    """
-    Validate the minus entity exists on the payload
-    """
-    try:
-        event_payload.minus
-    except AttributeError:
-        raise InvalidTransaction('Minus is required')
-    return event_payload
-
-
-def _check_value(event_payload):
-    try:
-        event_payload.value
-    except AttributeError:
-        raise InvalidTransaction('Quantity.Value is required')
-    return event_payload
-
-
-def _check_valueUnit(event_payload):
-    try:
-        event_payload.valueUnit
-    except AttributeError:
-        raise InvalidTransaction('Quanity.ValueUnit is required')
-    return event_payload
-
-
-def _check_resourceUnit(event_payload):
-    try:
-        event_payload.resourceUnit
-    except AttributeError:
-        raise InvalidTransaction('Quantity.ResourceUnit is required')
-    return event_payload
-
-
-def _check_quanity(event_payload):
-    """
-    Validate the quantity entity exists on the payload
-    and it's attributes are there
-    """
-    check = compose(_check_value, _check_valueUnit, _check_resourceUnit)
-    check(event_payload.quantity)
-    return event_payload
-
-
-def _check_ratio(event_payload):
-    check = compose(_check_value, _check_valueUnit, _check_resourceUnit)
-    try:
-        check(event_payload.ratio.numerator)
-        check(event_payload.ratio.denominator)
-    except AttributeError:
-        raise InvalidTransaction('Ratio is required')
-    return event_payload
+    context.add_event(
+        event_type="events/reciprocated",
+        attributes=[("reciprocated", reciprocateFQNAddress)])
 
 
 def _to_hash(value):
