@@ -202,13 +202,14 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
         quantity=quantity)
     # initiate_event_id=event_id)
     event_key = make_events_address(RECIPROCATE_EVENT_KEY, str(uuid.uuid4()))
-    event_keys = [event_key, event_id]
+    input_keys = [event_id]
+    output_keys = [event_key, event_id]
     payload = EventPayload(data=reciprocate_event.SerializeToString(),
                            ikey=event_id,
                            rkey=event_key,
                            action=EventPayload.RECIPROCATE_EVENT)
 
-    return _make_txn(signer, event_keys, payload)
+    return _make_txn(signer, input_keys, output_keys, payload)
 
 
 def _get_unmatched_event_list(rest_client):
@@ -335,15 +336,15 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
         minus=b'minus_public_key',
         quantity=quantity)
     event_key = make_events_address(INITIATE_EVENT_KEY, str(uuid.uuid4()))
-    event_keys = [event_key]
+    output_keys = [event_key]
     payload = EventPayload(data=initiateEvent.SerializeToString(),
                            ikey=event_key,
                            action=EventPayload.INITIATE_EVENT)
 
-    return _make_txn(signer, event_keys, payload)
+    return _make_txn(signer, [], output_keys, payload)
 
 
-def _make_txn(signer, event_keys, payload):
+def _make_txn(signer, input_keys, output_keys, payload):
     """Creates and signs a hashblock_events transaction with with a payload.
     """
     serialized_payload = payload.SerializeToString()
@@ -351,8 +352,8 @@ def _make_txn(signer, event_keys, payload):
         signer_public_key=signer.get_public_key().as_hex(),
         family_name='hashblock_events',
         family_version='0.1.0',
-        inputs=event_keys,
-        outputs=event_keys,
+        inputs=input_keys,
+        outputs=output_keys,
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex()

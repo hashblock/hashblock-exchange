@@ -14,6 +14,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import sys
 import logging
 import hashlib
 import base64
@@ -66,12 +67,14 @@ class EventTransactionHandler(TransactionHandler):
             EventPayload.INITIATE_EVENT: _apply_initiate,
             EventPayload.RECIPROCATE_EVENT: _apply_reciprocate,
         }
-
         event_payload = EventPayload()
         event_payload.ParseFromString(transaction.payload)
 
+        LOGGER.debug(
+            "Input {} and Output {}".format(transaction.header.inputs, transaction.header.outputs))
+
         try:
-            return verbs[event_payload.action](event_payload, context)
+            verbs[event_payload.action](event_payload, context)
         except KeyError:
             return _apply_invalid()
 
@@ -92,7 +95,7 @@ def _apply_initiate(payload, context):
     event_initiate.ParseFromString(payload.data)
     _check_initiate(event_initiate)
     LOGGER.debug("Adding initiate %s to state", payload.ikey)
-    return _set_event(context, event_initiate, payload.ikey)
+    _set_event(context, event_initiate, payload.ikey)
 
 
 def _apply_reciprocate(payload, context):
@@ -100,14 +103,16 @@ def _apply_reciprocate(payload, context):
     event_reciprocate = ReciprocateEvent()
     event_reciprocate.ParseFromString(payload.data)
     _check_reciprocate(event_reciprocate)
+    _event_initiate = InitiateEvent()
+    _get_event(context, _event_initiate, payload.ikey)
     new_reciprocate = ReciprocateEvent(
         plus=event_reciprocate.plus,
         minus=event_reciprocate.minus,
         ratio=event_reciprocate.ratio,
         quantity=event_reciprocate.quantity,
-        initiateEvent=_get_event(context, InitiateEvent(), payload.ikey))
+        initiateEvent=_event_initiate)
     LOGGER.debug("Reciprocate hydrated with Initiate")
-    return _complete_reciprocate_event(
+    _complete_reciprocate_event(
         context, payload.rkey,
         new_reciprocate, payload.ikey)
 
@@ -121,8 +126,10 @@ def _complete_reciprocate_event(
     """
     LOGGER.debug(
         "Reciprocate address given = {}".format(reciprocateFQNAddress))
+    LOGGER.debug(
+        "Initiate address given = {}".format(initiateFQNAddress))
     # Add the reciprocate to the merkle trie
-    set_event = _set_event(context, event_reciprocate, reciprocateFQNAddress)
+    _set_event(context, event_reciprocate, reciprocateFQNAddress)
     LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
 
     # Remove the intiate address merkle trie
@@ -131,6 +138,7 @@ def _complete_reciprocate_event(
             [initiateFQNAddress], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
         _timeout_error('context._delete_state', initiateFQNAddress)
+
     if len(event_list) != 1:
         raise InternalError(
             'Event not deleted for {}'.format(initiateFQNAddress))
@@ -139,8 +147,6 @@ def _complete_reciprocate_event(
     context.add_event(
         event_type="events/reciprocated",
         attributes=[("reciprocated", reciprocateFQNAddress)])
-
-    return set_event
 
 
 def _get_event(context, event, eventFQNAddress):
@@ -153,7 +159,6 @@ def _get_event(context, event, eventFQNAddress):
         raise InternalError(
             'Event does not exists for {}'.format(eventFQNAddress))
     event.ParseFromString(event_list[0].data)
-    return event
 
 
 def _set_event(context, event, eventFQNAddress):
@@ -171,8 +176,6 @@ def _set_event(context, event, eventFQNAddress):
     if len(addresses) != 1:
         raise InternalError(
             'Unable to save event for address {}'.format(eventFQNAddress))
-
-    return eventFQNAddress
 
 
 def _check_initiate(event_initiate):
