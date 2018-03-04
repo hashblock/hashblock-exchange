@@ -332,6 +332,7 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
         valueUnit=(int(unit)).to_bytes(2, byteorder='little'),
         resourceUnit=(int(resource)).to_bytes(2, byteorder='little'))
     initiateEvent = InitiateEvent(
+        reciprocated=False,
         plus=b'public key',
         minus=b'minus_public_key',
         quantity=quantity)
@@ -340,7 +341,6 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
     payload = EventPayload(data=initiateEvent.SerializeToString(),
                            ikey=event_key,
                            action=EventPayload.INITIATE_EVENT)
-
     return _make_txn(signer, [], output_keys, payload)
 
 

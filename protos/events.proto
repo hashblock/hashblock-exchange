@@ -49,6 +49,8 @@ message InitiateEvent {
     bytes minus = 2;
     //  Transaction quantity of unit and resource 
     Quantity quantity = 3;
+    //  State flag for reciprocate validity
+    bool reciprocated = 4;
 }
 
 message ReciprocateEvent {

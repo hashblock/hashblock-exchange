@@ -43,10 +43,6 @@ DEAD_KEY = 'DEAD'
 EVENTS_ADDRESS_PREFIX = hashlib.sha512(
     ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
 
-INITIATE_DEAD_ADDRESS = EVENTS_ADDRESS_PREFIX + \
-    hashlib.sha512(DEAD_KEY.encode("utf-8")).hexdigest()[0:6] + \
-    hashlib.sha512(DEAD_KEY.encode('utf-8')).hexdigest()[-58:]
-
 # Number of seconds to wait for key operations to succeed
 STATE_TIMEOUT_SEC = 10
 
@@ -104,7 +100,7 @@ def _timeout_error(basemsg, data):
 
 
 INITIATE_VSET = {'plus', 'minus', 'quantity'}
-RECIPROCATE_VSET = INITIATE_VSET.union({'ratio'})
+RECIPROCATE_VSET = {'plus', 'minus', 'quantity', 'ratio'}
 
 
 def __check_existence(event, eventset):
@@ -116,8 +112,11 @@ def apply_initiate(payload, context):
     event_initiate = InitiateEvent()
     event_initiate.ParseFromString(payload.data)
     if __check_existence(event_initiate, INITIATE_VSET):
-        LOGGER.debug("Adding initiate %s to state", payload.ikey)
-        __set_event(context, event_initiate, payload.ikey)
+        if event_initiate.reciprocated:
+            throw_invalid('Initiate already reconcilled')
+        else:
+            __set_event(context, event_initiate, payload.ikey)
+            LOGGER.debug("Added Initiate %s to state", payload.ikey)
     else:
         throw_invalid('Initiate not well formed')
 
@@ -128,6 +127,9 @@ def apply_reciprocate(payload, context):
     event_reciprocate.ParseFromString(payload.data)
     event_initiate = InitiateEvent()
     __get_event(context, event_initiate, payload.ikey)
+    if event_initiate.reciprocated:
+        throw_invalid(
+            "Attempt to balance with reciprocated Initiate")
     if __check_existence(event_reciprocate, RECIPROCATE_VSET):
         try:
             __check_reciprocate(event_reciprocate, event_initiate)
@@ -138,22 +140,15 @@ def apply_reciprocate(payload, context):
         throw_invalid('Reciprocate not well formed')
 
     LOGGER.info("Initiate and Reciprocate Balance!")
+    event_initiate.reciprocated = True
     event_reciprocate.initiateEvent.CopyFrom(event_initiate)
-    event_initiate.plus = b'INITIATE_DEAD_ADDRESS'
-    event_initiate.minus = b'INITIATE_DEAD_ADDRESS'
     __set_event(context, event_initiate, payload.ikey)
-    LOGGER.debug("Reciprocate hydrated with Initiate")
     __complete_reciprocate_event(
         context, payload.rkey,
         event_reciprocate, payload.ikey)
 
 
 def __check_reciprocate(reciprocate, initiate):
-    if initiate.plus == b'INITIATE_DEAD_ADDRESS' \
-            or initiate.minus == b'INITIATE_DEAD_ADDRESS':
-        throw_invalid(
-            "Attempt to balance Reciprocate with reciprocated Initiate")
-
     __check_balance(reciprocate, initiate, 'value')
     __check_balance(reciprocate, initiate, 'valueUnit')
     __check_balance(reciprocate, initiate, 'resourceUnit')
@@ -212,21 +207,8 @@ def __complete_reciprocate_event(
     Completes reciprocation by removing the initiate address
     from merkle trie posts the reciprocate data to trie
     """
-    # Add the reciprocate to the merkle trie
     __set_event(context, event_reciprocate, reciprocateFQNAddress)
     LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
-
-    # Remove the intiate address merkle trie
-    # try:
-    #     event_list = context.delete_state(
-    #         [initiateFQNAddress], timeout=STATE_TIMEOUT_SEC)
-    # except FutureTimeoutError:
-    #     _timeout_error('context._delete_state', initiateFQNAddress)
-
-    # if len(event_list) != 1:
-    #     raise InternalError(
-    #         'Event not deleted for {}'.format(initiateFQNAddress))
-    LOGGER.debug("Removed initiate %s from state", initiateFQNAddress)
 
     context.add_event(
         event_type="events/reciprocated",
