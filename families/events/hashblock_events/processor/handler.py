@@ -38,10 +38,14 @@ LOGGER = logging.getLogger(__name__)
 
 ADDRESS_PREFIX = 'events'
 FAMILY_NAME = 'hashblock_events'
+DEAD_KEY = 'DEAD'
 
 EVENTS_ADDRESS_PREFIX = hashlib.sha512(
     ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
 
+INITIATE_DEAD_ADDRESS = EVENTS_ADDRESS_PREFIX + \
+    hashlib.sha512(DEAD_KEY.encode("utf-8")).hexdigest()[0:6] + \
+    hashlib.sha512(DEAD_KEY.encode('utf-8')).hexdigest()[-58:]
 
 # Number of seconds to wait for key operations to succeed
 STATE_TIMEOUT_SEC = 10
@@ -135,6 +139,9 @@ def apply_reciprocate(payload, context):
 
     LOGGER.info("Initiate and Reciprocate Balance!")
     event_reciprocate.initiateEvent.CopyFrom(event_initiate)
+    event_initiate.plus = b'INITIATE_DEAD_ADDRESS'
+    event_initiate.minus = b'INITIATE_DEAD_ADDRESS'
+    __set_event(context, event_initiate, payload.ikey)
     LOGGER.debug("Reciprocate hydrated with Initiate")
     __complete_reciprocate_event(
         context, payload.rkey,
@@ -142,6 +149,11 @@ def apply_reciprocate(payload, context):
 
 
 def __check_reciprocate(reciprocate, initiate):
+    if initiate.plus == b'INITIATE_DEAD_ADDRESS' \
+            or initiate.minus == b'INITIATE_DEAD_ADDRESS':
+        throw_invalid(
+            "Attempt to balance Reciprocate with reciprocated Initiate")
+
     __check_balance(reciprocate, initiate, 'value')
     __check_balance(reciprocate, initiate, 'valueUnit')
     __check_balance(reciprocate, initiate, 'resourceUnit')
