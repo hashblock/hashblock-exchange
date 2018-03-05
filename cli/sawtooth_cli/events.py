@@ -30,13 +30,11 @@ from sawtooth_cli.protobuf.events_pb2 import ReciprocateEvent
 ADDRESS_PREFIX = 'events'
 FAMILY_NAME = 'hashblock_events'
 
-EVENTS_ADDRESS_PREFIX = hashlib.sha512(
-    ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
-
-
+RECIPROCATE_EVENT_KEY = 'reciprocate.' 
+INITIATE_EVENT_KEY = 'initiate.'
 EVENTS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
-RECIPROCATE_EVENT_KEY = 'reciprocate'
-INITIATE_EVENT_KEY = 'initiate'
+RECIPROCATE_LIST_ADDRESS = EVENTS_NAMESPACE + \
+    hashlib.sha512(RECIPROCATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 
 _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
@@ -100,29 +98,35 @@ def _do_events_list(args):
     """Lists the current on-chain event values.
     """
     rest_client = RestClient(args.url)
-    state = rest_client.list_state(subtree=EVENTS_NAMESPACE)
+    state_leaf = rest_client.list_state(RECIPROCATE_LIST_ADDRESS)
 
-    head = state['head']
-    state_values = state['data']
-    receprocate_address = _key_to_address(RECIPROCATE_EVENT_KEY)
     printable_events = []
-    for state_value in state_values:
-        if state_value['address'].startswith(proposals_address):
-            decoded = b64decode(state_value['data'])
+    for event_state_leaf in state_leaf['data']:
+        if event_state_leaf is not None:
+            decoded = b64decode(event_state_leaf['data'])
             event = ReciprocateEvent()
             event.ParseFromString(decoded)
-            printable_events.append(event)
+            printable_events.append([event_state_leaf['address'],event])
 
     if args.format == 'default':
         tty_width = tty.width()
         for event in printable_events:
-            # Set value width to the available terminal space, or the min width
-            width = tty_width - len(event.key) - 3
-            width = width if width > _MIN_PRINT_WIDTH else _MIN_PRINT_WIDTH
-            value = (event.value[:width] + '...'
-                     if len(event.value) > width
-                     else event.value)
-            print('{}: {}'.format(event.key, value))
+            print('{}\n\r\t({}*{}) / {} = {}\n\r\t({}*{}) / {} = {}\n\r\t({}*{}) / {} = {}'.format(
+                event[0],
+                int.from_bytes(event[1].initiateEvent.quantity.value, byteorder='little'), 
+                int.from_bytes(event[1].ratio.numerator.value, byteorder='little'),
+                int.from_bytes(event[1].ratio.denominator.value, byteorder='little'),
+                int.from_bytes(event[1].quantity.value, byteorder='little'),
+
+                int.from_bytes(event[1].initiateEvent.quantity.valueUnit, byteorder='little'), 
+                int.from_bytes(event[1].ratio.numerator.valueUnit, byteorder='little'),
+                int.from_bytes(event[1].ratio.denominator.valueUnit, byteorder='little'),
+                int.from_bytes(event[1].quantity.valueUnit, byteorder='little'),
+
+                int.from_bytes(event[1].initiateEvent.quantity.resourceUnit, byteorder='little'), 
+                int.from_bytes(event[1].ratio.numerator.resourceUnit, byteorder='little'),
+                int.from_bytes(event[1].ratio.denominator.resourceUnit, byteorder='little'),
+                int.from_bytes(event[1].quantity.resourceUnit, byteorder='little')))
     elif args.format == 'csv':
         try:
             writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)

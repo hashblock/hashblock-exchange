@@ -24,6 +24,7 @@ import logging
 import os
 import sys
 import traceback
+import urllib.request
 import uuid
 import yaml
 
@@ -54,8 +55,8 @@ DISTRIBUTION_NAME = 'eventsset'
 INITIATE_EVENT_KEY = 'initiate.'
 RECIPROCATE_EVENT_KEY = 'reciprocate.'
 
-UNITS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
-INITIATE_LIST_ADDRESS = UNITS_NAMESPACE + \
+EVENTS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
+INITIATE_LIST_ADDRESS = EVENTS_NAMESPACE + \
     hashlib.sha512(INITIATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 
 _MIN_PRINT_WIDTH = 15
@@ -224,12 +225,13 @@ def _get_unmatched_event_list(rest_client):
                 if initiate_event_bytes is not None:
                     initiate_event = InitiateEvent()
                     initiate_event.ParseFromString(initiate_event_bytes)
-                    unmatched_event = UnmatchedEvent()
-                    unmatched_event.event_id = event_state_leaf['address']
-                    unmatched_event.value = initiate_event.quantity.value
-                    unmatched_event.valueUnit = initiate_event.quantity.valueUnit
-                    unmatched_event.resourceUnit = initiate_event.quantity.resourceUnit
-                    unmatched_events.append(unmatched_event)
+                    if initiate_event.reciprocated == False:
+                        unmatched_event = UnmatchedEvent()
+                        unmatched_event.event_id = event_state_leaf['address']
+                        unmatched_event.value = initiate_event.quantity.value
+                        unmatched_event.valueUnit = initiate_event.quantity.valueUnit
+                        unmatched_event.resourceUnit = initiate_event.quantity.resourceUnit
+                        unmatched_events.append(unmatched_event)
 
     return unmatched_events
 
