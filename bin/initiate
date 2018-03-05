@@ -1,0 +1,3 @@
+#!/bin/bash
+eventsset event initiate -k /root/.sawtooth/keys/your_key.priv --url http://rest-api:8008 $1
+
