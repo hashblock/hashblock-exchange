@@ -40,6 +40,17 @@ _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
+hash_lookup = {
+    "bag": 2,
+    "bags": 2,
+    "{peanuts}":3,
+    "$":5,
+    "{usd}":7,
+    "bale":11,
+    "bales":11,
+    "{hay}":13
+}
+
 
 def add_events_parser(subparsers, parent_parser):
     """Creates the args parser needed for the events command and its
@@ -109,24 +120,37 @@ def _do_events_list(args):
             printable_events.append([event_state_leaf['address'],event])
 
     if args.format == 'default':
-        tty_width = tty.width()
         for event in printable_events:
-            print('{}\n\r\t({}*{}) / {} = {}\n\r\t({}*{}) / {} = {}\n\r\t({}*{}) / {} = {}'.format(
+            i_value = int.from_bytes(event[1].initiateEvent.quantity.value, byteorder='little') 
+            i_value_units = _hash_reverse_lookup(int.from_bytes(event[1].initiateEvent.quantity.valueUnit, byteorder='little'))
+            i_value_unit = i_value_units[0]
+            if i_value > 1 and i_value_unit.endswith('s') == False:
+                i_value_unit = i_value_units[1]
+            i_resource_unit = _hash_reverse_lookup(int.from_bytes(event[1].initiateEvent.quantity.resourceUnit, byteorder='little'))[0]
+
+            n_value = int.from_bytes(event[1].ratio.numerator.value, byteorder='little')
+            n_value_units = _hash_reverse_lookup(int.from_bytes(event[1].ratio.numerator.valueUnit, byteorder='little'))
+            n_value_unit = n_value_units[0]
+            n_resource_unit = _hash_reverse_lookup(int.from_bytes(event[1].ratio.numerator.resourceUnit, byteorder='little'))[0]
+
+            d_value = int.from_bytes(event[1].ratio.denominator.value, byteorder='little')
+            d_value_units = _hash_reverse_lookup(int.from_bytes(event[1].ratio.denominator.valueUnit, byteorder='little'))
+            d_value_unit = d_value_units[0]
+            if d_value > 1 and d_value_unit.endswith('s') == False:
+                d_value_unit = d_value_units[1]
+            d_resource_unit = _hash_reverse_lookup(int.from_bytes(event[1].ratio.denominator.resourceUnit, byteorder='little'))[0]
+
+            r_value = int.from_bytes(event[1].quantity.value, byteorder='little')
+            r_value_units = _hash_reverse_lookup(int.from_bytes(event[1].quantity.valueUnit, byteorder='little'))
+            r_value_unit = r_value_units[0]
+            r_resource_unit = _hash_reverse_lookup(int.from_bytes(event[1].quantity.resourceUnit, byteorder='little'))[0]
+
+            print('{}\n\r\t({}.{}{} * {}{}{}) / {}.{}{} = {}{}{}'.format(
                 event[0],
-                int.from_bytes(event[1].initiateEvent.quantity.value, byteorder='little'), 
-                int.from_bytes(event[1].ratio.numerator.value, byteorder='little'),
-                int.from_bytes(event[1].ratio.denominator.value, byteorder='little'),
-                int.from_bytes(event[1].quantity.value, byteorder='little'),
-
-                int.from_bytes(event[1].initiateEvent.quantity.valueUnit, byteorder='little'), 
-                int.from_bytes(event[1].ratio.numerator.valueUnit, byteorder='little'),
-                int.from_bytes(event[1].ratio.denominator.valueUnit, byteorder='little'),
-                int.from_bytes(event[1].quantity.valueUnit, byteorder='little'),
-
-                int.from_bytes(event[1].initiateEvent.quantity.resourceUnit, byteorder='little'), 
-                int.from_bytes(event[1].ratio.numerator.resourceUnit, byteorder='little'),
-                int.from_bytes(event[1].ratio.denominator.resourceUnit, byteorder='little'),
-                int.from_bytes(event[1].quantity.resourceUnit, byteorder='little')))
+                i_value, i_value_unit, i_resource_unit,
+                n_value_unit, n_value, n_resource_unit,
+                d_value, d_value_unit, d_resource_unit,
+                r_value_unit, r_value, r_resource_unit))
     elif args.format == 'csv':
         try:
             writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
@@ -147,6 +171,12 @@ def _do_events_list(args):
             print(yaml.dump(events_snapshot, default_flow_style=False)[0:-1])
     else:
         raise AssertionError('Unknown format {}'.format(args.format))
+
+
+def _hash_reverse_lookup(lookup_value):
+    """Reverse hash lookup
+    """
+    return [key for key, value in hash_lookup.items() if value == lookup_value]
 
 
 def _key_to_address(key):

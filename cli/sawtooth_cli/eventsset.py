@@ -33,6 +33,7 @@ from colorlog import ColoredFormatter
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
+from sawtooth_cli.parser import parser
 
 from sawtooth_cli.protobuf.events_pb2 import EventPayload
 from sawtooth_cli.protobuf.events_pb2 import InitiateEvent
@@ -67,18 +68,70 @@ ADDRESS_PREFIX = 'events'
 
 LOGGER = logging.getLogger(__name__)
 
+hash_lookup = {
+    "bag": 2,
+    "bags": 2,
+    "{peanuts}":3,
+    "$":5,
+    "{usd}":7,
+    "bale":11,
+    "bales":11,
+    "{hay}":13
+}
+
 
 def _do_event_initiate(args):
     """Executes the 'event initiate' subcommand.  Given a signing private key file, an
-    assignment public key file, and a quanity, it generates batches of hashblock_events
+    assignment public key file, and a quantity, it generates batches of hashblock_events
     transactions in a BatchList instance.  The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
-    quantities = [s.split(':', 2) for s in args.quantities]
+    raw_quantity = []
+    ast = parser.parse(args.quantity)
+    if ast[0].lower() != 'event_quantity':
+        raise AssertionError('Invalid quantity specification.')
+    else:
+        quantity = ast[1]
+        if quantity[0].lower() != 'quantity':
+            raise AssertionError('Invalid quantity specification.')
+        else:
+            term_binary = quantity[1]
+            if term_binary[0].lower() != 'term_binary' and term_binary[1].lower() != '.':
+                raise AssertionError('Invalid quantity specification.')
+            else:
+                term = term_binary[2]
+                if term[0].lower() != 'term':
+                    raise AssertionError('Invalid quantity specification.')
+                else:
+                    component_unary = term[1]
+                    if component_unary[0].lower() != 'component_unary':
+                        raise AssertionError('Invalid quantity specification.')
+                    else:
+                        factor = component_unary[1]
+                        if factor[0].lower() != 'factor':
+                            raise AssertionError('Invalid quantity specification.')
+                        else:
+                            raw_quantity.append(factor[1])
+
+                component_binary = term_binary[3]
+                if component_binary[0].lower() != 'component_binary':
+                    raise AssertionError('Invalid quantity specification.')
+                else:
+                    annotatable = component_binary[1]
+                    resource_unit = component_binary[2]
+                    if annotatable[0].lower() != 'annotatable':
+                        raise AssertionError('Invalid quantity specification.')
+                    else:
+                        simple_unit = annotatable[1]
+                        if simple_unit[0].lower() != 'simple_unit':
+                            raise AssertionError('Invalid quantity specification.')
+                        else:
+                            value_unit = simple_unit[1]
+                            raw_quantity.append(hash_lookup[value_unit])
+                            raw_quantity.append(hash_lookup[resource_unit])             
 
     signer = _read_signer(args.key)
-    txns = [_create_initiate_txn(signer, quantity)
-            for quantity in quantities]
+    txns = [_create_initiate_txn(signer, raw_quantity)]
 
     batch = _create_batch(signer, txns)
 
@@ -108,11 +161,18 @@ def _do_event_list(args):
 
     if args.format == 'default':
         for unmatched_event in unmatched_event_list:
-            print('{} => {}:{}:{}'.format(
+            value_magnitude = int.from_bytes(unmatched_event.value, byteorder='little')
+            value_units = _hash_reverse_lookup(int.from_bytes(unmatched_event.valueUnit, byteorder='little'))
+            value_unit = value_units[0]
+            if value_magnitude > 1 and value_unit.endswith('s') == False:
+                value_unit = value_units[1]
+            resource_units = _hash_reverse_lookup(int.from_bytes(unmatched_event.resourceUnit, byteorder='little'))
+            resource_unit = resource_units[0]
+            print('{} => {}.{}{}'.format(
                 unmatched_event.event_id,
-                int.from_bytes(unmatched_event.value, byteorder='little'),
-                int.from_bytes(unmatched_event.valueUnit, byteorder='little'),
-                int.from_bytes(unmatched_event.resourceUnit, byteorder='little')))
+                value_magnitude,
+                value_unit,
+                resource_unit))
     elif args.format == 'csv':
         writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
         writer.writerow(['ADDESS', 'VALUE', 'VALUEUNIT', 'RESOURCEUNIT'])
@@ -138,6 +198,11 @@ def _do_event_list(args):
         raise AssertionError('Unknown format {}'.format(args.format))
 
 
+def _hash_reverse_lookup(lookup_value):
+    """Reverse hash lookup
+    """
+    return [key for key, value in hash_lookup.items() if value == lookup_value]
+
 def _do_event_reciprocate(args):
     """Executes the 'event reciprocate' subcommand.  Given a key file, an event
     id, a quantity, and a ratop, it generates a batch of hashblock_events transactions
@@ -158,32 +223,113 @@ def _do_event_reciprocate(args):
     if initiate_event_id is None:
         raise CliException('No unmatched initiating event exists with the given id:{}'.format(args.event_id))
 
-    quantities = [s.split(':', 2) for s in args.quantities]
+    quantities = args.quantities
 
-    value, unit, resource = quantities[0]
-    quantity = Quantity()
-    quantity.value=(int(value)).to_bytes(2, byteorder='little')
-    quantity.valueUnit=(int(unit)).to_bytes(2, byteorder='little')
-    quantity.resourceUnit=(int(resource)).to_bytes(2, byteorder='little')
+    if quantities[1] != '@' and quantities[3].lower() != 'for':
+        raise AssertionError('Invalid specification.')
 
-    value, unit, resource = quantities[1]
+    r_quantity = Quantity()
+    event_quantity = parser.parse(quantities[0])
+    if event_quantity[0].lower() != 'event_quantity':
+        raise AssertionError('Invalid quantity specification.')
+    else:
+        quantity_prefix = event_quantity[1]
+        if quantity_prefix[0].lower() != 'quantity_prefix':
+            raise AssertionError('Invalid quantity specification.')
+        else:
+            value_unit = quantity_prefix[1]
+            term = quantity_prefix[2]
+            if term[0].lower() != 'term':
+                raise AssertionError('Invalid quantity specification.')
+            else:
+                component_unary = term[1]
+                if component_unary[0].lower() != 'component_unary':
+                    raise AssertionError('Invalid quantity specification.')
+                else:
+                    factor_annotation = component_unary[1]
+                    if factor_annotation[0].lower() != 'factor_annotation':
+                        raise AssertionError('Invalid quantity specification.')
+                    else:
+                        r_quantity.value=(int(factor_annotation[1])).to_bytes(2, byteorder='little')
+                        r_quantity.valueUnit=(int(hash_lookup[value_unit])).to_bytes(2, byteorder='little')
+                        r_quantity.resourceUnit=(int(hash_lookup[factor_annotation[2]])).to_bytes(2, byteorder='little')
+
     numerator = Quantity()
-    numerator.value=(int(value)).to_bytes(2, byteorder='little')
-    numerator.valueUnit=(int(unit)).to_bytes(2, byteorder='little')
-    numerator.resourceUnit=(int(resource)).to_bytes(2, byteorder='little')
+    event_quantity = parser.parse(quantities[2])
+    if event_quantity[0].lower() != 'event_quantity':
+        raise AssertionError('Invalid quantity specification.')
+    else:
+        quantity_prefix = event_quantity[1]
+        if quantity_prefix[0].lower() != 'quantity_prefix':
+            raise AssertionError('Invalid quantity specification.')
+        else:
+            value_unit = quantity_prefix[1]
+            term = quantity_prefix[2]
+            if term[0].lower() != 'term':
+                raise AssertionError('Invalid quantity specification.')
+            else:
+                component_unary = term[1]
+                if component_unary[0].lower() != 'component_unary':
+                    raise AssertionError('Invalid quantity specification.')
+                else:
+                    factor_annotation = component_unary[1]
+                    if factor_annotation[0].lower() != 'factor_annotation':
+                        raise AssertionError('Invalid quantity specification.')
+                    else:
+                        numerator.value=(int(factor_annotation[1])).to_bytes(2, byteorder='little')
+                        numerator.valueUnit=(int(hash_lookup[value_unit])).to_bytes(2, byteorder='little')
+                        numerator.resourceUnit=(int(hash_lookup[factor_annotation[2]])).to_bytes(2, byteorder='little')
 
-    value, unit, resource = quantities[2]
     denominator = Quantity()
-    denominator.value=(int(value)).to_bytes(2, byteorder='little')
-    denominator.valueUnit=(int(unit)).to_bytes(2, byteorder='little')
-    denominator.resourceUnit=(int(resource)).to_bytes(2, byteorder='little')
+    event_quantity = parser.parse(quantities[4])
+    if event_quantity[0].lower() != 'event_quantity':
+        raise AssertionError('Invalid quantity specification.')
+    else:
+        quantity = event_quantity[1]
+        if quantity[0].lower() != 'quantity':
+            raise AssertionError('Invalid quantity specification.')
+        else:
+            term_binary = quantity[1]
+            if term_binary[0].lower() != 'term_binary' and term_binary[1].lower() != '.':
+                raise AssertionError('Invalid quantity specification.')
+            else:
+                term = term_binary[2]
+                if term[0].lower() != 'term':
+                    raise AssertionError('Invalid quantity specification.')
+                else:
+                    component_unary = term[1]
+                    if component_unary[0].lower() != 'component_unary':
+                        raise AssertionError('Invalid quantity specification.')
+                    else:
+                        factor = component_unary[1]
+                        if factor[0].lower() != 'factor':
+                            raise AssertionError('Invalid quantity specification.')
+                        else:
+                            denominator.value=(int(factor[1])).to_bytes(2, byteorder='little')
+
+                component_binary = term_binary[3]
+                if component_binary[0].lower() != 'component_binary':
+                    raise AssertionError('Invalid quantity specification.')
+                else:
+                    annotatable = component_binary[1]
+                    resource_unit = component_binary[2]
+                    if annotatable[0].lower() != 'annotatable':
+                        raise AssertionError('Invalid quantity specification.')
+                    else:
+                        simple_unit = annotatable[1]
+                        if simple_unit[0].lower() != 'simple_unit':
+                            raise AssertionError('Invalid quantity specification.')
+                        else:
+                            value_unit = simple_unit[1]
+                            denominator.valueUnit=(int(hash_lookup[value_unit])).to_bytes(2, byteorder='little')
+                            denominator.resourceUnit=(int(hash_lookup[resource_unit])).to_bytes(2, byteorder='little')
 
     ratio=Ratio(numerator=numerator, denominator=denominator)
 
     txn = _create_reciprocate_txn(
         signer,
         args.event_id,
-        quantity,
+        r_quantity,
         ratio)
     batch = _create_batch(signer, [txn])
 
@@ -476,8 +622,8 @@ def create_parser(prog_name):
 
     initiate_parser = event_parsers.add_parser(
         'initiate',
-        help='Creates initiating events',
-        description='Create initiating events.'
+        help='Creates initiating event',
+        description='Create initiating event.'
     )
 
     initiate_parser.add_argument(
@@ -504,12 +650,10 @@ def create_parser(prog_name):
         default='http://rest-api:8008')
 
     initiate_parser.add_argument(
-        'quantities',
+        'quantity',
         type=str,
-        nargs='+',
-        help='Quantity vectors with the '
-        'format <value>:<unit_hash>:<resource_hash> where '
-        'unit and resource hashes are prime numbers or 1.')
+        help='Quantity with the '
+        'format <value>.<value_unit> {resource_unit}.')
 
     event_list_parser = event_parsers.add_parser(
         'list',
@@ -570,13 +714,10 @@ def create_parser(prog_name):
         'quantities',
         type=str,
         nargs='+',
-        help='Reciprocating event as quantity and ratio vectors with the '
-        'format <value>:<unit_hash>:<resource_hash>, '
-        '<value>:<unit_hash>:<resource_hash>, '
-        '<value>:<unit_hash>:<resource_hash> where the first quanity '
-        'vector is the reciprocating quanity of resource, the second '
-        'vector is the ratio numerator, and the third vector is the '
-        'ratio denominator. The unit and resource hashes are prime numbers or 1.')
+        help='Reciprocating event as quantity and quantity ratio with the '
+        'format <value_symbol><value>{<resource_unit>} @ '
+        '<value_symbol><value>{<resource_unit>} for '
+        '<value>.<value_unit>{<resource_unit>}.')
 
     return parser
 
