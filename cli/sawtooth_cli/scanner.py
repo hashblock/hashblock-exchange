@@ -1,7 +1,8 @@
 from ply import lex
 
 reserved = {
-   'of' : 'OF'
+   'of' : 'OF',
+   'for' : 'FOR'
 }
 
 tokens = [
@@ -9,8 +10,10 @@ tokens = [
     'MINUS',
     'LPAR',
     'RPAR',
+    'LBRACE',
+    'RBRACE',
     'SOLIDUS',
-    'STAR',
+    'AT',
     'DOT',
     'DIGIT',
     'PREFIX',
@@ -21,9 +24,13 @@ t_PLUS      = r'\+'
 t_MINUS     = r'\-'
 t_LPAR      = r'\('
 t_RPAR      = r'\)'
+t_LBRACE    = r'\{'
+t_RBRACE    = r'\}'
 t_SOLIDUS   = r'\/'
-t_STAR      = r'\*'
+t_AT        = r'\@'
+t_DOT       = r'\.'
 t_DIGIT     = r'\d'
+t_ignore    = ' \t'
 
 def t_PREFIX(t): 
     r'^[Y|Z|E|P|T|G|M|k|h|da|d|c|m|u|n|p|f|a|z|y]'
@@ -44,9 +51,6 @@ def t_error(t):
 
 lexer = lex.lex()
 
-'''
-lex.lex()
-lex.input("15")
-for tok in iter(lex.token, None):
-    print(repr(tok.type), repr(tok.value))
-'''
+#lexer.input("+15")
+#for tok in iter(lexer.token, None):
+#    print(repr(tok.type), repr(tok.value))
