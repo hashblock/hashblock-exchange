@@ -70,11 +70,39 @@ class EventTransactionHandler(TransactionHandler):
         event_payload.ParseFromString(transaction.payload)
         try:
             verbs[event_payload.action](event_payload, context)
+            generateTxnSuccessFor(event_payload, context)
         except KeyError:
             return throw_invalid(
                 "'action' must be one of {INITIATE_EVENT, RECIPROCATE_EVENT}")
 
 # Module functions
+
+
+transactionKeyMap = {
+    EventPayload.INITIATE_EVENT: "hashblock.transaction.initiate",
+    EventPayload.RECIPROCATE_EVENT: "hashblock.transactio.reciprocate"
+}
+
+
+def __post_event(context, event_type, attributes):
+    context.add_event(
+        event_type=event_type,
+        attributes=attributes,
+        timeout=STATE_TIMEOUT_SEC)
+
+
+def generateTxnSuccessFor(payload, context):
+    attributes = [("status", "completed"), ("initiate_address", payload.ikey)]
+    if payload.action == EventPayload.RECIPROCATE_EVENT:
+        attributes.append(tuple(["reciprocate_address", payload.rkey]))
+    __post_event(
+        context,
+        transactionKeyMap[payload.action],
+        attributes)
+
+
+def generateTxnFailEvent(context, payload, msg):
+    pass
 
 
 def compose(*functions):
@@ -209,10 +237,6 @@ def __complete_reciprocate_event(
     """
     __set_event(context, event_reciprocate, reciprocateFQNAddress)
     LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
-
-    context.add_event(
-        event_type="events/reciprocated",
-        attributes=[("reciprocated", reciprocateFQNAddress)])
 
 
 def _to_hash(value):
