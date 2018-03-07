@@ -52,6 +52,11 @@ coverage.xml
 *.cover
 .hypothesis/
 
+# ply Parser
+
+*.out
+parsetab.py
+
 # Translations
 *.mo
 *.pot
