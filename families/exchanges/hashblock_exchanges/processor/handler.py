@@ -25,20 +25,19 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 # from sawtooth_sdk.processor.exceptions import AuthorizationException
 
-from protobuf.events_pb2 import EventPayload
-from protobuf.events_pb2 import InitiateEvent
-from protobuf.events_pb2 import ReciprocateEvent
+from protobuf.exchange_pb2 import TransactionPayload
+from protobuf.exchange_pb2 import UTXQ
+from protobuf.exchange_pb2 import MTXQ
 
 # initiate 5:2:3
 # initiate 10:7:13
-# reciprocate <event_id> 10:7:13 2:7:13 1:2:3
+# reciprocate <exchange_id> 10:7:13 2:7:13 1:2:3
 
 
 LOGGER = logging.getLogger(__name__)
 
-ADDRESS_PREFIX = 'events'
-FAMILY_NAME = 'hashblock_events'
-DEAD_KEY = 'DEAD'
+ADDRESS_PREFIX = 'exchanges'
+FAMILY_NAME = 'hashblock_exchanges'
 
 EVENTS_ADDRESS_PREFIX = hashlib.sha512(
     ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
@@ -46,8 +45,20 @@ EVENTS_ADDRESS_PREFIX = hashlib.sha512(
 # Number of seconds to wait for key operations to succeed
 STATE_TIMEOUT_SEC = 10
 
+initiateActionSet = frozenset([
+    TransactionPayload.UTXQ_ASK,
+    TransactionPayload.UTXQ_OFFER,
+    TransactionPayload.UTXQ_COMMITMENT,
+    TransactionPayload.UTXQ_GIVE])
 
-class EventTransactionHandler(TransactionHandler):
+reciprocateActionSet = frozenset([
+    TransactionPayload.MTXQ_TELL,
+    TransactionPayload.MTXQ_ACCEPT,
+    TransactionPayload.MTXQ_OBLIGATION,
+    TransactionPayload.MTXQ_TAKE])
+
+
+class ExchangeTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
@@ -55,47 +66,56 @@ class EventTransactionHandler(TransactionHandler):
 
     @property
     def family_versions(self):
-        return ['0.1.0']
+        return ['0.2.0']
 
     @property
     def namespaces(self):
         return [EVENTS_ADDRESS_PREFIX]
 
     def apply(self, transaction, context):
-        verbs = {
-            EventPayload.INITIATE_EVENT: apply_initiate,
-            EventPayload.RECIPROCATE_EVENT: apply_reciprocate,
-        }
-        event_payload = EventPayload()
-        event_payload.ParseFromString(transaction.payload)
+        transactionExecute = {
+            initiateActionSet: apply_initiate,
+            reciprocateActionSet: apply_reciprocate}
+
+        exchange_payload = TransactionPayload()
+        exchange_payload.ParseFromString(transaction.payload)
         try:
-            verbs[event_payload.action](event_payload, context)
-            generateTxnSuccessFor(event_payload, context)
+            transactionExecute[exchange_payload.action]
+            (exchange_payload, context)
+            generateTxnSuccessFor(exchange_payload, context)
         except KeyError:
             return throw_invalid(
-                "'action' must be one of {INITIATE_EVENT, RECIPROCATE_EVENT}")
+                "'action' must be one of {} or {}".
+                format([initiateActionSet, reciprocateActionSet]))
 
 # Module functions
 
 
 transactionKeyMap = {
-    EventPayload.INITIATE_EVENT: "hashblock.transaction.initiate",
-    EventPayload.RECIPROCATE_EVENT: "hashblock.transactio.reciprocate"
+    TransactionPayload.UTXQ_ASK: "hashblock.exchange.ask",
+    TransactionPayload.MTXQ_TELL: "hashblock.exchange.tell",
+    TransactionPayload.UTXQ_OFFER: "hashblock.exchange.offer",
+    TransactionPayload.MTXQ_ACCEPT: "hashblock.exchange.accept",
+    TransactionPayload.UTXQ_COMMITMENT: "hashblock.exchange.commitment",
+    TransactionPayload.MTXQ_OBLIGATION: "hashblock.exchange.obligation",
+    TransactionPayload.UTXQ_GIVE: "hashblock.exchange.give",
+    TransactionPayload.MTXQ_TAKE: "hashblock.exchange.take"
 }
 
 
-def __post_event(context, event_type, attributes):
-    context.add_event(
-        event_type=event_type,
+def __post_exchange(context, exchange_type, attributes):
+    context.add_exchange(
+        exchange_type=exchange_type,
         attributes=attributes,
         timeout=STATE_TIMEOUT_SEC)
 
 
 def generateTxnSuccessFor(payload, context):
-    attributes = [("status", "completed"), ("initiate_address", payload.ikey)]
-    if payload.action == EventPayload.RECIPROCATE_EVENT:
-        attributes.append(tuple(["reciprocate_address", payload.rkey]))
-    __post_event(
+    attributes = [
+        ("status", "completed"), ("unbalanced_address", payload.ukey)]
+    if payload.action == TransactionPayload.RECIPROCATE_EVENT:
+        attributes.append(tuple(["balanced_address", payload.mkey]))
+    __post_exchange(
         context,
         transactionKeyMap[payload.action],
         attributes)
@@ -131,49 +151,49 @@ INITIATE_VSET = {'plus', 'minus', 'quantity'}
 RECIPROCATE_VSET = {'plus', 'minus', 'quantity', 'ratio'}
 
 
-def __check_existence(event, eventset):
-    return eventset == set([f[0].name for f in event.ListFields()])
+def __check_existence(exchange, exchangeset):
+    return exchangeset == set([f[0].name for f in exchange.ListFields()])
 
 
 def apply_initiate(payload, context):
-    LOGGER.debug("Executing initiate event")
-    event_initiate = InitiateEvent()
-    event_initiate.ParseFromString(payload.data)
-    if __check_existence(event_initiate, INITIATE_VSET):
-        if event_initiate.reciprocated:
-            throw_invalid('Initiate already reconcilled')
+    LOGGER.debug("Executing unbalanced exchange")
+    exchange_initiate = UTXQ()
+    exchange_initiate.ParseFromString(payload.data)
+    if __check_existence(exchange_initiate, INITIATE_VSET):
+        if exchange_initiate.reciprocated:
+            throw_invalid('Already reconcilled')
         else:
-            __set_event(context, event_initiate, payload.ikey)
-            LOGGER.debug("Added Initiate %s to state", payload.ikey)
+            __set_exchange(context, exchange_initiate, payload.ukey)
+            LOGGER.debug("Added unbalanced %s to state", payload.ukey)
     else:
-        throw_invalid('Initiate not well formed')
+        throw_invalid('Unbalanced exchange not well formed')
 
 
 def apply_reciprocate(payload, context):
-    LOGGER.debug("Executing reciprocate event")
-    event_reciprocate = ReciprocateEvent()
-    event_reciprocate.ParseFromString(payload.data)
-    event_initiate = InitiateEvent()
-    __get_event(context, event_initiate, payload.ikey)
-    if event_initiate.reciprocated:
+    LOGGER.debug("Executing balancing exchange")
+    exchange_reciprocate = MTXQ()
+    exchange_reciprocate.ParseFromString(payload.data)
+    exchange_initiate = UTXQ()
+    __get_exchange(context, exchange_initiate, payload.ukey)
+    if exchange_initiate.reciprocated:
         throw_invalid(
             "Attempt to balance with reciprocated Initiate")
-    if __check_existence(event_reciprocate, RECIPROCATE_VSET):
+    if __check_existence(exchange_reciprocate, RECIPROCATE_VSET):
         try:
-            __check_reciprocate(event_reciprocate, event_initiate)
+            __check_reciprocate(exchange_reciprocate, exchange_initiate)
         except InvalidTransaction:
-            LOGGER.error("Initiate and Reciprocate DO NOT BALANCE")
+            LOGGER.error("UTXQ and MTXQ DO NOT BALANCE")
             raise
     else:
-        throw_invalid('Reciprocate not well formed')
+        throw_invalid('Balancing exchange not well formed')
 
-    LOGGER.info("Initiate and Reciprocate Balance!")
-    event_initiate.reciprocated = True
-    event_reciprocate.initiateEvent.CopyFrom(event_initiate)
-    __set_event(context, event_initiate, payload.ikey)
-    __complete_reciprocate_event(
-        context, payload.rkey,
-        event_reciprocate, payload.ikey)
+    LOGGER.info("UTXQ and MTXQ Balance!")
+    exchange_initiate.reciprocated = True
+    exchange_reciprocate.initiateEvent.CopyFrom(exchange_initiate)
+    __set_exchange(context, exchange_initiate, payload.ukey)
+    __complete_reciprocate_exchange(
+        context, payload.mkey,
+        exchange_reciprocate, payload.ukey)
 
 
 def __check_reciprocate(reciprocate, initiate):
@@ -199,43 +219,44 @@ def __check_balance(reciprocate, initiate, key):
     return True
 
 
-def __get_event(context, event, eventFQNAddress):
+def __get_exchange(context, exchange, exchangeFQNAddress):
     try:
-        event_list = context.get_state(
-            [eventFQNAddress], timeout=STATE_TIMEOUT_SEC)
+        exchange_list = context.get_state(
+            [exchangeFQNAddress], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
-        _timeout_error('context._get_event', eventFQNAddress)
-    if len(event_list) != 1:
+        _timeout_error('context._get_exchange', exchangeFQNAddress)
+    if len(exchange_list) != 1:
         raise InternalError(
-            'Event does not exists for {}'.format(eventFQNAddress))
-    event.ParseFromString(event_list[0].data)
+            'Event does not exists for {}'.format(exchangeFQNAddress))
+    exchange.ParseFromString(exchange_list[0].data)
 
 
-def __set_event(context, event, eventFQNAddress):
+def __set_exchange(context, exchange, exchangeFQNAddress):
     """
-    Sets an event state
+    Sets an exchange state
     """
-    event_data = event.SerializeToString()
-    state_dict = {eventFQNAddress: event_data}
+    exchange_data = exchange.SerializeToString()
+    state_dict = {exchangeFQNAddress: exchange_data}
     try:
         addresses = context.set_state(
             state_dict,
             timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
-        raise InternalError('Unable to set {}'.format(eventFQNAddress))
+        raise InternalError('Unable to set {}'.format(exchangeFQNAddress))
     if len(addresses) != 1:
         raise InternalError(
-            'Unable to save event for address {}'.format(eventFQNAddress))
+            'Unable to save exchange for address {}'.
+            format(exchangeFQNAddress))
 
 
-def __complete_reciprocate_event(
+def __complete_reciprocate_exchange(
     context, reciprocateFQNAddress,
-        event_reciprocate, initiateFQNAddress):
+        exchange_reciprocate, initiateFQNAddress):
     """
     Completes reciprocation by removing the initiate address
     from merkle trie posts the reciprocate data to trie
     """
-    __set_event(context, event_reciprocate, reciprocateFQNAddress)
+    __set_exchange(context, exchange_reciprocate, reciprocateFQNAddress)
     LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
 
 
@@ -248,21 +269,21 @@ _ADDRESS_PART_SIZE = 16
 _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
 
 
-def make_events_address(data):
+def make_exchanges_address(data):
     return EVENTS_ADDRESS_PREFIX + hashlib.sha512(
         data.encode('utf-8')).hexdigest()[-64:]
 
 
 def make_fqnaddress(key, keyUUID):
-    return _make_events_key(''.join([key, keyUUID]))
+    return _make_exchanges_key(''.join([key, keyUUID]))
 
 
 @functools.lru_cache(maxsize=128)
-def _make_events_key(key):
+def _make_exchanges_key(key):
     # split the key into 4 parts, maximum
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     # compute the short hash of each part
     addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
     # pad the parts with the empty hash, if needed
     addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-    return make_events_address(''.join(addr_parts))
+    return make_exchanges_address(''.join(addr_parts))

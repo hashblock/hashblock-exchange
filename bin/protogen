@@ -40,13 +40,13 @@ def main(args=None):
     proto_dir = JOIN(TOP_DIR, "protos")
     protoc_python(proto_dir, "cli", "sawtooth_cli/protobuf")
     protoc_python(proto_dir, "families/units", "hashblock_units/protobuf")
-    protoc_python(proto_dir, "families/events", "hashblock_events/protobuf")
+    protoc_python(proto_dir, "families/exchanges", "hashblock_exchanges/protobuf")
 
     # 2. Generate config protos
     proto_dir = JOIN(TOP_DIR, "families/units/protos")
     protoc_python(proto_dir, "cli", "sawtooth_cli/protobuf")
     protoc_python(proto_dir, "families/units", "hashblock_units/protobuf")
-    protoc_python(proto_dir, "families/events", "hashblock_events/protobuf")
+    protoc_python(proto_dir, "families/exchanges", "hashblock_exchanges/protobuf")
 
 
 def protoc_python(src_dir, base_dir, pkg):

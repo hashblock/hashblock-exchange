@@ -24,7 +24,7 @@ services:
     image: hashblock-dev-python
     container_name: hashblock-shell
     volumes:
-      - ../../../sawtooth-eventchain/:/project/sawtooth-eventchain
+      - ../../../exchange/:/project/exchange
       - ../../../sawtooth-core/:/project/sawtooth-core
      # Expose 5678 for remote debugging
     expose:
@@ -51,7 +51,7 @@ services:
     image: hashblock-dev-units-tp
     container_name: hashblock-dev-units-tp
     volumes:
-      - ../../../sawtooth-eventchain/:/project/sawtooth-eventchain
+      - ../../../exchange/:/project/exchange
     # Expose 5679 for remote debugging
     expose:
       - 5679
@@ -66,18 +66,18 @@ services:
       \""
     stop_signal: SIGKILL
 
-  events-processor:
+  exchange-processor:
     build:
       context: ../..
-      dockerfile: docker/hashblock-dev-events-tp
+      dockerfile: docker/hashblock-dev-exchange-tp
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: hashblock-dev-events-tp
-    container_name: hashblock-dev-events-tp
+    image: hashblock-dev-exchange-tp
+    container_name: hashblock-dev-exchange-tp
     volumes:
-      - ../../../sawtooth-eventchain/:/project/sawtooth-eventchain
+      - ../../../exchange/:/project/exchange
     # Expose 5679 for remote debugging
     expose:
       - 5670
@@ -87,7 +87,7 @@ services:
       - validator
     command: "bash -c \"\
         sleep 1 &&
-        events-tp -vv \
+        exchange-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL
@@ -107,7 +107,7 @@ services:
     container_name: sawtooth-validator-local
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core    
-      - ../../:/project/sawtooth-eventchain
+      - ../../:/project/exchange
     # Expose 5700 for remote debugging
     expose:
       - 4004
@@ -121,7 +121,7 @@ services:
         sawtooth keygen my_key && \
         sawtooth keygen your_key && \
         sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
-        /project/sawtooth-eventchain/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
+        /project/exchange/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
         sawadm genesis /etc/config-settings.batch /etc/config-units.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \

@@ -22,7 +22,7 @@ services:
     image: hashblock-dev-units-tp:latest
     container_name: hashblock-units-dev-tp
     volumes:
-      - ../../..:/project/sawtooth-eventchain
+      - ../../..:/project/exchange
     expose:
       - 4004
     command: units-tp -vv -C tcp://test-tp-units:4004        
@@ -32,21 +32,21 @@ services:
   test-tp-units:
     image: sawtooth-dev-python:latest
     volumes:
-      - ../../..:/devprj/sawtooth-eventchain
+      - ../../..:/devprj/exchange
       - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
     command: nose2-3
-        -c /devprj/sawtooth-eventchain/families/units/nose2.cfg
+        -c /devprj/exchange/families/units/nose2.cfg
         -v
-        -s /devprj/sawtooth-eventchain/families/units/tests
+        -s /devprj/exchange/families/units/tests
         test_tp_units
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/devprj/sawtooth-eventchain/families/units/hashblock_units:\
-            /devprj/sawtooth-eventchain/families/units/tests:\
-            /devprj/sawtooth-eventchain/sdk/python:\
+        PYTHONPATH: "/devprj/exchange/families/units/hashblock_units:\
+            /devprj/exchange/families/units/tests:\
+            /devprj/exchange/sdk/python:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"

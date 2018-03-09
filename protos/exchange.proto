@@ -42,7 +42,7 @@ message Ratio {
 }
 
 // Economic event with plus/minus duality
-message InitiateEvent {
+message UTXQ {
     //  Keys of resource inc.
     bytes plus = 1;
     //  Keys of resource dec.
@@ -53,7 +53,7 @@ message InitiateEvent {
     bool reciprocated = 4;
 }
 
-message ReciprocateEvent {
+message MTXQ {
     //  Keys of transaction inc. has to jive with IE minus
     bytes plus = 1;
     //  Keys of resource dec. has to jive with IE plus
@@ -62,24 +62,30 @@ message ReciprocateEvent {
     Ratio ratio = 3;
     //  Transaction quantity of unit and resource
     Quantity quantity = 4;
-    //  Initiating event - maybe
-    InitiateEvent initiateEvent = 5;
+    //  
+    UTXQ unbalanced = 5;
 }
 
-message EventPayload {
+message TransactionPayload {
     enum Action {
-        INITIATE_EVENT = 0;
-        RECIPROCATE_EVENT = 1;
+        UTXQ_ASK = 0;
+        MTXQ_TELL = 1;
+        UTXQ_OFFER = 2;
+        MTXQ_ACCEPT = 3;
+        UTXQ_COMMITMENT = 4;
+        MTXQ_OBLIGATION = 5;
+        UTXQ_GIVE = 6;
+        MTXQ_TAKE = 7;
     }
 
     //  See enum above
     Action action = 1;
 
     //  The initiate event key
-    string ikey = 2;
+    string ukey = 2;
 
     //  The reciprocate event key
-    string rkey = 3;
+    string mkey = 3;
 
     // The content of this payload
     bytes data = 4;

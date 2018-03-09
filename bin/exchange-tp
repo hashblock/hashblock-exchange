@@ -1,5 +1,6 @@
-# ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+#!/usr/bin/env python3
+
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +15,15 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
-FROM ubuntu:16.04
+import os
+import sys
 
-# Remove python debug library from this container
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD && \
-    echo 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe' >> /etc/apt/sources.list && \
-    apt-get update 
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'families/exchanges/hashblock_exchanges'))
 
-RUN apt-get install -y -q python3-sawtooth-sdk
 
-WORKDIR /project/sawtooth-eventchain
+from processor.main import main
 
-ENV PATH $PATH:/project/sawtooth-eventchain/bin
-
-CMD chains-tp
+if __name__ == '__main__':
+    main()

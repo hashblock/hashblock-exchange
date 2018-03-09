@@ -203,7 +203,7 @@ then
     build_python() {
         docker_build $top_dir/docker/hashblock-dev-python docker/ hashblock-dev-python
         docker_build $top_dir/docker/hashblock-dev-units-tp docker/ hashblock-dev-units-tp
-        docker_build $top_dir/docker/hashblock-dev-events-tp docker/ hashblock-dev-events-tp
+        docker_build $top_dir/docker/hashblock-dev-exchange-tp docker/ hashblock-dev-exchange-tp
         docker_run hashblock-dev-python
     }
 fi
@@ -230,8 +230,8 @@ then
         docker_build $build_dir/hashblock-int-units-tp \
             $build_dir/ hashblock-units-tp
 
-        docker_build $build_dir/hashblock-int-events-tp \
-            $build_dir/ hashblock-events-tp
+        docker_build $build_dir/hashblock-int-exchange-tp \
+            $build_dir/ hashblock-exchange-tp
     }
 fi
 

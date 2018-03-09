@@ -14,31 +14,17 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
-# This Dockerfile is for running protogen, lint, and unit-tests
+FROM ubuntu:16.04
 
-FROM ubuntu:xenial
-
-RUN echo "deb apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD" && \
+# Remove python debug library from this container
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD && \
     echo 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe' >> /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install -y --allow-unauthenticated -q \
-        python3-pip \
-        python3-sawtooth-sdk \
-        python3-sawtooth-rest-api \
-        python3-sawtooth-cli \
-        python3-sawtooth-signing \
-        python-pudb
+    apt-get update 
 
-RUN pip3 install \
-    pylint==1.8.1 \
-    pycodestyle==2.3.1 \
-    grpcio-tools==1.7.0 \
-    nose2==0.7.2 \
-    bcrypt \
-    pycrypto \
-    ptvsd
+RUN apt-get install -y -q python3-sawtooth-sdk
 
-ENV PATH $PATH:/project/sawtooth-eventchain/bin
+WORKDIR /project/exchange
 
-WORKDIR /project/sawtooth-eventchain
-CMD build_python
+ENV PATH $PATH:/project/exchange/bin
+
+CMD chains-tp

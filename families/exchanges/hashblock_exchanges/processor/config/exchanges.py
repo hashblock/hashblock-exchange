@@ -25,16 +25,16 @@ from sawtooth_sdk.processor.exceptions import LocalConfigurationError
 LOGGER = logging.getLogger(__name__)
 
 
-def load_default_events_config():
+def load_default_exchanges_config():
     """
     Returns the default UnitConfig
     """
-    return EventsConfig(
+    return ExchangesConfig(
         connect='tcp://localhost:4004'
     )
 
 
-def load_toml_events_config(filename):
+def load_toml_exchanges_config(filename):
     """Returns a UnitConfig created by loading a TOML file from the
     filesystem.
 
@@ -52,7 +52,7 @@ def load_toml_events_config(filename):
         LOGGER.info(
             "Skipping transaction proccesor config loading from non-existent"
             " config file: %s", filename)
-        return EventsConfig()
+        return ExchangesConfig()
 
     LOGGER.info("Loading transaction processor information from config: %s",
                 filename)
@@ -73,14 +73,14 @@ def load_toml_events_config(filename):
             "Invalid keys in transaction processor config: "
             "{}".format(", ".join(sorted(list(invalid_keys)))))
 
-    config = EventsConfig(
+    config = ExchangesConfig(
         connect=toml_config.get("connect", None)
     )
 
     return config
 
 
-def merge_events_config(configs):
+def merge_exchanges_config(configs):
     """
     Given a list of UnitConfig objects, merges them into a single
     UnitConfig, giving priority in the order of the configs
@@ -100,10 +100,10 @@ def merge_events_config(configs):
         if config.connect is not None:
             connect = config.connect
 
-    return EventsConfig(connect=connect)
+    return ExchangesConfig(connect=connect)
 
 
-class EventsConfig:
+class ExchangesConfig:
     def __init__(self, connect=None):
         self._connect = connect
 
