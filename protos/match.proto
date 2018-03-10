@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 option java_multiple_files = true;
-option java_package = "hashblock.events.protobuf";
+option java_package = "hashblock.match.protobuf";
 
 // Resource quantity
 message Quantity {
@@ -50,7 +50,7 @@ message UTXQ {
     //  Transaction quantity of unit and resource 
     Quantity quantity = 3;
     //  State flag for reciprocate validity
-    bool reciprocated = 4;
+    bool matched = 4;
 }
 
 message MTXQ {
@@ -63,10 +63,10 @@ message MTXQ {
     //  Transaction quantity of unit and resource
     Quantity quantity = 4;
     //  
-    UTXQ unbalanced = 5;
+    UTXQ unmatched = 5;
 }
 
-message TransactionPayload {
+message MatchEvent {
     enum Action {
         UTXQ_ASK = 0;
         MTXQ_TELL = 1;

@@ -29,19 +29,19 @@ import yaml
 import pkg_resources
 from colorlog import ColoredFormatter
 
-from sawtooth_cli.exceptions import CliException
-from sawtooth_cli.rest_client import RestClient
+from hashblock_cli.exceptions import CliException
+from hashblock_cli.rest_client import RestClient
 
-from sawtooth_cli.protobuf.unit_pb2 import UnitPayload
-from sawtooth_cli.protobuf.unit_pb2 import UnitProposal
-from sawtooth_cli.protobuf.unit_pb2 import UnitVote
-from sawtooth_cli.protobuf.unit_pb2 import UnitCandidates
-from sawtooth_cli.protobuf.units_pb2 import Unit
-from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_cli.protobuf.transaction_pb2 import Transaction
-from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
-from sawtooth_cli.protobuf.batch_pb2 import Batch
-from sawtooth_cli.protobuf.batch_pb2 import BatchList
+from hashblock_cli.protobuf.unit_pb2 import UnitPayload
+from hashblock_cli.protobuf.unit_pb2 import UnitProposal
+from hashblock_cli.protobuf.unit_pb2 import UnitVote
+from hashblock_cli.protobuf.unit_pb2 import UnitCandidates
+from hashblock_cli.protobuf.units_pb2 import Unit
+from hashblock_cli.protobuf.transaction_pb2 import TransactionHeader
+from hashblock_cli.protobuf.transaction_pb2 import Transaction
+from hashblock_cli.protobuf.batch_pb2 import BatchHeader
+from hashblock_cli.protobuf.batch_pb2 import Batch
+from hashblock_cli.protobuf.batch_pb2 import BatchList
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory

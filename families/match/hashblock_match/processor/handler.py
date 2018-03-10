@@ -25,9 +25,9 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 # from sawtooth_sdk.processor.exceptions import AuthorizationException
 
-from protobuf.exchange_pb2 import TransactionPayload
-from protobuf.exchange_pb2 import UTXQ
-from protobuf.exchange_pb2 import MTXQ
+from protobuf.match_pb2 import MatchEvent
+from protobuf.match_pb2 import UTXQ
+from protobuf.match_pb2 import MTXQ
 
 # initiate 5:2:3
 # initiate 10:7:13
@@ -36,29 +36,29 @@ from protobuf.exchange_pb2 import MTXQ
 
 LOGGER = logging.getLogger(__name__)
 
-ADDRESS_PREFIX = 'exchanges'
-FAMILY_NAME = 'hashblock_exchanges'
+ADDRESS_PREFIX = 'match'
+FAMILY_NAME = 'hashblock-match'
 
-EVENTS_ADDRESS_PREFIX = hashlib.sha512(
-    ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
+MATCH_ADDRESS_PREFIX = hashlib.sha512(
+    FAMILY_NAME.encode('utf-8')).hexdigest()[0:6]
 
 # Number of seconds to wait for key operations to succeed
 STATE_TIMEOUT_SEC = 10
 
 initiateActionSet = frozenset([
-    TransactionPayload.UTXQ_ASK,
-    TransactionPayload.UTXQ_OFFER,
-    TransactionPayload.UTXQ_COMMITMENT,
-    TransactionPayload.UTXQ_GIVE])
+    MatchEvent.UTXQ_ASK,
+    MatchEvent.UTXQ_OFFER,
+    MatchEvent.UTXQ_COMMITMENT,
+    MatchEvent.UTXQ_GIVE])
 
 reciprocateActionSet = frozenset([
-    TransactionPayload.MTXQ_TELL,
-    TransactionPayload.MTXQ_ACCEPT,
-    TransactionPayload.MTXQ_OBLIGATION,
-    TransactionPayload.MTXQ_TAKE])
+    MatchEvent.MTXQ_TELL,
+    MatchEvent.MTXQ_ACCEPT,
+    MatchEvent.MTXQ_OBLIGATION,
+    MatchEvent.MTXQ_TAKE])
 
 
-class ExchangeTransactionHandler(TransactionHandler):
+class MatchTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
@@ -70,36 +70,37 @@ class ExchangeTransactionHandler(TransactionHandler):
 
     @property
     def namespaces(self):
-        return [EVENTS_ADDRESS_PREFIX]
+        return [MATCH_ADDRESS_PREFIX]
 
     def apply(self, transaction, context):
-        transactionExecute = {
-            initiateActionSet: apply_initiate,
-            reciprocateActionSet: apply_reciprocate}
 
-        exchange_payload = TransactionPayload()
+        exchange_payload = MatchEvent()
         exchange_payload.ParseFromString(transaction.payload)
-        try:
-            transactionExecute[exchange_payload.action]
-            (exchange_payload, context)
-            generateTxnSuccessFor(exchange_payload, context)
-        except KeyError:
+        if exchange_payload.action in initiateActionSet:
+            apply_initiate(exchange_payload, context)
+        elif exchange_payload.action in reciprocateActionSet:
+            apply_reciprocate(exchange_payload, context)
+        else:
             return throw_invalid(
                 "'action' must be one of {} or {}".
                 format([initiateActionSet, reciprocateActionSet]))
 
+        (exchange_payload, context)
+        generateTxnSuccessFor(exchange_payload, context)
+
+
 # Module functions
 
 
-transactionKeyMap = {
-    TransactionPayload.UTXQ_ASK: "hashblock.exchange.ask",
-    TransactionPayload.MTXQ_TELL: "hashblock.exchange.tell",
-    TransactionPayload.UTXQ_OFFER: "hashblock.exchange.offer",
-    TransactionPayload.MTXQ_ACCEPT: "hashblock.exchange.accept",
-    TransactionPayload.UTXQ_COMMITMENT: "hashblock.exchange.commitment",
-    TransactionPayload.MTXQ_OBLIGATION: "hashblock.exchange.obligation",
-    TransactionPayload.UTXQ_GIVE: "hashblock.exchange.give",
-    TransactionPayload.MTXQ_TAKE: "hashblock.exchange.take"
+matchEventKeyMap = {
+    MatchEvent.UTXQ_ASK: "hashblock.match.ask",
+    MatchEvent.MTXQ_TELL: "hashblock.matchtell",
+    MatchEvent.UTXQ_OFFER: "hashblock.matchoffer",
+    MatchEvent.MTXQ_ACCEPT: "hashblock.matchaccept",
+    MatchEvent.UTXQ_COMMITMENT: "hashblock.matchcommitment",
+    MatchEvent.MTXQ_OBLIGATION: "hashblock.matchobligation",
+    MatchEvent.UTXQ_GIVE: "hashblock.matchgive",
+    MatchEvent.MTXQ_TAKE: "hashblock.matchtake"
 }
 
 
@@ -113,11 +114,11 @@ def __post_exchange(context, exchange_type, attributes):
 def generateTxnSuccessFor(payload, context):
     attributes = [
         ("status", "completed"), ("unbalanced_address", payload.ukey)]
-    if payload.action == TransactionPayload.RECIPROCATE_EVENT:
+    if payload.action in reciprocateActionSet:
         attributes.append(tuple(["balanced_address", payload.mkey]))
     __post_exchange(
         context,
-        transactionKeyMap[payload.action],
+        matchEventKeyMap[payload.action],
         attributes)
 
 
@@ -160,7 +161,7 @@ def apply_initiate(payload, context):
     exchange_initiate = UTXQ()
     exchange_initiate.ParseFromString(payload.data)
     if __check_existence(exchange_initiate, INITIATE_VSET):
-        if exchange_initiate.reciprocated:
+        if exchange_initiate.matched:
             throw_invalid('Already reconcilled')
         else:
             __set_exchange(context, exchange_initiate, payload.ukey)
@@ -188,8 +189,8 @@ def apply_reciprocate(payload, context):
         throw_invalid('Balancing exchange not well formed')
 
     LOGGER.info("UTXQ and MTXQ Balance!")
-    exchange_initiate.reciprocated = True
-    exchange_reciprocate.initiateEvent.CopyFrom(exchange_initiate)
+    exchange_initiate.matched = True
+    exchange_reciprocate.unmatched.CopyFrom(exchange_initiate)
     __set_exchange(context, exchange_initiate, payload.ukey)
     __complete_reciprocate_exchange(
         context, payload.mkey,
@@ -270,7 +271,7 @@ _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
 
 
 def make_exchanges_address(data):
-    return EVENTS_ADDRESS_PREFIX + hashlib.sha512(
+    return MATCH_ADDRESS_PREFIX + hashlib.sha512(
         data.encode('utf-8')).hexdigest()[-64:]
 
 

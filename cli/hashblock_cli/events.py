@@ -25,14 +25,14 @@ from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli import tty
 
-from sawtooth_cli.protobuf.events_pb2 import ReciprocateEvent
+from hashblock_cli.protobuf.exchange_pb2 import MTXQ
 
-ADDRESS_PREFIX = 'events'
-FAMILY_NAME = 'hashblock_events'
+ADDRESS_PREFIX = 'exchanges'
+FAMILY_NAME = 'hashblock_exchanges'
 
 RECIPROCATE_EVENT_KEY = 'reciprocate.' 
 INITIATE_EVENT_KEY = 'initiate.'
-EVENTS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
+EVENTS_NAMESPACE = hashlib.sha512('exchanges'.encode("utf-8")).hexdigest()[0:6]
 RECIPROCATE_LIST_ADDRESS = EVENTS_NAMESPACE + \
     hashlib.sha512(RECIPROCATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 
@@ -115,9 +115,9 @@ def _do_events_list(args):
     for event_state_leaf in state_leaf['data']:
         if event_state_leaf is not None:
             decoded = b64decode(event_state_leaf['data'])
-            event = ReciprocateEvent()
+            event = MTXQ()
             event.ParseFromString(decoded)
-            printable_events.append([event_state_leaf['address'],event])
+            printable_events.append([event_state_leaf['address'], event])
 
     if args.format == 'default':
         for event in printable_events:

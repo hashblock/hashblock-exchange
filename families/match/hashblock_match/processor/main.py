@@ -30,14 +30,14 @@ from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from processor.handler import ExchangeTransactionHandler
-from processor.config.exchanges import ExchangesConfig
-from processor.config.exchanges import \
-    load_default_exchanges_config
-from processor.config.exchanges import \
-    load_toml_exchanges_config
-from processor.config.exchanges import \
-    merge_exchanges_config
+from processor.handler import MatchTransactionHandler
+from processor.config.match import MatchConfig
+from processor.config.match import \
+    load_default_match_config
+from processor.config.match import \
+    load_toml_match_config
+from processor.config.match import \
+    merge_match_config
 
 DISTRIBUTION_NAME = 'hashblock-exchanges'
 
@@ -71,11 +71,11 @@ def create_console_handler(verbose_level):
 
 
 def setup_loggers(verbose_level, processor):
-    log_config = get_log_config(filename="exchanges_log_config.toml")
+    log_config = get_log_config(filename="match_log_config.toml")
 
     # If no toml, try loading yaml
     if log_config is None:
-        log_config = get_log_config(filename="exchanges_log_config.yaml")
+        log_config = get_log_config(filename="match_log_config.yaml")
 
     if log_config is not None:
         log_configuration(log_config=log_config)
@@ -84,7 +84,7 @@ def setup_loggers(verbose_level, processor):
         # use the transaction processor zmq identity for filename
         log_configuration(
             log_dir=log_dir,
-            name="exchanges-" + str(processor.zmq_id)[2:-1])
+            name="match-" + str(processor.zmq_id)[2:-1])
 
     init_console_logging(verbose_level=verbose_level)
 
@@ -92,9 +92,9 @@ def setup_loggers(verbose_level, processor):
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
         prog=prog_name,
-        description='Starts a hashblock-exchanges transaction processor.',
+        description='Starts a hashblock-match transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
-               'hashblock-exchanges used by the Sawtooth platform.',
+               'hashblock-match used by the Sawtooth platform.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
@@ -116,7 +116,7 @@ def create_parser(prog_name):
     parser.add_argument(
         '-V', '--version',
         action='version',
-        version=(DISTRIBUTION_NAME + ' (Hashblock Exchang) version {}')
+        version=(DISTRIBUTION_NAME + ' (Hashblock Match) version {}')
         .format(version),
         help='display version information')
 
@@ -125,17 +125,17 @@ def create_parser(prog_name):
 
 def load_settings_config(first_config):
     default_settings_config = \
-        load_default_exchanges_config()
+        load_default_match_config()
     conf_file = os.path.join(get_config_dir(), 'exchanges.toml')
 
-    toml_config = load_toml_exchanges_config(conf_file)
+    toml_config = load_toml_match_config(conf_file)
 
-    return merge_exchanges_config(
+    return merge_match_config(
         configs=[first_config, toml_config, default_settings_config])
 
 
 def create_settings_config(args):
-    return ExchangesConfig(connect=args.connect)
+    return MatchConfig(connect=args.connect)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
@@ -146,8 +146,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     args = parser.parse_args(args)
 
     arg_config = create_settings_config(args)
-    exchanges_config = load_settings_config(arg_config)
-    processor = TransactionProcessor(url=exchanges_config.connect)
+    match_config = load_settings_config(arg_config)
+    processor = TransactionProcessor(url=match_config.connect)
 
     if with_loggers is True:
         if args.verbose is None:
@@ -158,7 +158,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     my_logger = logging.getLogger(__name__)
     my_logger.debug("Processor loaded")
-    handler = ExchangeTransactionHandler()
+    handler = MatchTransactionHandler()
     processor.add_handler(handler)
     my_logger.debug("Handler instantiated, starting processor thread...")
 

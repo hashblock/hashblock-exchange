@@ -35,17 +35,17 @@ from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.parser import parser
 
-from sawtooth_cli.protobuf.events_pb2 import EventPayload
-from sawtooth_cli.protobuf.events_pb2 import InitiateEvent
-from sawtooth_cli.protobuf.events_pb2 import ReciprocateEvent
-from sawtooth_cli.protobuf.events_pb2 import Quantity
-from sawtooth_cli.protobuf.events_pb2 import Ratio
-from sawtooth_cli.protobuf.events_pb2 import UnmatchedEvent
-from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_cli.protobuf.transaction_pb2 import Transaction
-from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
-from sawtooth_cli.protobuf.batch_pb2 import Batch
-from sawtooth_cli.protobuf.batch_pb2 import BatchList
+from hashblock_cli.protobuf.exchange_pb2 import TransactionPayload
+from hashblock_cli.protobuf.exchange_pb2 import UTXQ
+from hashblock_cli.protobuf.exchange_pb2 import MTXQ
+from hashblock_cli.protobuf.exchange_pb2 import Quantity
+from hashblock_cli.protobuf.exchange_pb2 import Ratio
+from hashblock_cli.protobuf.exchange_pb2 import UnmatchedEvent
+from hashblock_cli.protobuf.transaction_pb2 import TransactionHeader
+from hashblock_cli.protobuf.transaction_pb2 import Transaction
+from hashblock_cli.protobuf.batch_pb2 import BatchHeader
+from hashblock_cli.protobuf.batch_pb2 import Batch
+from hashblock_cli.protobuf.batch_pb2 import BatchList
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
@@ -53,10 +53,10 @@ from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 DISTRIBUTION_NAME = 'eventsset'
-INITIATE_EVENT_KEY = 'initiate.'
-RECIPROCATE_EVENT_KEY = 'reciprocate.'
+INITIATE_EVENT_KEY = 'utxq.'
+RECIPROCATE_EVENT_KEY = 'mtxq.'
 
-EVENTS_NAMESPACE = hashlib.sha512('events'.encode("utf-8")).hexdigest()[0:6]
+EVENTS_NAMESPACE = hashlib.sha512('exchanges'.encode("utf-8")).hexdigest()[0:6]
 INITIATE_LIST_ADDRESS = EVENTS_NAMESPACE + \
     hashlib.sha512(INITIATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 
@@ -64,7 +64,7 @@ _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
-ADDRESS_PREFIX = 'events'
+ADDRESS_PREFIX = 'exchanges'
 
 LOGGER = logging.getLogger(__name__)
 
@@ -342,7 +342,7 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
     """Creates an individual hashblock_units transaction for creating
     a reciprocate event that matches with an initate event.
     """
-    reciprocate_event = ReciprocateEvent(
+    reciprocate_event = MTXQ(
         plus=b'public key',
         minus=b'minus',
         ratio=ratio,
@@ -351,10 +351,10 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
     event_key = make_events_address(RECIPROCATE_EVENT_KEY, str(uuid.uuid4()))
     input_keys = [event_id]
     output_keys = [event_key, event_id]
-    payload = EventPayload(data=reciprocate_event.SerializeToString(),
-                           ikey=event_id,
-                           rkey=event_key,
-                           action=EventPayload.RECIPROCATE_EVENT)
+    payload = TransactionPayload(data=reciprocate_event.SerializeToString(),
+                           ukey=event_id,
+                           mkey=event_key,
+                           action=TransactionPayload.RECIPROCATE_EVENT)
 
     return _make_txn(signer, input_keys, output_keys, payload)
 
@@ -369,9 +369,9 @@ def _get_unmatched_event_list(rest_client):
             if event_state_leaf is not None:
                 initiate_event_bytes = b64decode(event_state_leaf['data'])
                 if initiate_event_bytes is not None:
-                    initiate_event = InitiateEvent()
+                    initiate_event = UTXQ()
                     initiate_event.ParseFromString(initiate_event_bytes)
-                    if initiate_event.reciprocated == False:
+                    if initiate_event.matched == False:
                         unmatched_event = UnmatchedEvent()
                         unmatched_event.event_id = event_state_leaf['address']
                         unmatched_event.value = initiate_event.quantity.value
@@ -479,16 +479,16 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
         value=(int(value)).to_bytes(2, byteorder='little'),
         valueUnit=(int(unit)).to_bytes(2, byteorder='little'),
         resourceUnit=(int(resource)).to_bytes(2, byteorder='little'))
-    initiateEvent = InitiateEvent(
+    initiateEvent = UTXQ(
         reciprocated=False,
         plus=b'public key',
         minus=b'minus_public_key',
         quantity=quantity)
     event_key = make_events_address(INITIATE_EVENT_KEY, str(uuid.uuid4()))
     output_keys = [event_key]
-    payload = EventPayload(data=initiateEvent.SerializeToString(),
+    payload = TransactionPayload(data=initiateEvent.SerializeToString(),
                            ikey=event_key,
-                           action=EventPayload.INITIATE_EVENT)
+                           action=TransactionPayload.INITIATE_EVENT)
     return _make_txn(signer, [], output_keys, payload)
 
 

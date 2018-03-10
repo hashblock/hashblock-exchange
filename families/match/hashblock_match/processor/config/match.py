@@ -25,16 +25,16 @@ from sawtooth_sdk.processor.exceptions import LocalConfigurationError
 LOGGER = logging.getLogger(__name__)
 
 
-def load_default_exchanges_config():
+def load_default_match_config():
     """
     Returns the default UnitConfig
     """
-    return ExchangesConfig(
+    return MatchConfig(
         connect='tcp://localhost:4004'
     )
 
 
-def load_toml_exchanges_config(filename):
+def load_toml_match_config(filename):
     """Returns a UnitConfig created by loading a TOML file from the
     filesystem.
 
@@ -52,7 +52,7 @@ def load_toml_exchanges_config(filename):
         LOGGER.info(
             "Skipping transaction proccesor config loading from non-existent"
             " config file: %s", filename)
-        return ExchangesConfig()
+        return MatchConfig()
 
     LOGGER.info("Loading transaction processor information from config: %s",
                 filename)
@@ -73,25 +73,25 @@ def load_toml_exchanges_config(filename):
             "Invalid keys in transaction processor config: "
             "{}".format(", ".join(sorted(list(invalid_keys)))))
 
-    config = ExchangesConfig(
+    config = MatchConfig(
         connect=toml_config.get("connect", None)
     )
 
     return config
 
 
-def merge_exchanges_config(configs):
+def merge_match_config(configs):
     """
     Given a list of UnitConfig objects, merges them into a single
     UnitConfig, giving priority in the order of the configs
     (first has highest priority).
 
     Args:
-        config (list of UnitConfigs): The list of uom configs that
+        config (list of MatchConfigs): The list of uom configs that
             must be merged together
 
     Returns:
-        config (UnitConfig): one UnitConfig that combines all of the
+        config (MatchConfig): one MatchConfig that combines all of the
             passed in configs.
     """
     connect = None
@@ -100,10 +100,10 @@ def merge_exchanges_config(configs):
         if config.connect is not None:
             connect = config.connect
 
-    return ExchangesConfig(connect=connect)
+    return MatchConfig(connect=connect)
 
 
-class ExchangesConfig:
+class MatchConfig:
     def __init__(self, connect=None):
         self._connect = connect
 

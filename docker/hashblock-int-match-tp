@@ -23,8 +23,8 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F10
 
 RUN apt-get install -y -q python3-sawtooth-sdk
 
-WORKDIR /project/exchange
+WORKDIR /project/hashblock-exchange
 
-ENV PATH $PATH:/project/exchange/bin
+ENV PATH $PATH:/project/hashblock-exchange/bin
 
-CMD chains-tp
+CMD match-tp
