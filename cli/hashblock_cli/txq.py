@@ -31,16 +31,16 @@ import yaml
 import pkg_resources
 from colorlog import ColoredFormatter
 
-from sawtooth_cli.exceptions import CliException
-from sawtooth_cli.rest_client import RestClient
-from sawtooth_cli.parser import parser
+from hashblock_cli.exceptions import CliException
+from hashblock_cli.rest_client import RestClient
+from hashblock_cli.parser import parser
 
-from hashblock_cli.protobuf.exchange_pb2 import TransactionPayload
-from hashblock_cli.protobuf.exchange_pb2 import UTXQ
-from hashblock_cli.protobuf.exchange_pb2 import MTXQ
-from hashblock_cli.protobuf.exchange_pb2 import Quantity
-from hashblock_cli.protobuf.exchange_pb2 import Ratio
-from hashblock_cli.protobuf.exchange_pb2 import UnmatchedEvent
+from hashblock_cli.protobuf.match_pb2 import MatchEvent
+from hashblock_cli.protobuf.match_pb2 import UTXQ
+from hashblock_cli.protobuf.match_pb2 import MTXQ
+from hashblock_cli.protobuf.match_pb2 import Quantity
+from hashblock_cli.protobuf.match_pb2 import Ratio
+from hashblock_cli.protobuf.match_pb2 import UnmatchedEvent
 from hashblock_cli.protobuf.transaction_pb2 import TransactionHeader
 from hashblock_cli.protobuf.transaction_pb2 import Transaction
 from hashblock_cli.protobuf.batch_pb2 import BatchHeader
@@ -52,35 +52,39 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
-DISTRIBUTION_NAME = 'eventsset'
-INITIATE_EVENT_KEY = 'utxq.'
-RECIPROCATE_EVENT_KEY = 'mtxq.'
+DISTRIBUTION_NAME = 'txn'
+INITIATE_EVENT_KEY = 'utxq'
+RECIPROCATE_EVENT_KEY = 'mtxq'
 
-EVENTS_NAMESPACE = hashlib.sha512('exchanges'.encode("utf-8")).hexdigest()[0:6]
-INITIATE_LIST_ADDRESS = EVENTS_NAMESPACE + \
+INITIATE_CMDSET = frozenset(["ask", "offer", "commitment", "give"])
+RECIPROCATE_CMDSET = frozenset(["tell", "accept", "obligation", "take"])
+
+MATCH_NAMESPACE = hashlib.sha512(
+    'hashblock-match'.encode("utf-8")).hexdigest()[0:6]
+INITIATE_LIST_ADDRESS = MATCH_NAMESPACE + \
     hashlib.sha512(INITIATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 
 _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
-ADDRESS_PREFIX = 'exchanges'
+ADDRESS_PREFIX = 'hashblock-match'
 
 LOGGER = logging.getLogger(__name__)
 
 hash_lookup = {
     "bag": 2,
     "bags": 2,
-    "{peanuts}":3,
-    "$":5,
-    "{usd}":7,
-    "bale":11,
-    "bales":11,
-    "{hay}":13
+    "{peanuts}": 3,
+    "$": 5,
+    "{usd}": 7,
+    "bale": 11,
+    "bales": 11,
+    "{hay}": 13
 }
 
 
-def _do_event_initiate(args):
+def _do_match_initiate(args):
     """Executes the 'event initiate' subcommand.  Given a signing private key file, an
     assignment public key file, and a quantity, it generates batches of hashblock_events
     transactions in a BatchList instance.  The BatchList is either stored to a
@@ -151,11 +155,11 @@ def _do_event_initiate(args):
         raise AssertionError('No target for create set.')
 
 
-def _do_event_list(args):
-    """Executes the 'events list' subcommand.
+def _do_match_list(args):
+    """Executes the 'list' subcommand.
 
     Given a url, optional filters on prefix, this command lists
-    the current unmatched initate events.
+    the match type addresses.
     """
     unmatched_event_list = _get_unmatched_event_list(RestClient(args.url))
 
@@ -203,9 +207,10 @@ def _hash_reverse_lookup(lookup_value):
     """
     return [key for key, value in hash_lookup.items() if value == lookup_value]
 
-def _do_event_reciprocate(args):
-    """Executes the 'event reciprocate' subcommand.  Given a key file, an event
-    id, a quantity, and a ratop, it generates a batch of hashblock_events transactions
+
+def _do_match_reciprocate(args):
+    """Executes a reciprocate type subcommand.  Given a key file, an event
+    id, a quantity, and a ratop, it generates a batch of hashblock-match transactions
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
@@ -518,12 +523,12 @@ def _to_hash(value):
 
 
 _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
-EVENTS_ADDRESS_PREFIX = hashlib.sha512(
+MATCH_ADDRESS_PREFIX = hashlib.sha512(
     ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
 
 
 def make_events_address(sublist, data):
-    return EVENTS_ADDRESS_PREFIX + \
+    return MATCH_ADDRESS_PREFIX + \
         hashlib.sha512(sublist.encode('utf-8')).hexdigest()[0:6] + \
         hashlib.sha512(data.encode('utf-8')).hexdigest()[-58:]
 
@@ -587,7 +592,7 @@ def create_parent_parser(prog_name):
     parent_parser.add_argument(
         '-V', '--version',
         action='version',
-        version=(DISTRIBUTION_NAME + ' (Hashblock Sawtooth) version {}')
+        version=(DISTRIBUTION_NAME + ' (Hashblock txn) version {}')
         .format(version),
         help='display version information')
 
@@ -598,25 +603,25 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        description='Provides subcommands to '
-        'to list unmatched initating events, to create initiating '
-        'events, and to create reciprocating events.',
+        description='Provides commands to '
+        'list addresses, to create initiating (unmatched) '
+        'transactions, and to create reciprocating (matched) transactions.',
         parents=[parent_parser])
 
-    subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
+    subparsers = parser.add_subparsers(title='commands', dest='commands')
     subparsers.required = True
 
-    # The following parser is for the `event` subcommand group. These
-    # commands allow the user to create initiating events.
+    # The following parser is for the match type command groups. These
+    # commands allow the user to create transactions.
 
     event_parser = subparsers.add_parser(
         'event',
         help='Lists unmatched initiating events, creates initating events, '
         'or creates reciprocating events',
-        description='Provides subcommands to ist unmatched initiating events, '
+        description='Provides subcommands to list unmatched initiating events, '
         ' to creates initating events, and to create reciprocating events')
     event_parsers = event_parser.add_subparsers(
-        title='subcommands',
+        title='commands',
         dest='event_cmd')
     event_parsers.required = True
 
@@ -736,12 +741,12 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.subcommand == 'event' and args.event_cmd == 'initiate':
-        _do_event_initiate(args)
-    elif args.subcommand == 'event' and args.event_cmd == 'list':
-        _do_event_list(args)
-    elif args.subcommand == 'event' and args.event_cmd == 'reciprocate':
-        _do_event_reciprocate(args)
+    if args.subcommand in INITIATE_CMDSET and args.event_cmd != 'list':
+        _do_match_initiate(args)
+    elif args.subcommand in RECIPROCATE_CMDSET and args.event_cmd != 'list':
+        _do_match_reciprocate(args)
+    elif args.event_cmd == 'list':
+        _do_match_list(args)
     else:
         raise CliException(
             '"{}" is not a valid subcommand of "event"'.format(

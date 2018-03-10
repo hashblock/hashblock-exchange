@@ -1,4 +1,4 @@
-from sawtooth_cli.scanner import tokens
+from hashblock_cli.scanner import tokens
 from ply import yacc
 import sys
 

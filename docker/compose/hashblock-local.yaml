@@ -14,6 +14,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+#
+# python3 ./sdk/python/get-pip.py && \
+#
+
 version: '2.1'
 
 services:
@@ -35,7 +39,7 @@ services:
       - validator
       - rest-api      
     command: "bash -c \"\
-        python3 ./sdk/python/get-pip.py && \
+        python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
         pip3 install ptvsd==3.0.0.0 && \
         pip3 install ply && \
         sawtooth keygen your_key && \
