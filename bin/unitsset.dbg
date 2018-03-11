@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
     'signing'))
 
-from sawtooth_cli.unitsset import main_wrapper
+from hashblock_cli.unitsset import main_wrapper
 
 if __name__ == '__main__':
     ptvsd.enable_attach('alphabeta',('0.0.0.0',5700))

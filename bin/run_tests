@@ -116,8 +116,8 @@ main() {
                 units)
                     test_units
                     ;;
-                events)
-                    test_events
+                exchanges)
+                    test_exchanges
                     ;;
                 *)
                     echo "Module '$module' not found."
@@ -132,15 +132,15 @@ test_units() {
     # copy_coverage .coverage.units.config
 }
 
-test_events() {
-    run_docker_test ./families/events/tests/test_tp_events.yaml
-    copy_coverage .coverage.events.python
+test_exchanges() {
+    run_docker_test ./families/exchanges/tests/test_tp_events.yaml
+    copy_coverage .coverage.exchanges.python
 }
 
 test_all() {
     run_docker_test ./families/units/tests/test_tp_units.yaml
     # copy_coverage .coverage.units.python
-    run_docker_test ./families/events/tests/test_tp_events.yaml
+    run_docker_test ./families/exchanges/tests/test_tp_events.yaml
     # copy_coverage .coverage.events.python
 }
 

@@ -38,7 +38,7 @@ RUN pip3 install \
     pycrypto \
     ptvsd
 
-ENV PATH $PATH:/project/exchange/bin
+ENV PATH $PATH:/project/hashblock-exchange/bin
 
-WORKDIR /project/exchange
+WORKDIR /project/hashblock-exchange
 CMD build_python

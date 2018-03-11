@@ -21,7 +21,7 @@ import requests
 # needed for the google.protobuf imports to pass pylint
 from google.protobuf.message import Message as BaseMessage
 
-from sawtooth_cli.exceptions import CliException
+from hashblock_cli.exceptions import CliException
 
 
 class RestClient(object):
