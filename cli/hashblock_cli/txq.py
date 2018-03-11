@@ -52,23 +52,36 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
-DISTRIBUTION_NAME = 'txn'
-INITIATE_EVENT_KEY = 'utxq'
-RECIPROCATE_EVENT_KEY = 'mtxq'
+from hashblock_cli.txqcliparser import create_txq_cli_parser
 
+DISTRIBUTION_NAME = 'txn'
 INITIATE_CMDSET = frozenset(["ask", "offer", "commitment", "give"])
 RECIPROCATE_CMDSET = frozenset(["tell", "accept", "obligation", "take"])
 
+ACTION_MAP = {
+    'ask': MatchEvent.UTXQ_ASK,
+    'tell': MatchEvent.MTXQ_TELL,
+    'offer': MatchEvent.UTXQ_OFFER,
+    'accept': MatchEvent.MTXQ_ACCEPT,
+    'commitment': MatchEvent.UTXQ_COMMITMENT,
+    'obligation': MatchEvent.MTXQ_OBLIGATION,
+    'give': MatchEvent.UTXQ_GIVE,
+    'take': MatchEvent.MTXQ_TAKE}
+
+INITIATE_EVENT_KEY = 'utxq'
+RECIPROCATE_EVENT_KEY = 'mtxq'
+ADDRESS_PREFIX = 'hashblock_match'
 MATCH_NAMESPACE = hashlib.sha512(
-    'hashblock-match'.encode("utf-8")).hexdigest()[0:6]
+    ADDRESS_PREFIX.encode("utf-8")).hexdigest()[0:6]
 INITIATE_LIST_ADDRESS = MATCH_NAMESPACE + \
     hashlib.sha512(INITIATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
+
+RECIPROCATE_LIST_ADDRESS = MATCH_NAMESPACE + \
+    hashlib.sha512(RECIPROCATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 
 _MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
-
-ADDRESS_PREFIX = 'hashblock-match'
 
 LOGGER = logging.getLogger(__name__)
 
@@ -91,7 +104,7 @@ def _do_match_initiate(args):
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
     raw_quantity = []
-    ast = parser.parse(args.quantity)
+    ast = parser.parse(args.expr)
     if ast[0].lower() != 'event_quantity':
         raise AssertionError('Invalid quantity specification.')
     else:
@@ -132,27 +145,14 @@ def _do_match_initiate(args):
                         else:
                             value_unit = simple_unit[1]
                             raw_quantity.append(hash_lookup[value_unit])
-                            raw_quantity.append(hash_lookup[resource_unit])             
+                            raw_quantity.append(hash_lookup[resource_unit])
 
-    signer = _read_signer(args.key)
-    txns = [_create_initiate_txn(signer, raw_quantity)]
-
+    signer = _read_signer(args.skey)
+    txns = [_create_initiate_txn(args.cmd, signer, raw_quantity)]
     batch = _create_batch(signer, txns)
-
     batch_list = BatchList(batches=[batch])
-
-    if args.output is not None:
-        try:
-            with open(args.output, 'wb') as batch_file:
-                batch_file.write(batch_list.SerializeToString())
-        except IOError as e:
-            raise CliException(
-                'Unable to write to batch file: {}'.format(str(e)))
-    elif args.url is not None:
-        rest_client = RestClient(args.url)
-        rest_client.send_batches(batch_list)
-    else:
-        raise AssertionError('No target for create set.')
+    rest_client = RestClient(args.url)
+    rest_client.send_batches(batch_list)
 
 
 def _do_match_list(args):
@@ -214,27 +214,28 @@ def _do_match_reciprocate(args):
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
-    signer = _read_signer(args.key)
+    signer = _read_signer(args.skey)
     rest_client = RestClient(args.url)
 
     unmatched_events = _get_unmatched_event_list(rest_client)
 
     initiate_event_id = None
     for unmatched_event in unmatched_events:
-        if unmatched_event.event_id == args.event_id:
+        if unmatched_event.event_id == args.utxq:
             initiate_event_id = unmatched_event
             break
 
     if initiate_event_id is None:
-        raise CliException('No unmatched initiating event exists with the given id:{}'.format(args.event_id))
+        raise CliException('No unmatched initiating event exists with the given id:{}'.format(args.utxq))
 
-    quantities = args.quantities
+    quantities = args.expr
 
     if quantities[1] != '@' and quantities[3].lower() != 'for':
         raise AssertionError('Invalid specification.')
 
     r_quantity = Quantity()
     event_quantity = parser.parse(quantities[0])
+    print("Raw quantity = {}".format(event_quantity))
     if event_quantity[0].lower() != 'event_quantity':
         raise AssertionError('Invalid quantity specification.')
     else:
@@ -255,6 +256,8 @@ def _do_match_reciprocate(args):
                     if factor_annotation[0].lower() != 'factor_annotation':
                         raise AssertionError('Invalid quantity specification.')
                     else:
+                        print("Factor annotation = {}".format(factor_annotation[1]))
+                        print("Value unit = {}".format(value_unit))
                         r_quantity.value=(int(factor_annotation[1])).to_bytes(2, byteorder='little')
                         r_quantity.valueUnit=(int(hash_lookup[value_unit])).to_bytes(2, byteorder='little')
                         r_quantity.resourceUnit=(int(hash_lookup[factor_annotation[2]])).to_bytes(2, byteorder='little')
@@ -329,11 +332,15 @@ def _do_match_reciprocate(args):
                             denominator.valueUnit=(int(hash_lookup[value_unit])).to_bytes(2, byteorder='little')
                             denominator.resourceUnit=(int(hash_lookup[resource_unit])).to_bytes(2, byteorder='little')
 
-    ratio=Ratio(numerator=numerator, denominator=denominator)
+    ratio = Ratio(numerator=numerator, denominator=denominator)
+
+    print("R quantity = {}".format(r_quantity))
+    print("R ration = {}".format(ratio))
 
     txn = _create_reciprocate_txn(
+        args.cmd,
         signer,
-        args.event_id,
+        args.utxq,
         r_quantity,
         ratio)
     batch = _create_batch(signer, [txn])
@@ -343,7 +350,7 @@ def _do_match_reciprocate(args):
     rest_client.send_batches(batch_list)
 
 
-def _create_reciprocate_txn(signer, event_id, quantity, ratio):
+def _create_reciprocate_txn(icmd, signer, event_address, quantity, ratio):
     """Creates an individual hashblock_units transaction for creating
     a reciprocate event that matches with an initate event.
     """
@@ -352,14 +359,18 @@ def _create_reciprocate_txn(signer, event_id, quantity, ratio):
         minus=b'minus',
         ratio=ratio,
         quantity=quantity)
+
     # initiate_event_id=event_id)
-    event_key = make_events_address(RECIPROCATE_EVENT_KEY, str(uuid.uuid4()))
-    input_keys = [event_id]
-    output_keys = [event_key, event_id]
-    payload = TransactionPayload(data=reciprocate_event.SerializeToString(),
-                           ukey=event_id,
-                           mkey=event_key,
-                           action=TransactionPayload.RECIPROCATE_EVENT)
+    event_key = __make_match_address(
+        RECIPROCATE_LIST_ADDRESS, icmd, str(uuid.uuid4()))
+
+    input_keys = [event_address]
+    output_keys = [event_key, event_address]
+    payload = MatchEvent(
+        data=reciprocate_event.SerializeToString(),
+        ukey=event_address,
+        mkey=event_key,
+        action=ACTION_MAP[icmd])
 
     return _make_txn(signer, input_keys, output_keys, payload)
 
@@ -376,7 +387,7 @@ def _get_unmatched_event_list(rest_client):
                 if initiate_event_bytes is not None:
                     initiate_event = UTXQ()
                     initiate_event.ParseFromString(initiate_event_bytes)
-                    if initiate_event.matched == False:
+                    if initiate_event.matched is False:
                         unmatched_event = UnmatchedEvent()
                         unmatched_event.event_id = event_state_leaf['address']
                         unmatched_event.value = initiate_event.quantity.value
@@ -475,7 +486,7 @@ def _create_batch(signer, transactions):
         transactions=transactions)
 
 
-def _create_initiate_txn(signer, quantity_value_unit_resource):
+def _create_initiate_txn(icmd, signer, quantity_value_unit_resource):
     """Creates an individual hashblock_events transaction for the given key and
     value.quantity_value_unit_resource
     """
@@ -485,15 +496,18 @@ def _create_initiate_txn(signer, quantity_value_unit_resource):
         valueUnit=(int(unit)).to_bytes(2, byteorder='little'),
         resourceUnit=(int(resource)).to_bytes(2, byteorder='little'))
     initiateEvent = UTXQ(
-        reciprocated=False,
+        matched=False,
         plus=b'public key',
         minus=b'minus_public_key',
         quantity=quantity)
-    event_key = make_events_address(INITIATE_EVENT_KEY, str(uuid.uuid4()))
+
+    event_key = __make_match_address(
+        INITIATE_LIST_ADDRESS, icmd, str(uuid.uuid4()))
     output_keys = [event_key]
-    payload = TransactionPayload(data=initiateEvent.SerializeToString(),
-                           ikey=event_key,
-                           action=TransactionPayload.INITIATE_EVENT)
+    payload = MatchEvent(
+        data=initiateEvent.SerializeToString(),
+        ukey=event_key,
+        action=ACTION_MAP[icmd])
     return _make_txn(signer, [], output_keys, payload)
 
 
@@ -503,8 +517,8 @@ def _make_txn(signer, input_keys, output_keys, payload):
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
         signer_public_key=signer.get_public_key().as_hex(),
-        family_name='hashblock_events',
-        family_version='0.1.0',
+        family_name=ADDRESS_PREFIX,
+        family_version='0.2.0',
         inputs=input_keys,
         outputs=output_keys,
         dependencies=[],
@@ -518,30 +532,10 @@ def _make_txn(signer, input_keys, output_keys, payload):
         payload=serialized_payload)
 
 
-def _to_hash(value):
-    return hashlib.sha256(value.encode()).hexdigest()
-
-
-_EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
-MATCH_ADDRESS_PREFIX = hashlib.sha512(
-    ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
-
-
-def make_events_address(sublist, data):
-    return MATCH_ADDRESS_PREFIX + \
+def __make_match_address(base, sublist, data):
+    return base + \
         hashlib.sha512(sublist.encode('utf-8')).hexdigest()[0:6] + \
-        hashlib.sha512(data.encode('utf-8')).hexdigest()[-58:]
-
-
-def _make_events_key(key):
-    print("Making events key from {}".format(key))
-    # split the key into 4 parts, maximum
-    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-    # compute the short hash of each part
-    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
-    # pad the parts with the empty hash, if needed
-    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-    return make_events_address(addr_parts[0], ''.join(addr_parts[0:3]))
+        hashlib.sha512(data.encode('utf-8')).hexdigest()[-52:]
 
 
 def create_console_handler(verbose_level):
@@ -599,137 +593,10 @@ def create_parent_parser(prog_name):
     return parent_parser
 
 
-def create_parser(prog_name):
-    parent_parser = create_parent_parser(prog_name)
-
-    parser = argparse.ArgumentParser(
-        description='Provides commands to '
-        'list addresses, to create initiating (unmatched) '
-        'transactions, and to create reciprocating (matched) transactions.',
-        parents=[parent_parser])
-
-    subparsers = parser.add_subparsers(title='commands', dest='commands')
-    subparsers.required = True
-
-    # The following parser is for the match type command groups. These
-    # commands allow the user to create transactions.
-
-    event_parser = subparsers.add_parser(
-        'event',
-        help='Lists unmatched initiating events, creates initating events, '
-        'or creates reciprocating events',
-        description='Provides subcommands to list unmatched initiating events, '
-        ' to creates initating events, and to create reciprocating events')
-    event_parsers = event_parser.add_subparsers(
-        title='commands',
-        dest='event_cmd')
-    event_parsers.required = True
-
-    initiate_parser = event_parsers.add_parser(
-        'initiate',
-        help='Creates initiating event',
-        description='Create initiating event.'
-    )
-
-    initiate_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='specify a private signing key for the resulting batches, '
-        'and the plus public key assignment.')
-
-    initiate_parser.add_argument(
-        '-m', '--minus',
-        type=str,
-        help='specify the minus public key assignment.')
-
-    prop_target_group = initiate_parser.add_mutually_exclusive_group()
-    prop_target_group.add_argument(
-        '-o', '--output',
-        type=str,
-        help='specify the output file for the resulting batches')
-
-    prop_target_group.add_argument(
-        '--url',
-        type=str,
-        help="identify the URL of a validator's REST API",
-        default='http://rest-api:8008')
-
-    initiate_parser.add_argument(
-        'quantity',
-        type=str,
-        help='Quantity with the '
-        'format <value>.<value_unit> {resource_unit}.')
-
-    event_list_parser = event_parsers.add_parser(
-        'list',
-        help='Lists the unmatched initiating events',
-        description='Lists the initiating events. '
-                    'Use this list of initiating events to '
-                    'match with reciprocating events.')
-
-    event_list_parser.add_argument(
-        '--url',
-        type=str,
-        help="identify the URL of a validator's REST API",
-        default='http://rest-api:8008')
-
-    event_list_parser.add_argument(
-        '--public-key',
-        type=str,
-        default='',
-        help='filter proposals from a particular public key')
-
-    event_list_parser.add_argument(
-        '--filter',
-        type=str,
-        default='',
-        help='filter codes that begin with this value')
-
-    event_list_parser.add_argument(
-        '--format',
-        default='default',
-        choices=['default', 'csv', 'json', 'yaml'],
-        help='choose the output format')
-
-    reciprocate_parser = event_parsers.add_parser(
-        'reciprocate',
-        help='Create reciprocating events',
-        description='Create reciprocating events that  that match '
-        'with initiating events. Use "eventsset event list" to '
-        'find the initiating event id.')
-
-    reciprocate_parser.add_argument(
-        '--url',
-        type=str,
-        help="identify the URL of a validator's REST API",
-        default='http://rest-api:8008')
-
-    reciprocate_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='specify a signing private key for the resulting transaction batch, '
-        'and the resource increment assignment\'s public key')
-
-    reciprocate_parser.add_argument(
-        'event_id',
-        type=str,
-        help='identify the initiating event to match')
-
-    reciprocate_parser.add_argument(
-        'quantities',
-        type=str,
-        nargs='+',
-        help='Reciprocating event as quantity and quantity ratio with the '
-        'format <value_symbol><value>{<resource_unit>} @ '
-        '<value_symbol><value>{<resource_unit>} for '
-        '<value>.<value_unit>{<resource_unit>}.')
-
-    return parser
-
-
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
          with_loggers=True):
-    parser = create_parser(prog_name)
+    parser = create_txq_cli_parser(create_parent_parser(prog_name))
+    # parser = create_parser(prog_name)
     if args is None:
         args = sys.argv[1:]
     args = parser.parse_args(args)
@@ -741,16 +608,17 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.subcommand in INITIATE_CMDSET and args.event_cmd != 'list':
+    print(args)
+    if args.cmd in INITIATE_CMDSET:
         _do_match_initiate(args)
-    elif args.subcommand in RECIPROCATE_CMDSET and args.event_cmd != 'list':
+    elif args.cmd in RECIPROCATE_CMDSET:
         _do_match_reciprocate(args)
-    elif args.event_cmd == 'list':
+    elif args.cmd == 'list':
         _do_match_list(args)
     else:
         raise CliException(
             '"{}" is not a valid subcommand of "event"'.format(
-                args.subcommand))
+                args.cmd))
 
 
 def main_wrapper():
@@ -769,4 +637,3 @@ def main_wrapper():
     except:
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
-

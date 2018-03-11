@@ -37,7 +37,7 @@ from protobuf.match_pb2 import MTXQ
 LOGGER = logging.getLogger(__name__)
 
 ADDRESS_PREFIX = 'match'
-FAMILY_NAME = 'hashblock-match'
+FAMILY_NAME = 'hashblock_match'
 
 MATCH_ADDRESS_PREFIX = hashlib.sha512(
     FAMILY_NAME.encode('utf-8')).hexdigest()[0:6]
@@ -94,19 +94,19 @@ class MatchTransactionHandler(TransactionHandler):
 
 matchEventKeyMap = {
     MatchEvent.UTXQ_ASK: "hashblock.match.ask",
-    MatchEvent.MTXQ_TELL: "hashblock.matchtell",
-    MatchEvent.UTXQ_OFFER: "hashblock.matchoffer",
-    MatchEvent.MTXQ_ACCEPT: "hashblock.matchaccept",
-    MatchEvent.UTXQ_COMMITMENT: "hashblock.matchcommitment",
-    MatchEvent.MTXQ_OBLIGATION: "hashblock.matchobligation",
-    MatchEvent.UTXQ_GIVE: "hashblock.matchgive",
-    MatchEvent.MTXQ_TAKE: "hashblock.matchtake"
+    MatchEvent.MTXQ_TELL: "hashblock.match.tell",
+    MatchEvent.UTXQ_OFFER: "hashblock.match.offer",
+    MatchEvent.MTXQ_ACCEPT: "hashblock.match.accept",
+    MatchEvent.UTXQ_COMMITMENT: "hashblock.match.commitment",
+    MatchEvent.MTXQ_OBLIGATION: "hashblock.match.obligation",
+    MatchEvent.UTXQ_GIVE: "hashblock.match.give",
+    MatchEvent.MTXQ_TAKE: "hashblock.match.take"
 }
 
 
 def __post_exchange(context, exchange_type, attributes):
-    context.add_exchange(
-        exchange_type=exchange_type,
+    context.add_event(
+        event_type=exchange_type,
         attributes=attributes,
         timeout=STATE_TIMEOUT_SEC)
 
@@ -176,7 +176,7 @@ def apply_reciprocate(payload, context):
     exchange_reciprocate.ParseFromString(payload.data)
     exchange_initiate = UTXQ()
     __get_exchange(context, exchange_initiate, payload.ukey)
-    if exchange_initiate.reciprocated:
+    if exchange_initiate.matched:
         throw_invalid(
             "Attempt to balance with reciprocated Initiate")
     if __check_existence(exchange_reciprocate, RECIPROCATE_VSET):
