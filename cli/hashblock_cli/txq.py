@@ -235,7 +235,6 @@ def _do_match_reciprocate(args):
 
     r_quantity = Quantity()
     event_quantity = parser.parse(quantities[0])
-    print("Raw quantity = {}".format(event_quantity))
     if event_quantity[0].lower() != 'event_quantity':
         raise AssertionError('Invalid quantity specification.')
     else:
@@ -256,8 +255,6 @@ def _do_match_reciprocate(args):
                     if factor_annotation[0].lower() != 'factor_annotation':
                         raise AssertionError('Invalid quantity specification.')
                     else:
-                        print("Factor annotation = {}".format(factor_annotation[1]))
-                        print("Value unit = {}".format(value_unit))
                         r_quantity.value=(int(factor_annotation[1])).to_bytes(2, byteorder='little')
                         r_quantity.valueUnit=(int(hash_lookup[value_unit])).to_bytes(2, byteorder='little')
                         r_quantity.resourceUnit=(int(hash_lookup[factor_annotation[2]])).to_bytes(2, byteorder='little')
@@ -333,10 +330,6 @@ def _do_match_reciprocate(args):
                             denominator.resourceUnit=(int(hash_lookup[resource_unit])).to_bytes(2, byteorder='little')
 
     ratio = Ratio(numerator=numerator, denominator=denominator)
-
-    print("R quantity = {}".format(r_quantity))
-    print("R ration = {}".format(ratio))
-
     txn = _create_reciprocate_txn(
         args.cmd,
         signer,
@@ -608,7 +601,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    print(args)
+    # print(args)
     if args.cmd in INITIATE_CMDSET:
         _do_match_initiate(args)
     elif args.cmd in RECIPROCATE_CMDSET:
