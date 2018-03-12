@@ -24,12 +24,12 @@ import pkg_resources
 
 from colorlog import ColoredFormatter
 
-from sawtooth_cli.exceptions import CliException
-from sawtooth_cli.cli_config import load_cli_config
-from sawtooth_cli.units import add_units_parser
-from sawtooth_cli.units import do_units
-from sawtooth_cli.events import add_events_parser
-from sawtooth_cli.events import do_events
+from hashblock_cli.exceptions import CliException
+from hashblock_cli.cli_config import load_cli_config
+from hashblock_cli.units import add_units_parser
+from hashblock_cli.units import do_units
+from hashblock_cli.events import add_events_parser
+from hashblock_cli.events import do_events
 
 
 DISTRIBUTION_NAME = 'hashblock-cli'

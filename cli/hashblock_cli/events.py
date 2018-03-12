@@ -21,18 +21,18 @@ import sys
 
 import yaml
 
-from sawtooth_cli.exceptions import CliException
-from sawtooth_cli.rest_client import RestClient
-from sawtooth_cli import tty
+from hashblock_cli.exceptions import CliException
+from hashblock_cli.rest_client import RestClient
+from hashblock_cli import tty
 
-from hashblock_cli.protobuf.exchange_pb2 import MTXQ
+from hashblock_cli.protobuf.match_pb2 import MTXQ
 
-ADDRESS_PREFIX = 'exchanges'
-FAMILY_NAME = 'hashblock_exchanges'
+ADDRESS_PREFIX = 'match'
+FAMILY_NAME = 'hashblock_match'
 
 RECIPROCATE_EVENT_KEY = 'reciprocate.' 
 INITIATE_EVENT_KEY = 'initiate.'
-EVENTS_NAMESPACE = hashlib.sha512('exchanges'.encode("utf-8")).hexdigest()[0:6]
+EVENTS_NAMESPACE = hashlib.sha512('hashblock_match'.encode("utf-8")).hexdigest()[0:6]
 RECIPROCATE_LIST_ADDRESS = EVENTS_NAMESPACE + \
     hashlib.sha512(RECIPROCATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 

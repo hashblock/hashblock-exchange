@@ -21,11 +21,11 @@ import sys
 
 import yaml
 
-from sawtooth_cli.exceptions import CliException
-from sawtooth_cli.rest_client import RestClient
-from sawtooth_cli import tty
+from hashblock_cli.exceptions import CliException
+from hashblock_cli.rest_client import RestClient
+from hashblock_cli import tty
 
-from sawtooth_cli.protobuf.units_pb2 import Unit
+from hashblock_cli.protobuf.units_pb2 import Unit
 
 
 UNITS_NAMESPACE = hashlib.sha512('units'.encode("utf-8")).hexdigest()[0:6]
