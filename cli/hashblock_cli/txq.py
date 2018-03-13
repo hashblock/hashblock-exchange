@@ -1,4 +1,5 @@
-# Copyright 2017 Intel Corporation
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,6 +54,7 @@ from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from hashblock_cli.txqcliparser import create_txq_cli_parser
+from hashblock_cli.txqlist import exchange_list_for
 
 DISTRIBUTION_NAME = 'txn'
 INITIATE_CMDSET = frozenset(["ask", "offer", "commitment", "give"])
@@ -71,11 +73,11 @@ ACTION_MAP = {
 INITIATE_EVENT_KEY = 'utxq'
 RECIPROCATE_EVENT_KEY = 'mtxq'
 ADDRESS_PREFIX = 'hashblock_match'
+
 MATCH_NAMESPACE = hashlib.sha512(
     ADDRESS_PREFIX.encode("utf-8")).hexdigest()[0:6]
 INITIATE_LIST_ADDRESS = MATCH_NAMESPACE + \
     hashlib.sha512(INITIATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
-
 RECIPROCATE_LIST_ADDRESS = MATCH_NAMESPACE + \
     hashlib.sha512(RECIPROCATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
 
@@ -161,7 +163,8 @@ def _do_match_list(args):
     Given a url, optional filters on prefix, this command lists
     the match type addresses.
     """
-    unmatched_event_list = _get_unmatched_event_list(RestClient(args.url))
+    unmatched_event_list = _get_unmatched_event_list(
+        exchange_list_for(args.listtype, args.format, RestClient(args.url)))
 
     if args.format == 'default':
         for unmatched_event in unmatched_event_list:
@@ -217,7 +220,8 @@ def _do_match_reciprocate(args):
     signer = _read_signer(args.skey)
     rest_client = RestClient(args.url)
 
-    unmatched_events = _get_unmatched_event_list(rest_client)
+    unmatched_events = _get_unmatched_event_list(
+        exchange_list_for('utxq', args.format, rest_client))
 
     initiate_event_id = None
     for unmatched_event in unmatched_events:
@@ -368,25 +372,18 @@ def _create_reciprocate_txn(icmd, signer, event_address, quantity, ratio):
     return _make_txn(signer, input_keys, output_keys, payload)
 
 
-def _get_unmatched_event_list(rest_client):
-    state_leaf = rest_client.list_state(INITIATE_LIST_ADDRESS)
+def _get_unmatched_event_list(match_events):
     unmatched_events = []
-
-    if state_leaf is not None:
-        initiate_event_bytes = None
-        for event_state_leaf in state_leaf['data']:
-            if event_state_leaf is not None:
-                initiate_event_bytes = b64decode(event_state_leaf['data'])
-                if initiate_event_bytes is not None:
-                    initiate_event = UTXQ()
-                    initiate_event.ParseFromString(initiate_event_bytes)
-                    if initiate_event.matched is False:
-                        unmatched_event = UnmatchedEvent()
-                        unmatched_event.event_id = event_state_leaf['address']
-                        unmatched_event.value = initiate_event.quantity.value
-                        unmatched_event.valueUnit = initiate_event.quantity.valueUnit
-                        unmatched_event.resourceUnit = initiate_event.quantity.resourceUnit
-                        unmatched_events.append(unmatched_event)
+    if match_events is not None:
+        for event_state_leaf in match_events:
+            initiate_event = event_state_leaf['instance']
+            if initiate_event.matched is False:
+                unmatched_event = UnmatchedEvent()
+                unmatched_event.event_id = event_state_leaf['event_id']
+                unmatched_event.value = initiate_event.quantity.value
+                unmatched_event.valueUnit = initiate_event.quantity.valueUnit
+                unmatched_event.resourceUnit = initiate_event.quantity.resourceUnit
+                unmatched_events.append(unmatched_event)
 
     return unmatched_events
 
