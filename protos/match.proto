@@ -90,18 +90,3 @@ message MatchEvent {
     // The content of this payload
     bytes data = 4;
 }
-
-message UnmatchedEvent {
-
-    //Address
-    string event_id = 1;
- 
-    //Quanity value
-    bytes value = 2;
-
-    //  Quanity value unit
-	bytes valueUnit = 3;
-
-    //  Quantity resource unit
-	bytes resourceUnit = 4;
-}

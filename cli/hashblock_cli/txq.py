@@ -41,7 +41,6 @@ from hashblock_cli.protobuf.match_pb2 import UTXQ
 from hashblock_cli.protobuf.match_pb2 import MTXQ
 from hashblock_cli.protobuf.match_pb2 import Quantity
 from hashblock_cli.protobuf.match_pb2 import Ratio
-from hashblock_cli.protobuf.match_pb2 import UnmatchedEvent
 from hashblock_cli.protobuf.transaction_pb2 import TransactionHeader
 from hashblock_cli.protobuf.transaction_pb2 import Transaction
 from hashblock_cli.protobuf.batch_pb2 import BatchHeader
@@ -168,15 +167,15 @@ def _do_match_list(args):
 
     if args.format == 'default':
         for unmatched_event in unmatched_event_list:
-            value_magnitude = int.from_bytes(unmatched_event.value, byteorder='little')
-            value_units = _hash_reverse_lookup(int.from_bytes(unmatched_event.valueUnit, byteorder='little'))
+            value_magnitude = int.from_bytes(unmatched_event['value'], byteorder='little')
+            value_units = _hash_reverse_lookup(int.from_bytes(unmatched_event['valueUnit'], byteorder='little'))
             value_unit = value_units[0]
             if value_magnitude > 1 and value_unit.endswith('s') == False:
                 value_unit = value_units[1]
-            resource_units = _hash_reverse_lookup(int.from_bytes(unmatched_event.resourceUnit, byteorder='little'))
+            resource_units = _hash_reverse_lookup(int.from_bytes(unmatched_event['resourceUnit'], byteorder='little'))
             resource_unit = resource_units[0]
             print('{} => {}.{}{}'.format(
-                unmatched_event.event_id,
+                unmatched_event['event_id'],
                 value_magnitude,
                 value_unit,
                 resource_unit))
@@ -186,14 +185,14 @@ def _do_match_list(args):
         for unmatched_event in unmatched_event_list:
             writer.writerow([
                 unmatched_event.event_id,
-                int.from_bytes(unmatched_event.value, byteorder='little'),
-               int.from_bytes(unmatched_event.valueUnit, byteorder='little'),
-                int.from_bytes(unmatched_event.resourceUnit, byteorder='little')])
+                int.from_bytes(unmatched_event['value'], byteorder='little'),
+               int.from_bytes(unmatched_event['valueUnit'], byteorder='little'),
+                int.from_bytes(unmatched_event['resourceUnit'], byteorder='little')])
     elif args.format == 'json' or args.format == 'yaml':
         unmatched_event_snapshot = \
-            {e.event_id: {int.from_bytes(e.value, byteorder='little'),
-                    int.from_bytes(e.valueUnit, byteorder='little'), 
-                    int.from_bytes(e.resourceUnit, byteorder='little') }
+            {e.event_id: {int.from_bytes(e['value'], byteorder='little'),
+                    int.from_bytes(e['valueUnit'], byteorder='little'), 
+                    int.from_bytes(e['resourceUnit'], byteorder='little') }
              for e in unmatched_event_list}
 
         if args.format == 'json':
@@ -378,11 +377,13 @@ def _get_unmatched_event_list(match_events):
         for event_state_leaf in match_events:
             initiate_event = event_state_leaf['instance']
             if initiate_event.matched is False:
-                unmatched_event = UnmatchedEvent()
-                unmatched_event.event_id = event_state_leaf['event_id']
-                unmatched_event.value = initiate_event.quantity.value
-                unmatched_event.valueUnit = initiate_event.quantity.valueUnit
-                unmatched_event.resourceUnit = initiate_event.quantity.resourceUnit
+                unmatched_event = {}
+                unmatched_event['event_id'] = event_state_leaf['event_id']
+                unmatched_event['value'] = initiate_event.quantity.value
+                unmatched_event['valueUnit'] = \
+                    initiate_event.quantity.valueUnit
+                unmatched_event['resourceUnit'] = \
+                    initiate_event.quantity.resourceUnit
                 unmatched_events.append(unmatched_event)
 
     return unmatched_events
