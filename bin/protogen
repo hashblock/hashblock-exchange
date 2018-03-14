@@ -41,12 +41,14 @@ def main(args=None):
     protoc_python(proto_dir, "cli", "hashblock_cli/protobuf")
     protoc_python(proto_dir, "families/units", "hashblock_units/protobuf")
     protoc_python(proto_dir, "families/match", "hashblock_match/protobuf")
+    protoc_python(proto_dir, "families/resource", "hashblock_resource/protobuf")
 
     # 2. Generate config protos
     proto_dir = JOIN(TOP_DIR, "families/units/protos")
     protoc_python(proto_dir, "cli", "hashblock_cli/protobuf")
     protoc_python(proto_dir, "families/units", "hashblock_units/protobuf")
     protoc_python(proto_dir, "families/match", "hashblock_match/protobuf")
+    protoc_python(proto_dir, "families/resource", "hashblock_resource/protobuf")
 
 
 def protoc_python(src_dir, base_dir, pkg):

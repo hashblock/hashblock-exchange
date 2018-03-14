@@ -73,6 +73,32 @@ services:
       \""
     stop_signal: SIGKILL
 
+  resource-processor:
+    build:
+      context: ../..
+      dockerfile: docker/hashblock-dev-resource-tp
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: hashblock-dev-resource-tp
+    container_name: hashblock-dev-resource-tp
+    volumes:
+      - ../../../hashblock-exchange/:/project/hashblock-exchange
+    # Expose 5679 for remote debugging
+    expose:
+      - 5671
+    ports:
+      - "5671:5671"
+    depends_on:
+      - validator
+    command: "bash -c \"\
+        sleep 1 &&
+        resource-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
   match-processor:
     build:
       context: ../..

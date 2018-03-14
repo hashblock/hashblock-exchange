@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2017 Intel Corporation
+# Copyright 2017 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -204,6 +204,7 @@ then
         docker_build $top_dir/docker/hashblock-dev-python docker/ hashblock-dev-python
         docker_build $top_dir/docker/hashblock-dev-units-tp docker/ hashblock-dev-units-tp
         docker_build $top_dir/docker/hashblock-dev-match-tp docker/ hashblock-dev-match-tp
+        docker_build $top_dir/docker/hashblock-dev-resource-tp docker/ hashblock-dev-resource-tp
         docker_run hashblock-dev-python
     }
 fi
@@ -232,6 +233,9 @@ then
 
         docker_build $build_dir/hashblock-int-match-tp \
             $build_dir/ hashblock-match-tp
+
+        docker_build $build_dir/hashblock-int-resource-tp \
+            $build_dir/ hashblock-resource-tp
     }
 fi
 
