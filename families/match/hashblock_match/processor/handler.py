@@ -191,6 +191,7 @@ def apply_reciprocate(payload, context):
     LOGGER.info("UTXQ and MTXQ Balance!")
     exchange_initiate.matched = True
     exchange_reciprocate.unmatched.CopyFrom(exchange_initiate)
+    # __delete_exchange(context, payload.ukey)
     __set_exchange(context, exchange_initiate, payload.ukey)
     __complete_reciprocate_exchange(
         context, payload.mkey,
@@ -230,6 +231,15 @@ def __get_exchange(context, exchange, exchangeFQNAddress):
         raise InternalError(
             'Event does not exists for {}'.format(exchangeFQNAddress))
     exchange.ParseFromString(exchange_list[0].data)
+
+
+def __delete_exchange(context, exchangeFQNAddress):
+    try:
+        context.delete_state(
+            [exchangeFQNAddress],
+            timeout=STATE_TIMEOUT_SEC)
+    except FutureTimeoutError:
+        raise InternalError('Unable to set {}'.format(exchangeFQNAddress))
 
 
 def __set_exchange(context, exchange, exchangeFQNAddress):

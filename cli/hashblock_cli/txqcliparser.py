@@ -100,7 +100,12 @@ _reciprocateCmdMap = {
         'default': None,
         'required': True,
         'nargs': 5,
-        'dest': 'expr'}}
+        'dest': 'expr'},
+    '-f': {
+        'help': "format listing to type, default is 'default'",
+        'default': 'default',
+        'choices': ['default', 'json', 'yaml'],
+        'dest': 'format'}}
 
 _v2map = {
     'list': {

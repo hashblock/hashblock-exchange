@@ -52,7 +52,12 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
+from hashblock_cli.txqcommon import hash_lookup
+from hashblock_cli.txqcommon import ADDRESS_PREFIX
+from hashblock_cli.txqcommon import INITIATE_LIST_ADDRESS
+from hashblock_cli.txqcommon import RECIPROCATE_LIST_ADDRESS
 from hashblock_cli.txqcliparser import create_txq_cli_parser
+from hashblock_cli.txqlist import listing_of
 from hashblock_cli.txqlist import exchange_list_for
 
 DISTRIBUTION_NAME = 'txn'
@@ -69,33 +74,8 @@ ACTION_MAP = {
     'give': MatchEvent.UTXQ_GIVE,
     'take': MatchEvent.MTXQ_TAKE}
 
-INITIATE_EVENT_KEY = 'utxq'
-RECIPROCATE_EVENT_KEY = 'mtxq'
-ADDRESS_PREFIX = 'hashblock_match'
-
-MATCH_NAMESPACE = hashlib.sha512(
-    ADDRESS_PREFIX.encode("utf-8")).hexdigest()[0:6]
-INITIATE_LIST_ADDRESS = MATCH_NAMESPACE + \
-    hashlib.sha512(INITIATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
-RECIPROCATE_LIST_ADDRESS = MATCH_NAMESPACE + \
-    hashlib.sha512(RECIPROCATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
-
-_MIN_PRINT_WIDTH = 15
-_MAX_KEY_PARTS = 4
-_ADDRESS_PART_SIZE = 16
 
 LOGGER = logging.getLogger(__name__)
-
-hash_lookup = {
-    "bag": 2,
-    "bags": 2,
-    "{peanuts}": 3,
-    "$": 5,
-    "{usd}": 7,
-    "bale": 11,
-    "bales": 11,
-    "{hay}": 13
-}
 
 
 def _do_match_initiate(args):
@@ -156,54 +136,6 @@ def _do_match_initiate(args):
     rest_client.send_batches(batch_list)
 
 
-def _do_match_list(args):
-    """Executes the 'list' subcommand.
-
-    Given a url, optional filters on prefix, this command lists
-    the match type addresses.
-    """
-    unmatched_event_list = _get_unmatched_event_list(
-        exchange_list_for(args.listtype, args.format, RestClient(args.url)))
-
-    if args.format == 'default':
-        for unmatched_event in unmatched_event_list:
-            value_magnitude = int.from_bytes(unmatched_event['value'], byteorder='little')
-            value_units = _hash_reverse_lookup(int.from_bytes(unmatched_event['valueUnit'], byteorder='little'))
-            value_unit = value_units[0]
-            if value_magnitude > 1 and value_unit.endswith('s') == False:
-                value_unit = value_units[1]
-            resource_units = _hash_reverse_lookup(int.from_bytes(unmatched_event['resourceUnit'], byteorder='little'))
-            resource_unit = resource_units[0]
-            print('{} => {}.{}{}'.format(
-                unmatched_event['event_id'],
-                value_magnitude,
-                value_unit,
-                resource_unit))
-    elif args.format == 'csv':
-        writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
-        writer.writerow(['ADDESS', 'VALUE', 'VALUEUNIT', 'RESOURCEUNIT'])
-        for unmatched_event in unmatched_event_list:
-            writer.writerow([
-                unmatched_event.event_id,
-                int.from_bytes(unmatched_event['value'], byteorder='little'),
-               int.from_bytes(unmatched_event['valueUnit'], byteorder='little'),
-                int.from_bytes(unmatched_event['resourceUnit'], byteorder='little')])
-    elif args.format == 'json' or args.format == 'yaml':
-        unmatched_event_snapshot = \
-            {e.event_id: {int.from_bytes(e['value'], byteorder='little'),
-                    int.from_bytes(e['valueUnit'], byteorder='little'), 
-                    int.from_bytes(e['resourceUnit'], byteorder='little') }
-             for e in unmatched_event_list}
-
-        if args.format == 'json':
-            print(json.dumps(unmatched_event_snapshot, indent=2, sort_keys=True))
-        else:
-            print(yaml.dump(unmatched_event_snapshot,
-                            default_flow_style=False)[0:-1])
-    else:
-        raise AssertionError('Unknown format {}'.format(args.format))
-
-
 def _hash_reverse_lookup(lookup_value):
     """Reverse hash lookup
     """
@@ -224,7 +156,7 @@ def _do_match_reciprocate(args):
 
     initiate_event_id = None
     for unmatched_event in unmatched_events:
-        if unmatched_event.event_id == args.utxq:
+        if unmatched_event['event_id'] == args.utxq:
             initiate_event_id = unmatched_event
             break
 
@@ -605,7 +537,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     elif args.cmd in RECIPROCATE_CMDSET:
         _do_match_reciprocate(args)
     elif args.cmd == 'list':
-        _do_match_list(args)
+        listing_of(args.listtype, args.format, RestClient(args.url))
     else:
         raise CliException(
             '"{}" is not a valid subcommand of "event"'.format(
