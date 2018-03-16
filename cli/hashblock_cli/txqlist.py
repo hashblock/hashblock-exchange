@@ -133,8 +133,9 @@ def __get_query_address(listing_type):
     elif listing_type == 'mtxq':
         qadd = RECIPROCATE_LIST_ADDRESS
     else:
-        qadd = _QUERY_KEY_MAP[listing_type] + \
-            hashlib.sha512(listing_type.encode("utf-8")).hexdigest()[0:6]
+        qadd = _QUERY_KEY_MAP[listing_type]
+
+    print(listing_type, "=> ", qadd)
     return qadd
 
 
