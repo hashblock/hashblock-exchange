@@ -51,13 +51,20 @@
           "description": "Number of VM instances (100 or less)."
         },
         "maxValue": 100
+      },
+      "_artifactsLocation": {
+        "type": "string",
+        "metadata": {
+          "description": "The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated."
+        },
+        "defaultValue": "https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure"
       }
     },
     "variables": {
       "imagePublisher": "Canonical",
       "imageOffer": "UbuntuServer",
       "OSDiskName": "osdisk",
-      "extensionName": "DockerExtension",
+      "extensionName": "customscriptextension",
       "addressPrefix": "10.0.0.0/16",
       "subnetName": "Subnet",
       "subnetPrefix": "10.0.0.0/24",
@@ -206,10 +213,17 @@
         ],
         "properties": {
           "publisher": "Microsoft.Azure.Extensions",
-          "type": "DockerExtension",
-          "typeHandlerVersion": "1.0",
+          "type": "CustomScript",
+          "typeHandlerVersion": "2.0",
           "autoUpgradeMinorVersion": true,
-          "settings": { }
+          "settings": {
+            "fileUris": [
+              "[concat(parameters('_artifactsLocation'), '/scripts/configure.sh', parameters('_artifactsLocationSasToken'))]"
+            ]
+          },
+          "protectedSettings": {
+            "commandToExecute": "./configure.sh"
+          }
         },
         "copy": {
           "name": "extensions",
