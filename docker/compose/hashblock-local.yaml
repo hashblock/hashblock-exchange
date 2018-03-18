@@ -153,9 +153,12 @@ services:
         sawadm keygen && \
         sawtooth keygen my_key && \
         sawtooth keygen your_key && \
+        sawtooth keygen my_key2 && \
+        sawtooth keygen your_key2 && \
         sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
         /project/hashblock-exchange/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
-        sawadm genesis /etc/config-settings.batch /etc/config-units.batch && \
+        /project/hashblock-exchange/bin/resset genesis -k /root/.sawtooth/keys/my_key2.priv -o /etc/config-resource.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key2.pub) && \
+        sawadm genesis /etc/config-settings.batch /etc/config-units.batch /etc/config-resource.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \

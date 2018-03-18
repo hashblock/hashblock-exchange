@@ -28,6 +28,8 @@ from hashblock_cli.exceptions import CliException
 from hashblock_cli.cli_config import load_cli_config
 from hashblock_cli.units import add_units_parser
 from hashblock_cli.units import do_units
+from hashblock_cli.resource import add_resource_parser
+from hashblock_cli.resource import do_resource
 from hashblock_cli.events import add_events_parser
 from hashblock_cli.events import do_events
 
@@ -102,6 +104,7 @@ def create_parser(prog_name):
     subparsers.required = True
 
     add_units_parser(subparsers, parent_parser)
+    add_resource_parser(subparsers, parent_parser)
     add_events_parser(subparsers, parent_parser)
     return parser
 
@@ -126,6 +129,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         do_units(args)
     elif args.command == 'events':
         do_events(args)
+    elif args.command == 'resource':
+        do_resource(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
