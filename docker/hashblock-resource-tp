@@ -1,0 +1,14 @@
+FROM python:3
+
+RUN mkdir -p project/hashblock-exchange && \
+  mkdir -p project/hashblock-exchange/bin && \
+  mkdir -p project/hashblock-exchange/families/resource && \
+  mkdir -p /var/log/sawtooth && \  
+  pip3 install sawtooth-sdk
+
+WORKDIR project/hashblock-exchange
+
+COPY bin/resource-tp bin
+COPY families/resource/hashblock_resource families/resource/hashblock_resource 
+
+ENV PATH $PATH:/project/hashblock-exchange/bin
