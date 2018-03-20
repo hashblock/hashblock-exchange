@@ -48,7 +48,7 @@ services:
     stop_signal: SIGKILL
 
   units-processor:
-    image: frankc01/hashblock-units-tp:latest
+    image: hashblock/hashblock-units-tp:latest
     container_name: hashblock-units-tp
     # Expose 5679 for remote debugging
     expose:
@@ -65,7 +65,7 @@ services:
     stop_signal: SIGKILL
 
   resource-processor:
-    image: frankc01/hashblock-resource-tp:latest
+    image: hashblock/hashblock-resource-tp:latest
     container_name: hashblock-resource-tp
     # Expose 5679 for remote debugging
     expose:
@@ -82,7 +82,7 @@ services:
     stop_signal: SIGKILL
 
   match-processor:
-    image: frankc01/hashblock-match-tp:latest
+    image: hashblock/hashblock-match-tp:latest
     container_name: hashblock-match-tp
     # Expose 5679 for remote debugging
     expose:
