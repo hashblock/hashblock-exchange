@@ -218,11 +218,11 @@
           "autoUpgradeMinorVersion": true,
           "settings": {
             "fileUris": [
-              "[concat(parameters('_artifactsLocation'), '/scripts/configure',copyIndex(),'.sh', parameters('_artifactsLocationSasToken'))]"
+              "[concat(parameters('_artifactsLocation'), '/scripts/configure.',copyIndex(),'.sh')]"
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "./configure.sh"
+            "commandToExecute": "[concat('./configure.',copyIndex(),'.sh')]"
           }
         },
         "copy": {
