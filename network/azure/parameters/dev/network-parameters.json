@@ -6,10 +6,10 @@
         "value": "hashblockvmimages"
       },
       "adminUsername": {
-        "value": "<username>"
+        "value": "lambda"
       },
       "adminPassword": {
-        "value": "<password>"
+        "value": "omega!prime13"
       },
       "dnsNameForPublicIP": {
         "value": "hashblock"

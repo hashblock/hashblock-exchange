@@ -218,7 +218,7 @@
           "autoUpgradeMinorVersion": true,
           "settings": {
             "fileUris": [
-              "[concat(parameters('_artifactsLocation'), '/scripts/configure.sh', parameters('_artifactsLocationSasToken'))]"
+              "[concat(parameters('_artifactsLocation'), '/scripts/configure',copyIndex(),'.sh', parameters('_artifactsLocationSasToken'))]"
             ]
           },
           "protectedSettings": {
