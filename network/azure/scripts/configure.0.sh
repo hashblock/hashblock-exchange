@@ -18,7 +18,7 @@ cd $HOMEDIR;
 sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.0.yaml";
 
 FAILED_EXITCODE=0;
-sudo -u $AZUREUSER docker-compose -f /home/$AZUREUSER/hashblock-node.0.yaml up >> $CONFIG_LOG_FILE_PATH 2>&1;
+docker-compose -f hashblock-node.0.yaml up >> $CONFIG_LOG_FILE_PATH 2>&1;
 FAILED_EXITCODE=$?
 if [ $FAILED_EXITCODE -ne 0 ]; then
     echo "FAILED_EXITCODE: $FAILED_EXITCODE " >> $CONFIG_LOG_FILE_PATH;
