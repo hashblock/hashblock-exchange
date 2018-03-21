@@ -32,6 +32,8 @@ from hashblock_cli.resource import add_resource_parser
 from hashblock_cli.resource import do_resource
 from hashblock_cli.events import add_events_parser
 from hashblock_cli.events import do_events
+from hashblock_cli.keygen import add_keygen_parser
+from hashblock_cli.keygen import do_keygen
 
 
 DISTRIBUTION_NAME = 'hashblock-cli'
@@ -106,6 +108,7 @@ def create_parser(prog_name):
     add_units_parser(subparsers, parent_parser)
     add_resource_parser(subparsers, parent_parser)
     add_events_parser(subparsers, parent_parser)
+    add_keygen_parser(subparsers, parent_parser)
     return parser
 
 
@@ -125,7 +128,9 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.command == 'units':
+    if args.command == 'keygen':
+        do_keygen(args)
+    elif args.command == 'units':
         do_units(args)
     elif args.command == 'events':
         do_events(args)

@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,15 +22,8 @@ version: '2.1'
 
 services:
   shell:
-    build:
-      context: ../..
-      dockerfile: docker/hashblock-dev-python
-    image: hashblock-dev-python
+    image: hashblock/hashblock-python
     container_name: hashblock-shell
-    volumes:
-      - ../../../hashblock-exchange/:/project/hashblock-exchange
-      - ../../../sawtooth-core/:/project/sawtooth-core
-     # Expose 5678 for remote debugging
     expose:
       - 5678
     ports:
@@ -42,7 +35,7 @@ services:
         python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
         pip3 install ptvsd==3.0.0.0 && \
         pip3 install ply && \
-        sawtooth keygen your_key && \
+        hashblock keygen your_key && \
         tail -f /dev/null \
         \""
     stop_signal: SIGKILL
