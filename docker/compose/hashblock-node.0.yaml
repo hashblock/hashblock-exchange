@@ -18,7 +18,7 @@
 # python3 ./sdk/python/get-pip.py && \
 #
 
-version: '2.1'
+version: '2.0'
 
 services:
   shell:
@@ -92,7 +92,7 @@ services:
     stop_signal: SIGKILL
 
   settings-tp:
-    image: sawtooth-settings-tp:latest
+    image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-local
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core    
@@ -102,7 +102,7 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-validator:latest
+    image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core    
@@ -133,7 +133,7 @@ services:
         \""
 
   rest-api:
-    image: sawtooth-rest-api:latest
+    image: hyperledger/sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-local
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core
