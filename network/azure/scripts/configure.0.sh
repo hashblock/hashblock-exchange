@@ -1,6 +1,6 @@
 #!/bin/bash
 
-USER="lambda";
+USER="goedel";
 HOMEDIR="/home/$USER";
 CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
