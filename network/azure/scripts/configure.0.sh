@@ -15,7 +15,7 @@ CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
 
 cd $HOMEDIR;
-sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.0.yaml";
+sudo -u $USER /bin/bash -c "wget ${ARTIFACTS_URL_PREFIX}/hashblock-node.0.yaml";
 
 FAILED_EXITCODE=0;
 docker-compose -f hashblock-node.0.yaml up >> $CONFIG_LOG_FILE_PATH 2>&1;
