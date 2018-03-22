@@ -27,7 +27,7 @@ cd $HOMEDIR;
 sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.0.yaml";
 
 FAILED_EXITCODE=0;
-docker-compose -f hashblock-node.0.yaml up;
+docker-compose -d -f hashblock-node.0.yaml up;
 
 FAILED_EXITCODE=$?
 if [ $FAILED_EXITCODE -ne 0 ]; then
