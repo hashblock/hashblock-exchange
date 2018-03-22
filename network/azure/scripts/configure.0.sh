@@ -13,12 +13,12 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 sudo apt-get -y update
 sudo "DEBIAN_FRONTEND=noninteractive apt-get -y install docker-ce"
-groupadd docker
-usermod -aG docker $USER
+sudo groupadd docker
+sudo usermod -aG docker $USER
+sudo service docker start
+
 sudo curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
-
-
 
 cd $HOMEDIR;
 sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.0.yaml";
