@@ -103,7 +103,7 @@ services:
   rest-api:
     image: hyperledger/sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-local
-ß    ports:
+    ports:
       - "8008:8008"
     depends_on:
       - validator
