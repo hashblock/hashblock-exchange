@@ -40,39 +40,39 @@ services:
         \""
     stop_signal: SIGKILL
 
-  units-processor:
-    image: hashblock/hashblock-units-tp:latest
-    container_name: hashblock-units-tp
-    # Expose 5679 for remote debugging
-    expose:
-      - 5679
-    ports:
-      - "5679:5679"
-    depends_on:
-      - validator
-    command: "bash -c \"\
-        sleep 1 &&
-        units-tp -vv \
-          -C tcp://validator:4004 \
-      \""
-    stop_signal: SIGKILL
+  # units-processor:
+  #   image: hashblock/hashblock-units-tp:latest
+  #   container_name: hashblock-units-tp
+  #   # Expose 5679 for remote debugging
+  #   expose:
+  #     - 5679
+  #   ports:
+  #     - "5679:5679"
+  #   depends_on:
+  #     - validator
+  #   command: "bash -c \"\
+  #       sleep 1 &&
+  #       units-tp -vv \
+  #         -C tcp://validator:4004 \
+  #     \""
+  #   stop_signal: SIGKILL
 
-  resource-processor:
-    image: hashblock/hashblock-resource-tp:latest
-    container_name: hashblock-resource-tp
-    # Expose 5679 for remote debugging
-    expose:
-      - 5671
-    ports:
-      - "5671:5671"
-    depends_on:
-      - validator
-    command: "bash -c \"\
-        sleep 1 &&
-        resource-tp -vv \
-          -C tcp://validator:4004 \
-      \""
-    stop_signal: SIGKILL
+  # resource-processor:
+  #   image: hashblock/hashblock-resource-tp:latest
+  #   container_name: hashblock-resource-tp
+  #   # Expose 5679 for remote debugging
+  #   expose:
+  #     - 5671
+  #   ports:
+  #     - "5671:5671"
+  #   depends_on:
+  #     - validator
+  #   command: "bash -c \"\
+  #       sleep 1 &&
+  #       resource-tp -vv \
+  #         -C tcp://validator:4004 \
+  #     \""
+  #   stop_signal: SIGKILL
 
   match-processor:
     image: hashblock/hashblock-match-tp:latest
@@ -94,8 +94,6 @@ services:
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core    
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
@@ -104,9 +102,6 @@ services:
   validator:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core    
-      - ../../:/project/hashblock-exchange
     # Expose 5700 for remote debugging
     expose:
       - 4004
@@ -118,13 +113,8 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth keygen my_key && \
-        sawtooth keygen your_key && \
-        sawtooth keygen my_key2 && \
-        sawtooth keygen your_key2 && \
-        sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
-        /project/hashblock-exchange/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
-        /project/hashblock-exchange/bin/resset genesis -k /root/.sawtooth/keys/my_key2.priv -o /etc/config-resource.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key2.pub) && \
-        sawadm genesis /etc/config-settings.batch /etc/config-units.batch /etc/config-resource.batch && \
+        sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
+        sawadm genesis config-genesis.batch && \ 
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --peers tcp://hashblock1.westus2.cloudapp.azure.com:8800,tcp://hashblock2.westus2.cloudapp.azure.com:8800,tcp://hashblock3.westus2.cloudapp.azure.com:8800
@@ -135,8 +125,6 @@ services:
   rest-api:
     image: hyperledger/sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core
     ports:
       - "8008:8008"
     depends_on:

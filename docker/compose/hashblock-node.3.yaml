@@ -21,39 +21,39 @@
 version: '2.1'
 
 services:
-  units-processor:
-    image: hashblock/hashblock-units-tp:latest
-    container_name: hashblock-units-tp
-    # Expose 5679 for remote debugging
-    expose:
-      - 5679
-    ports:
-      - "5679:5679"
-    depends_on:
-      - validator
-    command: "bash -c \"\
-        sleep 1 &&
-        units-tp -vv \
-          -C tcp://validator:4004 \
-      \""
-    stop_signal: SIGKILL
+  # units-processor:
+  #   image: hashblock/hashblock-units-tp:latest
+  #   container_name: hashblock-units-tp
+  #   # Expose 5679 for remote debugging
+  #   expose:
+  #     - 5679
+  #   ports:
+  #     - "5679:5679"
+  #   depends_on:
+  #     - validator
+  #   command: "bash -c \"\
+  #       sleep 1 &&
+  #       units-tp -vv \
+  #         -C tcp://validator:4004 \
+  #     \""
+  #   stop_signal: SIGKILL
 
-  resource-processor:
-    image: hashblock/hashblock-resource-tp:latest
-    container_name: hashblock-resource-tp
-    # Expose 5671 for remote debugging
-    expose:
-      - 5671
-    ports:
-      - "5671:5671"
-    depends_on:
-      - validator
-    command: "bash -c \"\
-        sleep 1 &&
-        resource-tp -vv \
-          -C tcp://validator:4004 \
-      \""
-    stop_signal: SIGKILL
+  # resource-processor:
+  #   image: hashblock/hashblock-resource-tp:latest
+  #   container_name: hashblock-resource-tp
+  #   # Expose 5671 for remote debugging
+  #   expose:
+  #     - 5671
+  #   ports:
+  #     - "5671:5671"
+  #   depends_on:
+  #     - validator
+  #   command: "bash -c \"\
+  #       sleep 1 &&
+  #       resource-tp -vv \
+  #         -C tcp://validator:4004 \
+  #     \""
+  #   stop_signal: SIGKILL
 
   match-processor:
     image: hashblock/hashblock-match-tp:latest
@@ -75,8 +75,6 @@ services:
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core    
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
@@ -85,9 +83,6 @@ services:
   validator:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core    
-      - ../../:/project/hashblock-exchange
     # Expose 5700 for remote debugging
     expose:
       - 4004
@@ -108,9 +103,7 @@ services:
   rest-api:
     image: hyperledger/sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core
-    ports:
+ß    ports:
       - "8008:8008"
     depends_on:
       - validator
