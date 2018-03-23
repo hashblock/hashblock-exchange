@@ -69,7 +69,7 @@
       "subnetName": "Subnet",
       "subnetPrefix": "10.0.0.0/24",
       "storageAccountType": "Standard_LRS",
-      "publicIPAddressType": "Static",
+      "publicIPAddressType": "Dynamic",
       "vmStorageAccountContainerName": "vhds",
       "vmName": "HBDockerVM",
       "virtualNetworkName": "HBVNETD",
@@ -140,7 +140,7 @@
             {
               "name": "[concat('ipconfig1',copyIndex())]",
               "properties": {
-                "privateIPAllocationMethod": "Static",
+                "privateIPAllocationMethod": "Dynamic",
                 "publicIPAddress": {
                   "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat(variables('publicIPAddressName'),copyIndex()))]"
                 },
