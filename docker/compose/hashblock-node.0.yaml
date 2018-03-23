@@ -118,7 +118,7 @@ services:
         sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
         sawadm genesis config-genesis.batch && \ 
         sawtooth-validator -vv \
-          --endpoint tcp://eth0:8800 \
+          --endpoint tcp://hashblock0.westus2.cloudapp.azure.com:8800 \
           --peers tcp://hashblock1.westus2.cloudapp.azure.com:8800,tcp://hashblock2.westus2.cloudapp.azure.com:8800,tcp://hashblock3.westus2.cloudapp.azure.com:8800
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
