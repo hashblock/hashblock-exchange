@@ -87,11 +87,9 @@ services:
     expose:
       - 4004
       - 5700
-      - 8800
     ports:
       - "4004:4004"
       - "5700:5700"
-      - "8800:8800"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \
