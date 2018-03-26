@@ -96,13 +96,8 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth-validator -vv \
-<<<<<<< HEAD
           --endpoint tcp://52.233.65.172:8800 \
           --peers tcp://52.233.70.176:8800,tcp://52.233.68.6:8800,tcp://52.233.64.14:8800 \
-=======
-          --endpoint tcp://hashblock2.westus2.cloudapp.azure.com:8800 \
-          --peers tcp://hashblock0.westus2.cloudapp.azure.com:8800,tcp://hashblock1.westus2.cloudapp.azure.com:8800,tcp://hashblock3.westus2.cloudapp.azure.com:8800
->>>>>>> origin/master
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
         \""
