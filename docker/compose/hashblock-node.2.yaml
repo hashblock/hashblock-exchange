@@ -21,39 +21,39 @@
 version: '2.1'
 
 services:
-  # units-processor:
-  #   image: hashblock/hashblock-units-tp:latest
-  #   container_name: hashblock-units-tp
-  #   # Expose 5679 for remote debugging
-  #   expose:
-  #     - 5679
-  #   ports:
-  #     - "5679:5679"
-  #   depends_on:
-  #     - validator
-  #   command: "bash -c \"\
-  #       sleep 1 &&
-  #       units-tp -vv \
-  #         -C tcp://validator:4004 \
-  #     \""
-  #   stop_signal: SIGKILL
+  units-processor:
+    image: hashblock/hashblock-units-tp:latest
+    container_name: hashblock-units-tp
+    # Expose 5679 for remote debugging
+    expose:
+      - 5679
+    ports:
+      - "5679:5679"
+    depends_on:
+      - validator
+    command: "bash -c \"\
+         sleep 1 &&
+         units-tp -vv \
+           -C tcp://validator:4004 \
+       \""
+    stop_signal: SIGKILL
 
-  # resource-processor:
-  #   image: hashblock/hashblock-resource-tp:latest
-  #   container_name: hashblock-resource-tp
-  #   # Expose 5671 for remote debugging
-  #   expose:
-  #     - 5671
-  #   ports:
-  #     - "5671:5671"
-  #   depends_on:
-  #     - validator
-  #   command: "bash -c \"\
-  #       sleep 1 &&
-  #       resource-tp -vv \
-  #         -C tcp://validator:4004 \
-  #     \""
-  #   stop_signal: SIGKILL
+  resource-processor:
+    image: hashblock/hashblock-resource-tp:latest
+    container_name: hashblock-resource-tp
+    # Expose 5671 for remote debugging
+    expose:
+      - 5671
+    ports:
+      - "5671:5671"
+    depends_on:
+      - units-processor
+    command: "bash -c \"\
+         sleep 1 &&
+         resource-tp -vv \
+           -C tcp://validator:4004 \
+       \""
+    stop_signal: SIGKILL
 
   match-processor:
     image: hashblock/hashblock-match-tp:latest
@@ -64,7 +64,7 @@ services:
     ports:
       - "5670:5670"
     depends_on:
-      - validator
+      - resource-processor
     command: "bash -c \"\
         sleep 1 &&
         match-tp -vv \
@@ -96,8 +96,13 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth-validator -vv \
+<<<<<<< HEAD
+          --endpoint tcp://52.233.65.172:8800 \
+          --peers tcp://52.233.70.176:8800,tcp://52.233.68.6:8800,tcp://52.233.64.14:8800 \
+=======
           --endpoint tcp://hashblock2.westus2.cloudapp.azure.com:8800 \
           --peers tcp://hashblock0.westus2.cloudapp.azure.com:8800,tcp://hashblock1.westus2.cloudapp.azure.com:8800,tcp://hashblock3.westus2.cloudapp.azure.com:8800
+>>>>>>> origin/master
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
         \""
