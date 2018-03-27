@@ -74,7 +74,7 @@
       "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
       "nicName": "HBVMNicD",
       "publicIPAddressName": "HBPublicIPD",
-      "vmStorageAccountName": "[concat('asa',variables('envLocation'),variables('shortUniqueId')]"
+      "vmStorageAccountName": "[concat('vhd',variables('envLocation'),variables('shortUniqueId'))]"
     },
     "resources": [
       {
@@ -220,7 +220,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex())]"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', parameters('dnsNameForPublicIP'), '\"']"
           }
         },
         "copy": {

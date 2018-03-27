@@ -1,9 +1,10 @@
 #!/bin/bash
 
-if [ $# -lt 2 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+if [ $# -lt 3 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
 NODEINDEX=$2
+DNS=$3
 
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
 
@@ -31,6 +32,8 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 cd $HOMEDIR;
 sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.yaml";
+
+sudo sed -i "s/__DNS/$DNS/g" hashblock-node.yaml
 
 index=0
 for node in `seq 0 3`;

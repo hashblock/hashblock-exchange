@@ -34,7 +34,7 @@ services:
      image: hashblock/hashblock-resource-tp:latest
      container_name: hashblock-resource-tp
      depends_on:
-       - validator
+       - units-processor
      command: "bash -c \"\
          sleep 1 &&
          resource-tp -vv \
@@ -46,7 +46,7 @@ services:
     image: hashblock/hashblock-match-tp:latest
     container_name: hashblock-match-tp
     depends_on:
-      - validator
+      - resource-processor
     command: "bash -c \"\
         sleep 1 &&
         match-tp -vv \
@@ -73,8 +73,8 @@ services:
       - "8800:8800"
     entrypoint: "bash -c \"\
         sawtooth-validator -vv \
-          --endpoint tcp://hashblock__NODEINDEX__.westus2.cloudapp.azure.com:8800 \
-          --peers tcp://hashblock__PEERINDEX0__.westus2.cloudapp.azure.com:8800,tcp://hashblock__PEERINDEX1__.westus2.cloudapp.azure.com:8800,tcp://hashblock__PEERINDEX2__.westus2.cloudapp.azure.com:8800 \
+          --endpoint tcp://__DNS__NODEINDEX__.westus2.cloudapp.azure.com:8800 \
+          --peers tcp://__DNS__PEERINDEX0__.westus2.cloudapp.azure.com:8800,tcp://__DNS__PEERINDEX1__.westus2.cloudapp.azure.com:8800,tcp://__DNS__PEERINDEX2__.westus2.cloudapp.azure.com:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
         \""
