@@ -19,28 +19,28 @@ version: '2.1'
 services:
 
   units-processor:
-   image: hashblock/hashblock-units-tp:latest
-   container_name: hashblock-units-tp
-   depends_on:
-     - validator
-   command: "bash -c \"\
+    image: hashblock/hashblock-units-tp:latest
+    container_name: hashblock-units-tp
+    depends_on:
+      - validator
+    command: "bash -c \"\
        sleep 1 &&
        units-tp -vv \
          -C tcp://validator:4004 \
      \""
-   stop_signal: SIGKILL
+    stop_signal: SIGKILL
 
-   resource-processor:
-     image: hashblock/hashblock-resource-tp:latest
-     container_name: hashblock-resource-tp
-     depends_on:
-       - units-processor
-     command: "bash -c \"\
+  resource-processor:
+    image: hashblock/hashblock-resource-tp:latest
+    container_name: hashblock-resource-tp
+    depends_on:
+      - units-processor
+    command: "bash -c \"\
          sleep 1 &&
          resource-tp -vv \
            -C tcp://validator:4004 \
        \""
-     stop_signal: SIGKILL
+    stop_signal: SIGKILL
 
   match-processor:
     image: hashblock/hashblock-match-tp:latest
@@ -78,7 +78,7 @@ services:
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
         \""
-    stop_signal: SIGKILL    
+    stop_signal: SIGKILL
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:latest
