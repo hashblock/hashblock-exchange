@@ -74,7 +74,8 @@
       "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
       "nicName": "HBVMNicD",
       "publicIPAddressName": "HBPublicIPD",
-      "vmStorageAccountName": "[concat('vhd',variables('envLocation'),variables('shortUniqueId'))]"
+      "vmStorageAccountName": "[concat('vhd',variables('envLocation'),variables('shortUniqueId'))]",
+      "dnsName":"[concat(parameters('dnsNameForPublicIP'), variables('shortUniqueId')]"
     },
     "resources": [
       {
@@ -95,7 +96,7 @@
         "properties": {
           "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
           "dnsSettings": {
-            "domainNameLabel": "[concat(parameters('dnsNameForPublicIP'),copyIndex())]"
+            "domainNameLabel": "[concat(variables('dns'),copyIndex())]"
           }
         },
         "copy": {
@@ -220,7 +221,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', parameters('dnsNameForPublicIP'), '\"']"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dns'), '\"']"
           }
         },
         "copy": {

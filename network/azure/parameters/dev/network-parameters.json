@@ -9,7 +9,7 @@
         "value": "<password>"
       },
       "dnsNameForPublicIP": {
-        "value": "hashblock"
+        "value": "hb"
       },
       "instanceCount": {
         "value": 4
