@@ -20,11 +20,11 @@ services:
 
   units-processor:
     image: hashblock/hashblock-units-tp:latest
-    container_name: hashblock-units-tp
+    container_name: hashblock-units-tp-latest
     depends_on:
       - validator
     command: "bash -c \"\
-       sleep 1 &&
+       sleep 1 && \
        units-tp -vv \
          -C tcp://validator:4004 \
      \""
@@ -32,11 +32,11 @@ services:
 
   resource-processor:
     image: hashblock/hashblock-resource-tp:latest
-    container_name: hashblock-resource-tp
+    container_name: hashblock-resource-tp-latest
     depends_on:
       - units-processor
     command: "bash -c \"\
-         sleep 1 &&
+         sleep 1 && \
          resource-tp -vv \
            -C tcp://validator:4004 \
        \""
@@ -44,11 +44,11 @@ services:
 
   match-processor:
     image: hashblock/hashblock-match-tp:latest
-    container_name: hashblock-match-tp
+    container_name: hashblock-match-tp-latest
     depends_on:
       - resource-processor
     command: "bash -c \"\
-        sleep 1 &&
+        sleep 1 && \
         match-tp -vv \
           -C tcp://validator:4004 \
       \""
@@ -56,7 +56,7 @@ services:
 
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
-    container_name: sawtooth-settings-tp-local
+    container_name: sawtooth-settings-tp-latest
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
@@ -64,7 +64,7 @@ services:
 
   validator:
     image: hyperledger/sawtooth-validator:latest
-    container_name: sawtooth-validator-local
+    container_name: sawtooth-validator-latest
     expose:
       - 4004
       - 8800
@@ -72,6 +72,7 @@ services:
       - "4004:4004"
       - "8800:8800"
     entrypoint: "bash -c \"\
+        sawadm keygen && \
         sawtooth-validator -vv \
           --endpoint tcp://__DNS__NODEINDEX__.westus2.cloudapp.azure.com:8800 \
           --peers tcp://__DNS__PEERINDEX0__.westus2.cloudapp.azure.com:8800,tcp://__DNS__PEERINDEX1__.westus2.cloudapp.azure.com:8800,tcp://__DNS__PEERINDEX2__.westus2.cloudapp.azure.com:8800 \
@@ -82,7 +83,7 @@ services:
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:latest
-    container_name: sawtooth-rest-api-local
+    container_name: sawtooth-rest-api-latest
     ports:
       - "8008:8008"
     depends_on:
