@@ -14,74 +14,37 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-#
-# python3 ./sdk/python/get-pip.py && \
-#
-
 version: '2.1'
 
 services:
-  shell:
-    image: hashblock/hashblock-python
-    container_name: hashblock-shell
-    expose:
-      - 5678
-    ports:
-      - "5678:5678"
-    depends_on:
-      - validator
-      - rest-api      
-    command: "bash -c \"\
-        python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
-        pip3 install ptvsd==3.0.0.0 && \
-        pip3 install ply && \
-        hashblock keygen your_key && \
-        tail -f /dev/null \
-        \""
-    stop_signal: SIGKILL
 
-  # units-processor:
-  #   image: hashblock/hashblock-units-tp:latest
-  #   container_name: hashblock-units-tp
-  #   # Expose 5679 for remote debugging
-  #   expose:
-  #     - 5679
-  #   ports:
-  #     - "5679:5679"
-  #   depends_on:
-  #     - validator
-  #   command: "bash -c \"\
-  #       sleep 1 &&
-  #       units-tp -vv \
-  #         -C tcp://validator:4004 \
-  #     \""
-  #   stop_signal: SIGKILL
+   units-processor:
+     image: hashblock/hashblock-units-tp:latest
+     container_name: hashblock-units-tp
+     depends_on:
+       - validator
+     command: "bash -c \"\
+         sleep 1 &&
+         units-tp -vv \
+           -C tcp://validator:4004 \
+       \""
+     stop_signal: SIGKILL
 
-  # resource-processor:
-  #   image: hashblock/hashblock-resource-tp:latest
-  #   container_name: hashblock-resource-tp
-  #   # Expose 5679 for remote debugging
-  #   expose:
-  #     - 5671
-  #   ports:
-  #     - "5671:5671"
-  #   depends_on:
-  #     - validator
-  #   command: "bash -c \"\
-  #       sleep 1 &&
-  #       resource-tp -vv \
-  #         -C tcp://validator:4004 \
-  #     \""
-  #   stop_signal: SIGKILL
+   resource-processor:
+     image: hashblock/hashblock-resource-tp:latest
+     container_name: hashblock-resource-tp
+     depends_on:
+       - validator
+     command: "bash -c \"\
+         sleep 1 &&
+         resource-tp -vv \
+           -C tcp://validator:4004 \
+       \""
+     stop_signal: SIGKILL
 
   match-processor:
     image: hashblock/hashblock-match-tp:latest
     container_name: hashblock-match-tp
-    # Expose 5679 for remote debugging
-    expose:
-      - 5670
-    ports:
-      - "5670:5670"
     depends_on:
       - validator
     command: "bash -c \"\
@@ -102,24 +65,16 @@ services:
   validator:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
-    # Expose 5700 for remote debugging
     expose:
       - 4004
-      - 5700
       - 8800
     ports:
       - "4004:4004"
-      - "5700:5700"
       - "8800:8800"
-    # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
-        sawadm keygen && \
-        sawtooth keygen my_key && \
-        sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
-        sawadm genesis config-genesis.batch && \ 
         sawtooth-validator -vv \
-          --endpoint tcp://hashblock0.westus2.cloudapp.azure.com:8800 \
-          --peers tcp://hashblock1.westus2.cloudapp.azure.com:8800,tcp://hashblock2.westus2.cloudapp.azure.com:8800,tcp://hashblock3.westus2.cloudapp.azure.com:8800
+          --endpoint tcp://hashblock__NODEINDEX__.westus2.cloudapp.azure.com:8800 \
+          --peers tcp://hashblock__PEERINDEX0__.westus2.cloudapp.azure.com:8800,tcp://hashblock__PEERINDEX1__.westus2.cloudapp.azure.com:8800,tcp://hashblock__PEERINDEX2__.westus2.cloudapp.azure.com:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
         \""

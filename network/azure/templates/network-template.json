@@ -2,12 +2,6 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-      "imageStorageAccountName": {
-        "type": "string",
-        "metadata": {
-          "description": "Unique DNS Name for the Storage Account where the Virtual Machine's disks will be placed."
-        }
-      },
       "adminUsername": {
         "type": "string",
         "metadata": {
@@ -61,6 +55,7 @@
       }
     },
     "variables": {
+      "envLocation": "[toLower(resourceGroup().location)]",
       "imagePublisher": "Canonical",
       "imageOffer": "UbuntuServer",
       "OSDiskName": "osdisk",
@@ -76,14 +71,15 @@
       "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
       "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
       "nicName": "HBVMNicD",
-      "publicIPAddressName": "HBPublicIPD"
+      "publicIPAddressName": "HBPublicIPD",
+      "imageStorageAccountName": "[concat('asa',variables('envLocation'),uniqueString(resourceGroup().id))]"
     },
     "resources": [
       {
         "type": "Microsoft.Storage/storageAccounts",
-        "name": "[parameters('imageStorageAccountName')]",
+        "name": "[variables('imageStorageAccountName')]",
         "apiVersion": "2016-01-01",
-        "location": "[resourceGroup().location]",
+        "location": "[variables('envLocation')]",
         "kind": "Storage",
         "sku": {
           "name": "[variables('storageAccountType')]"
@@ -93,7 +89,7 @@
         "apiVersion": "2017-04-01",
         "type": "Microsoft.Network/publicIPAddresses",
         "name": "[concat(variables('publicIPAddressName'),copyIndex())]",
-        "location": "[resourceGroup().location]",
+        "location": "[variables('envLocation')]",
         "properties": {
           "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
           "dnsSettings": {
@@ -109,7 +105,7 @@
         "apiVersion": "2017-04-01",
         "type": "Microsoft.Network/virtualNetworks",
         "name": "[variables('virtualNetworkName')]",
-        "location": "[resourceGroup().location]",
+        "location": "[variables('envLocation')]",
         "properties": {
           "addressSpace": {
             "addressPrefixes": [
@@ -130,7 +126,7 @@
         "apiVersion": "2017-04-01",
         "type": "Microsoft.Network/networkInterfaces",
         "name": "[concat(variables('nicName'),copyIndex())]",
-        "location": "[resourceGroup().location]",
+        "location": "[variables('envLocation')]",
         "dependsOn": [
           "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'),copyIndex())]",
           "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
@@ -160,9 +156,9 @@
         "apiVersion": "2017-03-30",
         "type": "Microsoft.Compute/virtualMachines",
         "name": "[concat(variables('vmName'),copyIndex())]",
-        "location": "[resourceGroup().location]",
+        "location": "[variables('envLocation')]",
         "dependsOn": [
-          "[concat('Microsoft.Storage/storageAccounts/', parameters('imageStorageAccountName'))]",
+          "[concat('Microsoft.Storage/storageAccounts/', variables('imageStorageAccountName'))]",
           "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'),copyIndex())]"
         ],
         "copy": {
@@ -188,7 +184,7 @@
             "osDisk": {
               "name": "osdisk1",
               "vhd": {
-                "uri": "[concat('http://',parameters('imageStorageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'),copyIndex(),'.vhd')]"
+                "uri": "[concat('http://',variables('imageStorageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'),copyIndex(),'.vhd')]"
               },
               "caching": "ReadWrite",
               "createOption": "FromImage"
@@ -207,7 +203,7 @@
         "type": "Microsoft.Compute/virtualMachines/extensions",
         "name": "[concat(variables('vmName'),copyIndex(),'/', variables('extensionName'))]",
         "apiVersion": "2017-03-30",
-        "location": "[resourceGroup().location]",
+        "location": "[variables('envLocation')]",
         "dependsOn": [
           "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'),copyIndex())]"
         ],
@@ -218,11 +214,11 @@
           "autoUpgradeMinorVersion": true,
           "settings": {
             "fileUris": [
-              "[concat(parameters('_artifactsLocation'), '/scripts/configure.',copyIndex(),'.sh')]"
+              "[concat(parameters('_artifactsLocation'), '/scripts/configure.sh')]"
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.',copyIndex(),'.sh')]"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex())]"
           }
         },
         "copy": {

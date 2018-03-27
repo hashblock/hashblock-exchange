@@ -1,6 +1,12 @@
 #!/bin/bash
 
-USER="goedel";
+if [ $# -lt 2 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+
+USER=$1;
+NODEINDEX=$2
+
+echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
+
 HOMEDIR="/home/$USER";
 CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
@@ -24,10 +30,22 @@ sudo curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-c
 sudo chmod +x /usr/local/bin/docker-compose
 
 cd $HOMEDIR;
-sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.0.yaml";
+sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.yaml";
+
+index=0
+for node in `seq 0 3`;
+do
+    if [ $node -eq $NODEINDEX ] 
+    then 
+        sudo sed -i "s/__NODEINDEX__/$node/" hashblock-node.yaml
+    else
+        sudo sed -i "s/__PEERINDEX${index}__/$node/" hashblock-node.yaml
+        ((index++))
+    fi
+done 
 
 FAILED_EXITCODE=0;
-docker-compose -f hashblock-node.0.yaml up -d;
+docker-compose -f hashblock-node.yaml up -d;
 
 FAILED_EXITCODE=$?
 if [ $FAILED_EXITCODE -ne 0 ]; then
