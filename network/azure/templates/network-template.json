@@ -75,7 +75,7 @@
       "nicName": "HBVMNicD",
       "publicIPAddressName": "HBPublicIPD",
       "vmStorageAccountName": "[concat('vhd',variables('envLocation'),variables('shortUniqueId'))]",
-      "dnsName":"[concat(parameters('dnsNameForPublicIP'), variables('shortUniqueId')]"
+      "dnsName":"[concat(parameters('dnsNameForPublicIP'), variables('shortUniqueId'))]"
     },
     "resources": [
       {
@@ -221,7 +221,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"']"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"')]"
           }
         },
         "copy": {
