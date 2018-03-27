@@ -21,24 +21,6 @@
 version: '2.1'
 
 services:
-  # shell:
-  #   image: hashblock/hashblock-python
-  #   container_name: hashblock-shell
-  #   expose:
-  #     - 5678
-  #   ports:
-  #     - "5678:5678"
-  #   depends_on:
-  #     - match-processor
-  #     - rest-api
-  #   command: "bash -c \"\
-  #       python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
-  #       pip3 install ptvsd==3.0.0.0 && \
-  #       pip3 install ply && \
-  #       hashblock keygen your_key && \
-  #       tail -f /dev/null \
-  #       \""
-  #   stop_signal: SIGKILL
 
   units-processor:
     image: hashblock/hashblock-units-tp:latest
