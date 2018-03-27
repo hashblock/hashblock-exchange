@@ -96,7 +96,7 @@
         "properties": {
           "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
           "dnsSettings": {
-            "domainNameLabel": "[concat(variables('dns'),copyIndex())]"
+            "domainNameLabel": "[concat(variables('dnsName'),copyIndex())]"
           }
         },
         "copy": {
@@ -221,7 +221,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dns'), '\"']"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"']"
           }
         },
         "copy": {
