@@ -56,6 +56,8 @@
     },
     "variables": {
       "envLocation": "[toLower(resourceGroup().location)]",
+      "uniqueId": "[toLower(uniqueString(resourceGroup().id))]",
+      "shortUniqueId": "[concat(take(variables('uniqueId'), 3))]",      
       "imagePublisher": "Canonical",
       "imageOffer": "UbuntuServer",
       "OSDiskName": "osdisk",
@@ -72,12 +74,12 @@
       "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
       "nicName": "HBVMNicD",
       "publicIPAddressName": "HBPublicIPD",
-      "imageStorageAccountName": "[concat('asa',variables('envLocation'),uniqueString(resourceGroup().id))]"
+      "vmStorageAccountName": "[concat('asa',variables('envLocation'),variables('shortUniqueId')]"
     },
     "resources": [
       {
         "type": "Microsoft.Storage/storageAccounts",
-        "name": "[variables('imageStorageAccountName')]",
+        "name": "[variables('vmStorageAccountName')]",
         "apiVersion": "2016-01-01",
         "location": "[variables('envLocation')]",
         "kind": "Storage",
@@ -158,7 +160,7 @@
         "name": "[concat(variables('vmName'),copyIndex())]",
         "location": "[variables('envLocation')]",
         "dependsOn": [
-          "[concat('Microsoft.Storage/storageAccounts/', variables('imageStorageAccountName'))]",
+          "[concat('Microsoft.Storage/storageAccounts/', variables('vmStorageAccountName'))]",
           "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'),copyIndex())]"
         ],
         "copy": {
@@ -184,7 +186,7 @@
             "osDisk": {
               "name": "osdisk1",
               "vhd": {
-                "uri": "[concat('http://',variables('imageStorageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'),copyIndex(),'.vhd')]"
+                "uri": "[concat('http://',variables('vmStorageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'),copyIndex(),'.vhd')]"
               },
               "caching": "ReadWrite",
               "createOption": "FromImage"
