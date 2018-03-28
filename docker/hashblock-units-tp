@@ -1,14 +1,38 @@
-FROM python:3
+FROM python:3 as base
 
-RUN mkdir -p project/hashblock-exchange && \
-  mkdir -p project/hashblock-exchange/bin && \
-  mkdir -p project/hashblock-exchange/families/units && \
-  mkdir -p /var/log/sawtooth && \
-  pip3 install sawtooth-sdk
+RUN mkdir -p builder && \
+	pip3 install \
+		sawtooth-sdk \
+		grpcio-tools \
+		grpcio && \
+	rm -rf /var/lib/apt/lists/*
 
-WORKDIR project/hashblock-exchange
+WORKDIR builder
 
-COPY bin/units-tp bin
-COPY families/units/hashblock_units families/units/hashblock_units
+COPY bin bin
+COPY cli cli
+COPY protos protos
+COPY families families
+
+RUN bin/protogen && \
+	pip3 uninstall -y grpcio grpcio-tools
+
+WORKDIR .
+
+FROM base as clean
+
+RUN mkdir -p /project/hashblock-exchange && \
+  mkdir -p /project/hashblock-exchange/bin && \
+  mkdir -p /project/hashblock-exchange/families/units && \
+  mkdir -p /var/log/sawtooth
+
+WORKDIR /project/hashblock-exchange
+
+COPY --from=base builder/bin/units-tp bin
+COPY --from=base builder/families/units/hashblock_units families/units/hashblock_units
+
+RUN rm -rf /builder
+
+FROM clean as final
 
 ENV PATH $PATH:/project/hashblock-exchange/bin
