@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
       "adminUsername": {
-        "type": "string",
+        "type": "securestring",
         "metadata": {
           "description": "Username for the Virtual Machine."
         }
