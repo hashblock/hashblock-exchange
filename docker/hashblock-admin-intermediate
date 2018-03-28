@@ -14,41 +14,30 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM python:3 as base
+# Description:
+#   Builds an intermmediate image from sawtooth core to be used in the
+# 	final image for hashblock administration capability
+#
+# Assumptions:
+# 	1. sawtooth-validator-mounted has been created
+#	2. you are awake
+# Build:
+#   $ cd sawtooth-core
+#   $ docker build . -f ../hashblock-exchange/docker/hashblock-admin-intermediate -t hashblock_inter:latest
+#
 
-RUN mkdir -p builder && \
-	pip3 install \
-		sawtooth-sdk \
-		grpcio-tools \
-		grpcio && \
-	rm -rf /var/lib/apt/lists/*
-
-WORKDIR builder
-
-COPY bin bin
-COPY cli cli
-COPY protos protos
-COPY families families
-
-RUN bin/protogen && \
-	pip3 uninstall -y grpcio grpcio-tools
-
-WORKDIR .
-
-FROM base as clean
+FROM sawtooth-validator-mounted
 
 RUN mkdir -p /project/hashblock-exchange && \
   mkdir -p /project/hashblock-exchange/bin && \
-  mkdir -p /project/hashblock-exchange/families/resource && \
+  mkdir -p /project/hashblock-exchange/cli && \
   mkdir -p /var/log/sawtooth
 
-WORKDIR /project/hashblock-exchange
+ENV PATH $PATH:/project/hashblock-exchange/bin:/project/sawtooth-core
+WORKDIR /project/sawtooth-core
 
-COPY --from=base builder/bin/resource-tp bin
-COPY --from=base builder/families/resource/hashblock_resource families/resource/hashblock_resource
+COPY bin bin
+COPY protos protos
+COPY cli cli
 
-RUN rm -rf /builder
 
-FROM clean as final
-
-ENV PATH $PATH:/project/hashblock-exchange/bin
