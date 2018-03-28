@@ -63,7 +63,7 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    image: hyperledger/sawtooth-validator:latest
+    image: hashblock/sawtooth-validator:latest
     container_name: sawtooth-validator-latest
     expose:
       - 4004
