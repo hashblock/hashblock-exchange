@@ -34,15 +34,13 @@ sudo service docker start
 sudo curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 
-
-if [ $NODEINDEX -eq 0 ] && ( [ ! -d $SAWTOOTH_DATA ] || [ ! -e "$SAWTOOTH_DATA/block-chain-id" ] ); then
-  echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
   sudo mkdir -p "$SAWTOOTH_HOME/keys"
   sudo mkdir -p "$SAWTOOTH_HOME/logs"
-
   sudo mkdir -p $SAWTOOTH_DATA;
-  cd $SAWTOOTH_DATA;
 
+if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
+  sudo echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
+  cd $SAWTOOTH_DATA;
   sudo -u $USER /bin/bash -c "wget -N $GENESIS_BATCH";
 fi
 
