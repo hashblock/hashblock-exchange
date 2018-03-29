@@ -61,8 +61,8 @@ do
     fi
 done 
 
-if [ $NODEINDEX -eq 0 ] && [ ! -e ".env" ]; then
-  sudo echo "COMPOSE_HTTP_TIMEOUT=400" > .env;
+if [ ! -e ".env" ]; then
+  sudo bash -c 'echo "COMPOSE_HTTP_TIMEOUT=400" > .env'
 fi
 
 FAILED_EXITCODE=0;
