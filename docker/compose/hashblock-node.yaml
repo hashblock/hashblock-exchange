@@ -81,7 +81,7 @@ services:
       - "4004:4004"
       - "8800:8800"
     entrypoint: "bash -c \"\
-        sawadm keygen && \
+        sawadm keygen --force && \
         sawtooth-validator -vv \
           --endpoint tcp://__DNS__NODEINDEX__.westus2.cloudapp.azure.com:8800 \
           --peers tcp://__DNS__PEERINDEX0__.westus2.cloudapp.azure.com:8800,tcp://__DNS__PEERINDEX1__.westus2.cloudapp.azure.com:8800,tcp://__DNS__PEERINDEX2__.westus2.cloudapp.azure.com:8800 \

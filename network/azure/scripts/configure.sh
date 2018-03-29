@@ -37,8 +37,12 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 if [ $NODEINDEX -eq 0 ] && ( [ ! -d $SAWTOOTH_DATA ] || [ ! -e "$SAWTOOTH_DATA/block-chain-id" ] ); then
   echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
+  mkdir -p "$SAWTOOTH_HOME/keys"
+  mkdir -p "$SAWTOOTH_HOME/logs"
+
   mkdir -p $SAWTOOTH_DATA;
   cd $SAWTOOTH_DATA;
+
   sudo -u $USER /bin/bash -c "wget -N $GENESIS_BATCH";
 fi
 
@@ -58,6 +62,10 @@ do
         ((index++))
     fi
 done 
+
+if [ $NODEINDEX -eq 0 ] && [ ! -e ".env" ]; then
+  echo "COMPOSE_HTTP_TIMEOUT=400" > .env
+fi
 
 FAILED_EXITCODE=0;
 docker-compose -f hashblock-node.yaml up -d;
