@@ -21,6 +21,7 @@ services:
   units-processor:
     image: hashblock/hashblock-units-tp:latest
     container_name: hashblock-units-tp-latest
+    restart: always
     depends_on:
       - validator
     command: "bash -c \"\
@@ -33,6 +34,7 @@ services:
   resource-processor:
     image: hashblock/hashblock-resource-tp:latest
     container_name: hashblock-resource-tp-latest
+    restart: always
     depends_on:
       - units-processor
     command: "bash -c \"\
@@ -45,6 +47,7 @@ services:
   match-processor:
     image: hashblock/hashblock-match-tp:latest
     container_name: hashblock-match-tp-latest
+    restart: always
     depends_on:
       - resource-processor
     command: "bash -c \"\
@@ -57,6 +60,7 @@ services:
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-latest
+    restart: always
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
@@ -65,6 +69,7 @@ services:
   validator:
     image: hashblock/sawtooth-validator:latest
     container_name: sawtooth-validator-latest
+    restart: always
     expose:
       - 4004
       - 8800
@@ -84,6 +89,7 @@ services:
   rest-api:
     image: hyperledger/sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-latest
+    restart: always
     ports:
       - "8008:8008"
     depends_on:
