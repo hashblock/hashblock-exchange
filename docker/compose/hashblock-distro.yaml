@@ -1,0 +1,151 @@
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+#
+# python3 ./sdk/python/get-pip.py && \
+#
+
+version: '2.1'
+
+services:
+  shell:
+    build:
+      context: ../..
+      dockerfile: docker/hashblock-dev-python
+    image: hashblock-dev-python
+    container_name: hashblock-shell
+    volumes:
+      - ../../../hashblock-exchange/:/project/hashblock-exchange
+      - ../../../sawtooth-core/:/project/sawtooth-core
+     # Expose 5678 for remote debugging
+    expose:
+      - 5678
+    ports:
+      - "5678:5678"
+    depends_on:
+      - validator
+      - rest-api
+    command: "bash -c \"\
+        python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
+        pip3 install ptvsd==3.0.0.0 && \
+        pip3 install ply && \
+        sawtooth keygen your_key && \
+        tail -f /dev/null \
+        \""
+    stop_signal: SIGKILL
+
+  units-processor:
+    image: hashblock/hashblock-units-tp
+    container_name: units-tp
+    # Expose 5679 for remote debugging
+    expose:
+      - 5679
+    ports:
+      - "5679:5679"
+    depends_on:
+      - validator
+    command: "bash -c \"\
+        sleep 1 &&
+        units-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
+  resource-processor:
+    image: hashblock/hashblock-resource-tp
+    container_name: resource-tp
+    # Expose 5679 for remote debugging
+    expose:
+      - 5671
+    ports:
+      - "5671:5671"
+    depends_on:
+      - validator
+    command: "bash -c \"\
+        sleep 1 &&
+        resource-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
+  match-processor:
+    image: hashblock/hashblock-match-tp
+    container_name: match-tp
+    # Expose 5679 for remote debugging
+    expose:
+      - 5670
+    ports:
+      - "5670:5670"
+    depends_on:
+      - validator
+    command: "bash -c \"\
+        sleep 1 &&
+        match-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
+  settings-tp:
+    image: sawtooth-settings-tp:latest
+    container_name: sawtooth-settings-tp-local
+    volumes:
+      - ../../../sawtooth-core/:/project/sawtooth-core
+    depends_on:
+      - validator
+    entrypoint: settings-tp -vv -C tcp://validator:4004
+    stop_signal: SIGKILL
+
+  validator:
+    image: sawtooth-validator:latest
+    container_name: sawtooth-validator-local
+    volumes:
+      - ../../../sawtooth-core/:/project/sawtooth-core
+      - ../../:/project/hashblock-exchange
+    # Expose 5700 for remote debugging
+    expose:
+      - 4004
+      - 5700
+    ports:
+      - "4004:4004"
+      - "5700:5700"
+    # start the validator with an empty genesis batch
+    entrypoint: "bash -c \"\
+        sawadm keygen && \
+        sawtooth keygen my_key && \
+        sawtooth keygen your_key && \
+        sawtooth keygen my_key2 && \
+        sawtooth keygen your_key2 && \
+        sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
+        /project/hashblock-exchange/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
+        /project/hashblock-exchange/bin/resset genesis -k /root/.sawtooth/keys/my_key2.priv -o /etc/config-resource.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key2.pub) && \
+        sawadm genesis /etc/config-settings.batch /etc/config-units.batch /etc/config-resource.batch && \
+        sawtooth-validator -vv \
+          --endpoint tcp://validator:8800 \
+          --bind component:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
+        \""
+
+  rest-api:
+    image: sawtooth-rest-api:latest
+    container_name: sawtooth-rest-api-local
+    volumes:
+      - ../../../sawtooth-core/:/project/sawtooth-core
+    ports:
+      - "8008:8008"
+    depends_on:
+      - validator
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
+    stop_signal: SIGKILL

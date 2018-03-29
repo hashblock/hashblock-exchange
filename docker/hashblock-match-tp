@@ -15,41 +15,29 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM python:3 as base
+# Description:
+#   Builds a deployable production image for our hashblock-match-tp
+#
+# Assumptions:
+# 	1. Either bin/build_all or bin/protogen has been run
+#	2. you are awake
+# Build:
+#   $ cd hashblock-exchange
+#   $ docker build . -f docker/hashblock-match-tp -t hashblock/hashblock_match-tp:latest
+#
 
-RUN mkdir -p builder && \
-	pip3 install \
-		sawtooth-sdk \
-		grpcio-tools \
-		grpcio && \
-	rm -rf /var/lib/apt/lists/*
+FROM python:3.4-slim
 
-WORKDIR builder
-
-COPY bin bin
-COPY cli cli
-COPY protos protos
-COPY families families
-
-RUN bin/protogen && \
-	pip3 uninstall -y grpcio grpcio-tools
-
-WORKDIR .
-
-FROM base as clean
-
-RUN mkdir -p /project/hashblock-exchange && \
-  mkdir -p /project/hashblock-exchange/bin && \
-  mkdir -p /project/hashblock-exchange/families/match && \
-  mkdir -p /var/log/sawtooth
+RUN	pip3 install \
+	sawtooth-sdk && \
+	mkdir -p /project/hashblock-exchange && \
+  	mkdir -p /project/hashblock-exchange/bin && \
+  	mkdir -p /project/hashblock-exchange/families/match && \
+  	mkdir -p /var/log/sawtooth
 
 WORKDIR /project/hashblock-exchange
 
-COPY --from=base builder/bin/match-tp bin
-COPY --from=base builder/families/match/hashblock_match families/match/hashblock_match
-
-RUN rm -rf /builder
-
-FROM clean as final
+COPY bin/match-tp bin
+COPY families/match/hashblock_match families/match/hashblock_match
 
 ENV PATH $PATH:/project/hashblock-exchange/bin

@@ -1,0 +1,72 @@
+#!/bin/bash
+#
+# Copyright 2017 Frank V. Castellucci and Arthur Greef
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+# Exit on non-zero exit code from subcommand
+set -e
+
+info() {
+    echo -e "\033[0;36m\n[--- $1 ---]\n\033[0m"
+}
+
+warn() {
+    echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
+}
+
+protos() {
+	bin/build_python
+}
+
+RESOURCETP="hashblock-resource-tp"
+RESOURCETAG="hashblock/hashblock-resource-tp:latest"
+
+MATCHTP="hashblock-match-tp"
+MATCHTAG="hashblock/hashblock-match-tp:latest"
+
+UNITTP="hashblock-units-tp"
+UNITTAG="hashblock/hashblock-units-tp:latest"
+
+docker_build() {
+    image=$1
+    context=$2
+    tag=$3
+
+    info "Building $tag from $image"
+
+    # Start in project directory
+    cd $top_dir
+
+    # Build the image
+    docker build -f $image -t $tag $context
+}
+
+main() {
+
+    # Set sawtooth-core project directory relative to this file
+    top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+
+    info "Building hashblock distribution images from: $top_dir"
+    protos
+    docker_build $top_dir/docker/$RESOURCETP . $RESOURCETAG
+    docker_build $top_dir/docker/$MATCHTP . $MATCHTAG
+    docker_build $top_dir/docker/$UNITTP . $UNITTAG
+
+    info "Production image builds complete. Listing..."
+    docker images --filter=reference='hashblock/*'
+
+}
+
+main

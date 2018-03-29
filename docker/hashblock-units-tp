@@ -1,38 +1,43 @@
-FROM python:3 as base
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
 
-RUN mkdir -p builder && \
-	pip3 install \
-		sawtooth-sdk \
-		grpcio-tools \
-		grpcio && \
-	rm -rf /var/lib/apt/lists/*
+# Description:
+#   Builds a deployable production image for our hashblock-units-tp
+#
+# Assumptions:
+# 	1. Either bin/build_all or bin/protogen has been run
+#	2. you are awake
+# Build:
+#   $ cd hashblock-exchange
+#   $ docker build . -f docker/hashblock-units-tp -t hashblock/hashblock_units-tp:latest
+#
 
-WORKDIR builder
+FROM python:3.4-slim
 
-COPY bin bin
-COPY cli cli
-COPY protos protos
-COPY families families
-
-RUN bin/protogen && \
-	pip3 uninstall -y grpcio grpcio-tools
-
-WORKDIR .
-
-FROM base as clean
-
-RUN mkdir -p /project/hashblock-exchange && \
-  mkdir -p /project/hashblock-exchange/bin && \
-  mkdir -p /project/hashblock-exchange/families/units && \
-  mkdir -p /var/log/sawtooth
+RUN	pip3 install \
+	sawtooth-sdk && \
+	mkdir -p /project/hashblock-exchange && \
+  	mkdir -p /project/hashblock-exchange/bin && \
+  	mkdir -p /project/hashblock-exchange/families/units && \
+  	mkdir -p /var/log/sawtooth
 
 WORKDIR /project/hashblock-exchange
 
-COPY --from=base builder/bin/units-tp bin
-COPY --from=base builder/families/units/hashblock_units families/units/hashblock_units
-
-RUN rm -rf /builder
-
-FROM clean as final
+COPY bin/units-tp bin
+COPY families/units/hashblock_units families/units/hashblock_units
 
 ENV PATH $PATH:/project/hashblock-exchange/bin
+
