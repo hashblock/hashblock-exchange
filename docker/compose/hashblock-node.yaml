@@ -70,6 +70,10 @@ services:
     image: hashblock/sawtooth-validator:latest
     container_name: sawtooth-validator-latest
     restart: always
+    environment:
+      - SAWTOOTH_HOME=/sawtooth
+    volumes:
+        - /sawtooth:/sawtooth
     expose:
       - 4004
       - 8800

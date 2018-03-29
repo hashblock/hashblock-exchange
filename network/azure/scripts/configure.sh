@@ -9,8 +9,10 @@ DNS=$3
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
 
 HOMEDIR="/home/$USER";
+SAWTOOTH_DATA="/sawtooth/data"
 CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
+GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/genesis.batch"
 
 sudo apt-get -y update
 sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
@@ -29,6 +31,14 @@ sudo service docker start
 
 sudo curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
+
+
+if [ $NODEINDEX -eq 0 ] && ( [ ! -d $SAWTOOTH_DATA ] || [ ! -e "$SAWTOOTH_DATA/block-chain-id" ] ); then
+  echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
+  mkdir -p $SAWTOOTH_DATA;
+  cd $SAWTOOTH_DATA;
+  sudo -u $USER /bin/bash -c "wget -N $GENESIS_BATCH";
+fi
 
 cd $HOMEDIR;
 sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.yaml";
