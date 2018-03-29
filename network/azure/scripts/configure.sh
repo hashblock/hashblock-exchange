@@ -9,7 +9,8 @@ DNS=$3
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
 
 HOMEDIR="/home/$USER";
-SAWTOOTH_DATA="/sawtooth/data"
+SAWTOOTH_HOME="/sawtooth"
+SAWTOOTH_DATA="$SAWTOOTH_HOME/data"
 CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
 GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/genesis.batch"
