@@ -37,10 +37,10 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 if [ $NODEINDEX -eq 0 ] && ( [ ! -d $SAWTOOTH_DATA ] || [ ! -e "$SAWTOOTH_DATA/block-chain-id" ] ); then
   echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
-  mkdir -p "$SAWTOOTH_HOME/keys"
-  mkdir -p "$SAWTOOTH_HOME/logs"
+  sudo mkdir -p "$SAWTOOTH_HOME/keys"
+  sudo mkdir -p "$SAWTOOTH_HOME/logs"
 
-  mkdir -p $SAWTOOTH_DATA;
+  sudo mkdir -p $SAWTOOTH_DATA;
   cd $SAWTOOTH_DATA;
 
   sudo -u $USER /bin/bash -c "wget -N $GENESIS_BATCH";
@@ -49,22 +49,22 @@ fi
 cd $HOMEDIR;
 sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.yaml";
 
-sudo sed -i "s/__DNS/$DNS/g" hashblock-node.yaml
+sudo sed -i "s/__DNS/$DNS/g" hashblock-node.yaml;
 
 index=0
 for node in `seq 0 3`;
 do
     if [ $node -eq $NODEINDEX ] 
     then 
-        sudo sed -i "s/__NODEINDEX__/$node/" hashblock-node.yaml
+        sudo sed -i "s/__NODEINDEX__/$node/" hashblock-node.yaml;
     else
-        sudo sed -i "s/__PEERINDEX${index}__/$node/" hashblock-node.yaml
+        sudo sed -i "s/__PEERINDEX${index}__/$node/" hashblock-node.yaml;
         ((index++))
     fi
 done 
 
 if [ $NODEINDEX -eq 0 ] && [ ! -e ".env" ]; then
-  echo "COMPOSE_HTTP_TIMEOUT=400" > .env
+  sudo echo "COMPOSE_HTTP_TIMEOUT=400" > .env;
 fi
 
 FAILED_EXITCODE=0;
