@@ -41,7 +41,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
   sudo echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
   cd $SAWTOOTH_DATA;
-  sudo -u $USER /bin/bash -c "wget -N $GENESIS_BATCH";
+  sudo wget -N $GENESIS_BATCH;
 fi
 
 cd $HOMEDIR;
