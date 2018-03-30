@@ -8,11 +8,13 @@ DNS=$3
 PRIVKEY=$4
 PUBKEY=$5
 
+TMP_HOME="/sawtooth"
+
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
 
 if [[ -z "${SAWTOOTH_HOME}" ]]; then
   sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
-  sudo echo "SAWTOOTH_HOME=$SAWTOOTH_HOME" >> /etc/environment;
+  sudo echo "SAWTOOTH_HOME=$TMP_HOME" >> /etc/environment;
 fi
 
 export SAWTOOTH_HOME="/sawtooth"
@@ -69,14 +71,14 @@ sudo sed -i "s/__DNS/$DNS/g" hashblock-node.yaml;
 index=0
 for node in `seq 0 3`;
 do
-    if [ $node -eq $NODEINDEX ] 
-    then 
+    if [ $node -eq $NODEINDEX ]
+    then
         sudo sed -i "s/__NODEINDEX__/$node/" hashblock-node.yaml;
     else
         sudo sed -i "s/__PEERINDEX${index}__/$node/" hashblock-node.yaml;
         ((index++))
     fi
-done 
+done
 
 if [ ! -e ".env" ]; then
   sudo bash -c 'echo "COMPOSE_HTTP_TIMEOUT=400" > .env'
