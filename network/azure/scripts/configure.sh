@@ -39,6 +39,9 @@ sudo chmod +x /usr/local/bin/docker-compose
   sudo mkdir -p $SAWTOOTH_DATA;
 
 if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
+  sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo "SAWTOOTH_HOME=$SAWTOOTH_HOME" >> /etc/environment;
+
   sudo echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
   cd $SAWTOOTH_DATA;
   sudo wget -N $GENESIS_BATCH;
