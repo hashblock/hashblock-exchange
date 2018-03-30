@@ -18,6 +18,70 @@
           "secretName": "vmAdminUserPassword"
         }
       },
+      "validatorPrivKey0": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "validator-priv-0"
+        }
+      },
+      "validatorPubKey0": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "validator-pub-0"
+        }
+      },
+      "validatorPrivKey1": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "validator-priv-1"
+        }
+      },
+      "validatorPubKey1": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "validator-pub-1"
+        }
+      },
+      "validatorPrivKey2": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "validator-priv-2"
+        }
+      },
+      "validatorPubKey2": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "validator-pub-2"
+        }
+      },
+      "validatorPrivKey3": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "validator-priv-3"
+        }
+      },
+      "validatorPubKey3": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "validator-pub-3"
+        }
+      },
       "dnsNameForPublicIP": {
         "value": "hb"
       },

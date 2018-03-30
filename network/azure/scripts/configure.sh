@@ -1,10 +1,12 @@
 #!/bin/bash
 
-if [ $# -lt 3 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+if [ $# -lt 5 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
 NODEINDEX=$2
 DNS=$3
+PRIVKEY=$4
+PUBKEY=$5
 
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
 
@@ -38,10 +40,22 @@ sudo chmod +x /usr/local/bin/docker-compose
   sudo mkdir -p "$SAWTOOTH_HOME/logs"
   sudo mkdir -p $SAWTOOTH_DATA;
 
-if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
+if [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
   sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
   sudo echo "SAWTOOTH_HOME=$SAWTOOTH_HOME" >> /etc/environment;
+fi
 
+if [ ! -e "/sawtooth/keys/validator.priv" ]; then
+  sudo echo "Adding /sawtooth/keys/validator.priv key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $PRIVKEY >> /sawtooth/keys/validator.priv;
+fi
+
+if [ ! -e "/sawtooth/keys/validator.pub" ]; then
+  sudo echo "Adding /sawtooth/keys/validator.pub key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $PUBKEY >> /sawtooth/keys/validator.pub;
+fi
+
+if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
   sudo echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
   cd $SAWTOOTH_DATA;
   sudo wget -N $GENESIS_BATCH;

@@ -14,6 +14,54 @@
           "description": "Password for the Virtual Machine."
         }
       },
+      "validatorPrivKey0": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Node 0 validator private key."
+        }
+      },
+      "validatorPubKey0": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Node 0 validator public key."
+        }
+      },
+      "validatorPrivKey1": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Node 0 validator private key."
+        }
+      },
+      "validatorPubKey1": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Node 0 validator public key."
+        }
+      },
+      "validatorPrivKey2": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Node 0 validator private key."
+        }
+      },
+      "validatorPubKey2": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Node 0 validator public key."
+        }
+      },
+      "validatorPrivKey3": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Node 0 validator private key."
+        }
+      },
+      "validatorPubKey3": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Node 0 validator public key."
+        }
+      },
       "dnsNameForPublicIP": {
         "type": "string",
         "metadata": {
@@ -221,7 +269,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"')]"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"')]"
           }
         },
         "copy": {
