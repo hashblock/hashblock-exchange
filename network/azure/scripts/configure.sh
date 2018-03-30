@@ -10,6 +10,11 @@ PUBKEY=$5
 
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
 
+if [[ -z "${SAWTOOTH_HOME}" ]]; then
+  sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo "SAWTOOTH_HOME=$SAWTOOTH_HOME" >> /etc/environment;
+fi
+
 export SAWTOOTH_HOME="/sawtooth"
 
 HOMEDIR="/home/$USER";
@@ -36,14 +41,9 @@ sudo service docker start
 sudo curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 
-  sudo mkdir -p "$SAWTOOTH_HOME/keys"
-  sudo mkdir -p "$SAWTOOTH_HOME/logs"
-  sudo mkdir -p $SAWTOOTH_DATA;
-
-if [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
-  sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
-  sudo echo "SAWTOOTH_HOME=$SAWTOOTH_HOME" >> /etc/environment;
-fi
+sudo mkdir -p "$SAWTOOTH_HOME/keys"
+sudo mkdir -p "$SAWTOOTH_HOME/logs"
+sudo mkdir -p $SAWTOOTH_DATA;
 
 if [ ! -e "/sawtooth/keys/validator.priv" ]; then
   sudo echo "Adding /sawtooth/keys/validator.priv key" >> $CONFIG_LOG_FILE_PATH;
