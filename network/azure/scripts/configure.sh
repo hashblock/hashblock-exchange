@@ -1,12 +1,14 @@
 #!/bin/bash
 
-if [ $# -lt 5 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+if [ $# -lt 7 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
 NODEINDEX=$2
 DNS=$3
 PRIVKEY=$4
 PUBKEY=$5
+NETWORKPRIVKEY=$6
+NETWORKPUBKEY=$7
 
 TMP_HOME="/sawtooth"
 
@@ -17,7 +19,7 @@ if [[ -z "${SAWTOOTH_HOME}" ]]; then
   sudo echo "SAWTOOTH_HOME=$TMP_HOME" >> /etc/environment;
 fi
 
-export SAWTOOTH_HOME="/sawtooth"
+export SAWTOOTH_HOME=$TMP_HOME
 
 HOMEDIR="/home/$USER";
 SAWTOOTH_DATA="$SAWTOOTH_HOME/data"
@@ -45,6 +47,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 sudo mkdir -p "$SAWTOOTH_HOME/keys"
 sudo mkdir -p "$SAWTOOTH_HOME/logs"
+sudo mkdir -p "$SAWTOOTH_HOME/etc"
 sudo mkdir -p $SAWTOOTH_DATA;
 
 if [ ! -e "/sawtooth/keys/validator.priv" ]; then
@@ -55,6 +58,12 @@ fi
 if [ ! -e "/sawtooth/keys/validator.pub" ]; then
   sudo echo "Adding /sawtooth/keys/validator.pub key" >> $CONFIG_LOG_FILE_PATH;
   sudo echo $PUBKEY >> /sawtooth/keys/validator.pub;
+fi
+
+if [ ! -e "/sawtooth/etc/validator.toml" ]; then
+  sudo echo "Adding networ public and private keys to /sawtooth/etc/validator.toml" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo "network_private_key = '$NETWORKPRIVKEY'" >> /sawtooth/etc/validator.toml;
+  sudo echo "network_public_key = '$NETWORKPUBKEY'" >> /sawtooth/etc/validator.toml;
 fi
 
 if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then

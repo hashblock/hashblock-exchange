@@ -62,6 +62,18 @@
           "description": "Node 0 validator public key."
         }
       },
+      "networkPrivKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Network ZMQ curve private key."
+        }
+      },
+      "networkPubKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Network ZMQ curve public key."
+        }
+      },
       "dnsNameForPublicIP": {
         "type": "string",
         "metadata": {
@@ -269,7 +281,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"')]"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"', ' \"', parameters('networkPrivKey'), '\"', ' \"', parameters('networkPubKey'), '\"')]"
           }
         },
         "copy": {
