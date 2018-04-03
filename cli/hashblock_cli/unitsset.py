@@ -36,7 +36,7 @@ from hashblock_cli.protobuf.unit_pb2 import UnitPayload
 from hashblock_cli.protobuf.unit_pb2 import UnitProposal
 from hashblock_cli.protobuf.unit_pb2 import UnitVote
 from hashblock_cli.protobuf.unit_pb2 import UnitCandidates
-from hashblock_cli.protobuf.units_pb2 import Unit
+from hashblock_cli.protobuf.unit_pb2 import Unit
 from hashblock_cli.protobuf.transaction_pb2 import TransactionHeader
 from hashblock_cli.protobuf.transaction_pb2 import Transaction
 from hashblock_cli.protobuf.batch_pb2 import BatchHeader

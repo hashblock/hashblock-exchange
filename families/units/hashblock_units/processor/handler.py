@@ -30,7 +30,7 @@ from protobuf.unit_pb2 import UnitProposal
 from protobuf.unit_pb2 import UnitVote
 from protobuf.unit_pb2 import UnitCandidate
 from protobuf.unit_pb2 import UnitCandidates
-from protobuf.units_pb2 import Unit
+from protobuf.unit_pb2 import Unit
 
 LOGGER = logging.getLogger(__name__)
 ADDRESS = ''
