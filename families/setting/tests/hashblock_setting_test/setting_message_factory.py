@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,18 +22,24 @@ from protobuf.unit_pb2 import UnitProposal
 from protobuf.unit_pb2 import UnitVote
 from protobuf.units_pb2 import Unit
 
+from protobuf.setting_pb2 import SettingPayload
+from protobuf.setting_pb2 import Setting
+from sdk.python.address import Address
+
 LOGGER = logging.getLogger(__name__)
 
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 
-class UnitMessageFactory(object):
+class SettingMessageFactory(object):
+    _addresser = Address(Address.FAMILY_SETTING)
+
     def __init__(self, signer=None):
         self._factory = MessageFactory(
-            family_name="hashblock_units",
-            family_version="0.1.0",
-            namespace=[MessageFactory.sha512('units'.encode("utf-8"))[0:6]],
+            family_name=Address.NAMESPACE_SETTING,
+            family_version="1.0.0",
+            namespace=[self._addresser.ns_family],
             signer=signer)
 
     @property
@@ -56,37 +62,26 @@ class UnitMessageFactory(object):
     def create_tp_response(self, status):
         return self._factory.create_tp_response(status)
 
-    def _create_tp_process_request(self, code, payload):
+    def _create_tp_process_request(self, dimension, payload):
+
         inputs = [
-            self._key_to_address('hashblock.units.vote.proposals'),
-            self._key_to_address('hashblock.units.vote.authorized_keys'),
-            self._key_to_address('hashblock.units.vote.approval_threshold'),
-            self._key_to_address(code)
-        ]
+            self._addresser.settings(dimension, Address.SETTING_AUTHKEYS),
+            self._addresser.settings(dimension, Address.SETTING_APPTHRESH)]
 
         outputs = [
-            self._key_to_address('hashblock.units.vote.proposals'),
-            self._key_to_address(code)
-        ]
+            self._addresser.settings(dimension, Address.SETTING_AUTHKEYS),
+            self._addresser.settings(dimension, Address.SETTING_APPTHRESH)]
 
         return self._factory.create_tp_process_request(
             payload.SerializeToString(), inputs, outputs, [])
 
-    def create_proposal_transaction(self, code, value, nonce):
-        proposal = UnitProposal(code=code, value=value, nonce=nonce)
-        payload = UnitPayload(
-            action=UnitPayload.PROPOSE,
-            data=proposal.SerializeToString())
-
-        return self._create_tp_process_request(code, payload)
-
-    def create_vote_proposal(self, proposal_id, code, vote):
-        vote = UnitVote(proposal_id=proposal_id, vote=vote)
-        payload = UnitPayload(
-            action=UnitPayload.VOTE,
-            data=vote.SerializeToString())
-
-        return self._create_tp_process_request(code, payload)
+    def create_setting_transaction(self, key, value, dimension, action):
+        setting = Setting(key=key, value=value)
+        payload = SettingPayload(
+            action=action,
+            dimension=dimension,
+            data=setting.SerializeToString())
+        return self._create_tp_process_request(dimension, payload)
 
     def create_get_request(self, code):
         addresses = [self._key_to_address(code)]

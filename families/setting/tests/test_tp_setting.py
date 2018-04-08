@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,13 +17,17 @@
 import hashlib
 import base64
 
-from protobuf.unit_pb2 import UnitProposal
-from protobuf.unit_pb2 import UnitVote
-from protobuf.unit_pb2 import UnitCandidate
-from protobuf.unit_pb2 import UnitCandidates
+from protobuf.setting_pb2 import UnitProposal
+from protobuf.setting_pb2 import UnitVote
+from protobuf.setting_pb2 import UnitCandidate
+from protobuf.setting_pb2 import UnitCandidates
 
-from hashblock_units_test.units_message_factory \
-    import UnitMessageFactory
+from protobuf.setting_pb2 import SettingPayload
+from protobuf.setting_pb2 import Setting
+from sdk.python.address import Address
+
+from hashblock_setting_test.setting_message_factory \
+    import SettingMessageFactory
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
@@ -36,12 +40,12 @@ def _to_hash(value):
 EMPTY_CANDIDATES = UnitCandidates(candidates=[]).SerializeToString()
 
 
-class TestUnit(TransactionProcessorTestCase):
+class TestSetting(TransactionProcessorTestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.factory = UnitMessageFactory()
+        cls.factory = SettingMessageFactory()
 
     def _expect_get(self, key, value=None):
         received = self.validator.expect(
@@ -75,13 +79,9 @@ class TestUnit(TransactionProcessorTestCase):
         self.validator.expect(
             self.factory.create_tp_response("INTERNAL_ERROR"))
 
-    def _propose(self, key, value):
-        self.validator.send(self.factory.create_proposal_transaction(
-            key, value, "somenonce"))
-
-    def _vote(self, proposal_id, unit, vote):
-        self.validator.send(self.factory.create_vote_proposal(
-            proposal_id, unit, vote))
+    def _set_setting(self, key, value, dimension, action):
+        self.validator.send(self.factory.create_setting_transaction(
+            key, value, dimension, action))
 
     @property
     def _public_key(self):

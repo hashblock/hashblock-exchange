@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,35 +18,35 @@ version: "2.1"
 
 services:
 
-  units-processor:
-    image: hashblock-dev-units-tp:latest
-    container_name: hashblock-units-dev-tp
+  settings-processor:
+    image: hashblock-dev-setting-tp:latest
+    container_name: hashblock-setting-dev-tp
     volumes:
-      - ../../..:/project/exchange
+      - ../../..:/project/hashblock-exchange
     expose:
       - 4004
-    command: units-tp -vv -C tcp://test-tp-units:4004        
+    command: setting-tp -vv -C tcp://test-tp-setting:4004
     stop_signal: SIGKILL
 
 
   test-tp-units:
     image: sawtooth-dev-python:latest
     volumes:
-      - ../../..:/devprj/exchange
+      - ../../..:/devprj/hashblock-exchange
       - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
     command: nose2-3
-        -c /devprj/exchange/families/units/nose2.cfg
+        -c /devprj/hashblock-exchange/families/setting/nose2.cfg
         -v
-        -s /devprj/exchange/families/units/tests
-        test_tp_units
+        -s /devprj/hashblock-exchange/families/setting/tests
+        test_tp_setting
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/devprj/exchange/families/units/hashblock_units:\
-            /devprj/exchange/families/units/tests:\
-            /devprj/exchange/sdk/python:\
+        PYTHONPATH: "/devprj/hashblock-exchange/families/setting/hashblock_setting:\
+            /devprj/hashblock-exchange/families/setting/tests:\
+            /devprj/hashblock-exchange/sdk/python:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"

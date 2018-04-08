@@ -83,15 +83,13 @@ class Address():
     # 0-2 namespace
     # 3-5 family
     # 6-8 dimension
-    # 9-11 key (e.g. authorized_keys)
-    # 12-34 filler23
-    def settings(self, dimension, key):
+    # 9-34 filler26
+    def settings(self, dimension):
         """Create the dimension settings address using key
         """
         return self.ns_family \
             + self.hashup(dimension)[0:6] \
-            + self.hashup(key)[0:6] \
-            + self._filler_hash23
+            + self._filler_hash26
 
     # E.g. hashblock.asset.unit.imperial.foot
     # 0-2  namespace

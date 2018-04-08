@@ -20,11 +20,11 @@ option java_package = "hashblock.setting.protobuf";
 
 // Setting Container for on-chain configuration key/value pairs
 
-message Setting {
+message Settings {
 
     // Contains a setting entry voting thresholds
-    string key = 1;
-    string value = 2;
+    string auth_list = 1;
+    string threhold = 2;
 
 }
 
@@ -34,11 +34,11 @@ message Setting {
 message SettingPayload {
     // The action indicates data is contained within this payload
     enum Action {
-        // A threshold count change
-        SETTING_THRESHOLD = 0;
+        // Creation (typically genesis only)
+        CREATE = 0;
 
-        // A proposal action - data will be a UnitProposal
-        SETTING_AUTHORIZATIONS = 1;
+        // Update to setting block
+        UPDATE = 1;
     }
     // The action of this payload
     Action action = 1;

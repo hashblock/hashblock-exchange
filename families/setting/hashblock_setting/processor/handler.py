@@ -22,7 +22,7 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
 from protobuf.setting_pb2 import SettingPayload
-from protobuf.setting_pb2 import Setting
+from protobuf.setting_pb2 import Settings
 
 from sdk.python.address import Address
 
@@ -35,10 +35,7 @@ STATE_TIMEOUT_SEC = 10
 class SettingTransactionHandler(TransactionHandler):
 
     _addresser = Address(Address.FAMILY_SETTING)
-    _actions = {
-        SettingPayload.SETTING_THRESHOLD: Address.SETTING_APPTHRESH,
-        SettingPayload.SETTING_AUTHORIZATIONS: Address.SETTING_AUTHKEYS
-    }
+    _actions = [SettingPayload.CREATE, SettingPayload.UPDATE]
 
     @property
     def family_name(self):
@@ -63,44 +60,65 @@ class SettingTransactionHandler(TransactionHandler):
         if auth_keys and public_key not in auth_keys:
             raise InvalidTransaction(
                 '{} is not authorized to change setting'.format(public_key))
-
-        setting = Setting()
+        setting = Settings()
         setting.ParseFromString(setting_payload.data)
-        return _set_setting(
-            context,
-            self._addresser.settings(
+        if setting_payload.action in self._actions:
+            return self._set_setting(
+                auth_keys,
+                public_key,
+                context,
                 setting_payload.dimension,
-                self._actions[setting_payload.action]),
-            setting)
+                self._addresser.settings(setting_payload.dimension),
+                setting)
+        else:
+            raise InvalidTransaction(
+                "Payload 'action' must be one of {CREATE, UPDATE")
+
+    def _validate_threshold(self, setting, auth_keys):
+        """Valudate the threshold setting
+        """
+        pass
+
+    def _validate_authorization(self, context, setting, dimension):
+        """Valudate the authorization list setting
+        """
+        pass
 
     def _get_auth_keys(self, context, dimension):
         """Retrieve the authorization keys for this dimension
         """
-        address = self._addresser.settings(dimension, Address.SETTING_AUTHKEYS)
+        address = self._addresser.settings(dimension)
         result = _get_setting(context, address)
         if result:
-            return [v.strip() for v in result.value.split(',') if v]
+            return _string_tolist(result.auth_list)
         return result
 
+    def _set_setting(
+        self, auth_keys, public_key,
+            context, dimension, address, setting):
+        """Change the hashblock settings on the block
+        """
+        try:
+            context.set_state(
+                {address: setting.SerializeToString()},
+                timeout=STATE_TIMEOUT_SEC)
+        except FutureTimeoutError:
+            LOGGER.warning(
+                'Timeout occured on set_state([%s, <value>])',
+                address)
+            raise InternalError('Unable to set {}'.format(address))
 
-def _set_setting(context, address, setting):
-    """Change the hashblock settings on the block
+
+def _string_tolist(s):
+    """Convert the authorization comma separated string to list
     """
-    try:
-        context.set_state(
-            {address: setting.SerializeToString()},
-            timeout=STATE_TIMEOUT_SEC)
-    except FutureTimeoutError:
-        LOGGER.warning(
-            'Timeout occured on set_state([%s, <value>])',
-            address)
-        raise InternalError('Unable to set {}'.format(address))
+    return [v.strip() for v in s.split(',') if v]
 
 
 def _get_setting(context, address, default_value=None):
     """Get a hashblock settings from the block
     """
-    setting = Setting()
+    setting = Settings()
     try:
         results = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
@@ -109,6 +127,7 @@ def _get_setting(context, address, default_value=None):
             address)
         raise InternalError('Unable to get {}'.format(address))
 
+    LOGGER.debug("_gs results = {}".format(results))
     if results:
         setting.ParseFromString(results[0].data)
         return setting

@@ -33,7 +33,7 @@ from hashblock_cli.exceptions import CliException
 from hashblock_cli.rest_client import RestClient
 
 from hashblock_cli.protobuf.setting_pb2 import SettingPayload
-from hashblock_cli.protobuf.setting_pb2 import Setting
+from hashblock_cli.protobuf.setting_pb2 import Settings
 from hashblock_cli.protobuf.transaction_pb2 import TransactionHeader
 from hashblock_cli.protobuf.transaction_pb2 import Transaction
 from hashblock_cli.protobuf.batch_pb2 import BatchHeader
@@ -128,30 +128,18 @@ def _do_config_genesis(args):
 
     txns = []
 
+    keys = ','.join(authorized_keys)
+    threshold = str(args.approval_threshold)
     txns.append(_create_setting(
         signer,
         Address.DIMENSION_UNIT,
-        SettingPayload.SETTING_AUTHORIZATIONS,
-        Address.SETTING_AUTHKEYS,
-        ','.join(authorized_keys)))
-    txns.append(_create_setting(
-        signer,
-        Address.DIMENSION_UNIT,
-        SettingPayload.SETTING_THRESHOLD,
-        Address.SETTING_APPTHRESH,
-        str(args.approval_threshold)))
+        SettingPayload.CREATE,
+        keys, threshold))
     txns.append(_create_setting(
         signer,
         Address.DIMENSION_RESOURCE,
-        SettingPayload.SETTING_AUTHORIZATIONS,
-        Address.SETTING_AUTHKEYS,
-        ','.join(authorized_keys)))
-    txns.append(_create_setting(
-        signer,
-        Address.DIMENSION_RESOURCE,
-        SettingPayload.SETTING_THRESHOLD,
-        Address.SETTING_APPTHRESH,
-        str(args.approval_threshold)))
+        SettingPayload.CREATE,
+        keys, threshold))
 
     # txns.append(_create_propose_txn(
     #     signer,
@@ -184,16 +172,15 @@ def _do_config_genesis(args):
             'Unable to write to batch file: {}'.format(str(e)))
 
 
-def _create_setting(signer, dimension, action, key, value):
-    nonce = str(datetime.datetime.utcnow().timestamp())
-    setting = Setting(
-        key=key,
-        value=value)
+def _create_setting(signer, dimension, action, auth_keys, threshold):
+    # nonce = str(datetime.datetime.utcnow().timestamp())
+    settings = Settings(
+        auth_list=auth_keys,
+        threhold=threshold)
     payload = SettingPayload(
         action=action,
         dimension=dimension,
-        data=setting.SerializeToString())
-    # data=setting.SerializeToString())
+        data=settings.SerializeToString())
 
     return _make_setting_txn(signer, dimension, payload)
 
@@ -206,12 +193,8 @@ def _make_setting_txn(signer, dimension, payload):
         signer_public_key=signer.get_public_key().as_hex(),
         family_name=Address.NAMESPACE_SETTING,
         family_version='1.0.0',
-        inputs=[
-            _addresser.settings(dimension, Address.SETTING_AUTHKEYS),
-            _addresser.settings(dimension, Address.SETTING_APPTHRESH)],
-        outputs=[
-            _addresser.settings(dimension, Address.SETTING_AUTHKEYS),
-            _addresser.settings(dimension, Address.SETTING_APPTHRESH)],
+        inputs=[_addresser.settings(dimension)],
+        outputs=[_addresser.settings(dimension)],
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex()
