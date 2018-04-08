@@ -208,7 +208,7 @@ def _do_config_genesis(args):
 
     txns.append(_create_propose_txn(
         signer,
-        ('hashblock.resource.vote.authorized_keys',
+        ('hashblock.setting.resource.authorized_keys',
          ','.join(authorized_keys))))
 
     if args.approval_threshold is not None:
@@ -222,7 +222,7 @@ def _do_config_genesis(args):
 
         txns.append(_create_propose_txn(
             signer,
-            ('hashblock.resource.vote.approval_threshold',
+            ('hashblock.setting.resource.approval_threshold',
              str(args.approval_threshold))))
 
     batch = _create_batch(signer, txns)
@@ -358,7 +358,7 @@ def _make_txn(signer, resource_key, payload):
     header = TransactionHeader(
         signer_public_key=signer.get_public_key().as_hex(),
         family_name='hashblock_resource',
-        family_version='0.1.0',
+        family_version='1.0.0',
         inputs=_config_inputs(resource_key),
         outputs=_config_outputs(resource_key),
         dependencies=[],
@@ -378,8 +378,8 @@ def _config_inputs(key):
     """
     return [
         _key_to_address('hashblock.resource.vote.proposals'),
-        _key_to_address('hashblock.resource.vote.authorized_keys'),
-        _key_to_address('hashblock.resource.vote.approval_threshold'),
+        _key_to_address('hashblock.setting.resource.authorized_keys'),
+        _key_to_address('hashblock.setting.resource.approval_threshold'),
         _key_to_address(key)
     ]
 

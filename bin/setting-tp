@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2017 Intel Corporation
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import sys
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'families/resource/hashblock_resource'))
+    'families/setting/hashblock_setting'))
 
 
 from processor.main import main

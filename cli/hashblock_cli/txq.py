@@ -32,6 +32,8 @@ import yaml
 import pkg_resources
 from colorlog import ColoredFormatter
 
+from .sdk.python.state import State
+
 from hashblock_cli.exceptions import CliException
 from hashblock_cli.rest_client import RestClient
 from hashblock_cli.parser import parser

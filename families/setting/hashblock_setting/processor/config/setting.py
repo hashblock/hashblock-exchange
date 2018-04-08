@@ -25,24 +25,24 @@ from sawtooth_sdk.processor.exceptions import LocalConfigurationError
 LOGGER = logging.getLogger(__name__)
 
 
-def load_default_resource_config():
+def load_default_setting_config():
     """
-    Returns the default ResourceConfig
+    Returns the default SettingConfig
     """
-    return ResourceConfig(
+    return SettingConfig(
         connect='tcp://localhost:4004'
     )
 
 
-def load_toml_resource_config(filename):
-    """Returns a ResourceConfig created by loading a TOML file from the
+def load_toml_setting_config(filename):
+    """Returns a SettingConfig created by loading a TOML file from the
     filesystem.
 
     Args:
         filename (string): The name of the file to load the config from
 
     Returns:
-        config (ResourceConfig): The ResourceConfig created from the stored
+        config (SettingConfig): The SettingConfig created from the stored
             toml file.
 
     Raises:
@@ -52,7 +52,7 @@ def load_toml_resource_config(filename):
         LOGGER.info(
             "Skipping transaction proccesor config loading from non-existent"
             " config file: %s", filename)
-        return ResourceConfig()
+        return SettingConfig()
 
     LOGGER.info("Loading transaction processor information from config: %s",
                 filename)
@@ -73,25 +73,25 @@ def load_toml_resource_config(filename):
             "Invalid keys in transaction processor config: "
             "{}".format(", ".join(sorted(list(invalid_keys)))))
 
-    config = ResourceConfig(
+    config = SettingConfig(
         connect=toml_config.get("connect", None)
     )
 
     return config
 
 
-def merge_resource_config(configs):
+def merge_setting_config(configs):
     """
-    Given a list of ResourceConfig objects, merges them into a single
-    ResourceConfig, giving priority in the order of the configs
+    Given a list of SettingConfig objects, merges them into a single
+    SettingConfig, giving priority in the order of the configs
     (first has highest priority).
 
     Args:
-        config (list of ResourceConfigs): The list of units configs that
+        config (list of SettingConfigs): The list of units configs that
             must be merged together
 
     Returns:
-        config (ResourceConfig): one ResourceConfig that combines all of the
+        config (SettingConfig): one SettingConfig that combines all of the
             passed in configs.
     """
     connect = None
@@ -100,10 +100,10 @@ def merge_resource_config(configs):
         if config.connect is not None:
             connect = config.connect
 
-    return ResourceConfig(connect=connect)
+    return SettingConfig(connect=connect)
 
 
-class ResourceConfig:
+class SettingConfig:
     def __init__(self, connect=None):
         self._connect = connect
 

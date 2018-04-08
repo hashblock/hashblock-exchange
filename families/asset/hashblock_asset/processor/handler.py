@@ -32,9 +32,12 @@ from protobuf.unit_pb2 import UnitCandidate
 from protobuf.unit_pb2 import UnitCandidates
 from protobuf.unit_pb2 import Unit
 
+from sdk.python.state import State
+
 LOGGER = logging.getLogger(__name__)
 ADDRESS = ''
 
+unitState = State('unit')
 
 # Number of seconds to wait for state operations to succeed
 STATE_TIMEOUT_SEC = 10
@@ -52,11 +55,12 @@ class UnitTransactionHandler(TransactionHandler):
 
     @property
     def family_versions(self):
-        return ['0.1.0']
+        return ['1.0.0']
+# [FAKE_ADDRESS_PREFIX]  # [self._namespace_prefix]
 
     @property
     def namespaces(self):
-        return [self._namespace_prefix]
+        return [unitState.family_ns]
 
     def apply(self, transaction, context):
         txn_header = transaction.header
@@ -86,9 +90,7 @@ class UnitTransactionHandler(TransactionHandler):
         units_proposal.ParseFromString(units_proposal_data)
 
         proposal_id = hashlib.sha256(units_proposal_data).hexdigest()
-
         approval_threshold = _get_approval_threshold(context)
-
         _validate_units(
             auth_keys,
             units_proposal.code,
@@ -199,12 +201,12 @@ def _save_units_candidates(context, units_candidates):
 
 def _get_approval_threshold(context):
     return int(_get_units_value(
-        context, 'hashblock.units.vote.approval_threshold', 1))
+        context, 'hashblock.setting.unit.approval_threshold', 1))
 
 
 def _get_auth_keys(context):
     value = _get_units_value(
-        context, 'hashblock.units.vote.authorized_keys', '')
+        context, 'hashblock.setting.unit.authorized_keys', '')
     return _split_ignore_empties(value)
 
 
@@ -214,15 +216,15 @@ def _split_ignore_empties(value):
 
 def _validate_units(auth_keys, units_code, value):
     if not auth_keys and \
-            units_code != 'hashblock.units.vote.authorized_keys':
+            units_code != 'hashblock.setting.unit.authorized_keys':
         raise InvalidTransaction(
             'Cannot set {} until authorized_keys is set.'.format(units_code))
 
-    if units_code == 'hashblock.units.vote.authorized_keys':
+    if units_code == 'hashblock.setting.unit.authorized_keys':
         if not _split_ignore_empties(value):
             raise InvalidTransaction('authorized_keys must not be empty.')
 
-    if units_code == 'hashblock.units.vote.approval_threshold':
+    if units_code == 'hashblock.setting.unit.approval_threshold':
         threshold = None
         try:
             threshold = int(value)

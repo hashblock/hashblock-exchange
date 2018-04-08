@@ -44,16 +44,16 @@ def main(args=None):
         "hashblock_cli/protobuf")
     protoc_python(
         proto_dir,
-        "families/units",
-        "hashblock_units/protobuf")
+        "families/asset",
+        "hashblock_asset/protobuf")
     protoc_python(
         proto_dir,
         "families/match",
         "hashblock_match/protobuf")
     protoc_python(
         proto_dir,
-        "families/resource",
-        "hashblock_resource/protobuf")
+        "families/setting",
+        "hashblock_setting/protobuf")
 
 
 def protoc_python(src_dir, base_dir, pkg):

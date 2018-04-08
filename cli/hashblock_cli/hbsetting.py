@@ -32,11 +32,8 @@ from colorlog import ColoredFormatter
 from hashblock_cli.exceptions import CliException
 from hashblock_cli.rest_client import RestClient
 
-from hashblock_cli.protobuf.unit_pb2 import UnitPayload
-from hashblock_cli.protobuf.unit_pb2 import UnitProposal
-from hashblock_cli.protobuf.unit_pb2 import UnitVote
-from hashblock_cli.protobuf.unit_pb2 import UnitCandidates
-from hashblock_cli.protobuf.unit_pb2 import Unit
+from hashblock_cli.protobuf.setting_pb2 import SettingPayload
+from hashblock_cli.protobuf.setting_pb2 import Setting
 from hashblock_cli.protobuf.transaction_pb2 import TransactionHeader
 from hashblock_cli.protobuf.transaction_pb2 import Transaction
 from hashblock_cli.protobuf.batch_pb2 import BatchHeader
@@ -47,15 +44,11 @@ from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
 from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
+from sdk.python.address import Address
 
-DISTRIBUTION_NAME = 'unitsset'
+_addresser = Address(Address.FAMILY_SETTING)
 
-
-UNITS_NAMESPACE = hashlib.sha512('units'.encode("utf-8")).hexdigest()[0:6]
-
-_MIN_PRINT_WIDTH = 15
-_MAX_KEY_PARTS = 4
-_ADDRESS_PART_SIZE = 16
+DISTRIBUTION_NAME = 'setset'
 
 
 def add_config_parser(subparsers, parent_parser):
@@ -112,48 +105,7 @@ def _do_config_proposal_list(args):
     Given a url, optional filters on prefix and public key, this command lists
     the current pending proposals for units changes.
     """
-
-    def _accept(candidate, public_key, prefix):
-        # Check to see if the first public key matches the given public key
-        # (if it is not None).  This public key belongs to the user that
-        # created it.
-        has_pub_key = (not public_key
-                       or candidate.votes[0].public_key == public_key)
-        has_prefix = candidate.proposal.code.startswith(prefix)
-        return has_prefix and has_pub_key
-
-    candidates_payload = _get_proposals(RestClient(args.url))
-    candidates = [
-        c for c in candidates_payload.candidates
-        if _accept(c, args.public_key, args.filter)
-    ]
-
-    if args.format == 'default':
-        for candidate in candidates:
-            print('{}: {} => {}'.format(
-                candidate.proposal_id,
-                candidate.proposal.code,
-                candidate.proposal.value))
-    elif args.format == 'csv':
-        writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
-        writer.writerow(['PROPOSAL_ID', 'CODE', 'VALUE'])
-        for candidate in candidates:
-            writer.writerow([
-                candidate.proposal_id,
-                candidate.proposal.code,
-                candidate.proposal.value])
-    elif args.format == 'json' or args.format == 'yaml':
-        candidates_snapshot = \
-            {c.proposal_id: {c.proposal.code: c.proposal.value}
-             for c in candidates}
-
-        if args.format == 'json':
-            print(json.dumps(candidates_snapshot, indent=2, sort_keys=True))
-        else:
-            print(yaml.dump(candidates_snapshot,
-                            default_flow_style=False)[0:-1])
-    else:
-        raise AssertionError('Unknown format {}'.format(args.format))
+    pass
 
 
 def _do_config_proposal_vote(args):
@@ -162,36 +114,7 @@ def _do_config_proposal_vote(args):
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
-    signer = _read_signer(args.key)
-    rest_client = RestClient(args.url)
-
-    proposals = _get_proposals(rest_client)
-
-    proposal = None
-    for candidate in proposals.candidates:
-        if candidate.proposal_id == args.proposal_id:
-            proposal = candidate
-            break
-
-    if proposal is None:
-        raise CliException('No proposal exists with the given id')
-
-    for vote_record in proposal.votes:
-        if vote_record.public_key == signer.get_public_key().as_hex():
-            raise CliException(
-                'A vote has already been recorded with this signing key')
-
-    txn = _create_vote_txn(
-        signer,
-        args.proposal_id,
-        proposal.proposal.code,
-        args.vote_value)
-    batch = _create_batch(signer, [txn])
-
-    batch_list = BatchList(batches=[batch])
-
-    rest_client.send_batches(batch_list)
-
+    pass
 
 
 def _do_config_genesis(args):
@@ -205,24 +128,49 @@ def _do_config_genesis(args):
 
     txns = []
 
-    txns.append(_create_propose_txn(
+    txns.append(_create_setting(
         signer,
-        ('hashblock.units.vote.authorized_keys',
-         ','.join(authorized_keys))))
+        Address.DIMENSION_UNIT,
+        SettingPayload.SETTING_AUTHORIZATIONS,
+        Address.SETTING_AUTHKEYS,
+        ','.join(authorized_keys)))
+    txns.append(_create_setting(
+        signer,
+        Address.DIMENSION_UNIT,
+        SettingPayload.SETTING_THRESHOLD,
+        Address.SETTING_APPTHRESH,
+        str(args.approval_threshold)))
+    txns.append(_create_setting(
+        signer,
+        Address.DIMENSION_RESOURCE,
+        SettingPayload.SETTING_AUTHORIZATIONS,
+        Address.SETTING_AUTHKEYS,
+        ','.join(authorized_keys)))
+    txns.append(_create_setting(
+        signer,
+        Address.DIMENSION_RESOURCE,
+        SettingPayload.SETTING_THRESHOLD,
+        Address.SETTING_APPTHRESH,
+        str(args.approval_threshold)))
 
-    if args.approval_threshold is not None:
-        if args.approval_threshold < 1:
-            raise CliException('approval threshold must not be less than 1')
+    # txns.append(_create_propose_txn(
+    #     signer,
+    #     ('hashblock.setting.unit.authorized_keys',
+    #      ','.join(authorized_keys))))
 
-        if args.approval_threshold > len(authorized_keys):
-            raise CliException(
-                'approval threshold must not be greater than the number of '
-                'authorized keys')
+    # if args.approval_threshold is not None:
+    #     if args.approval_threshold < 1:
+    #         raise CliException('approval threshold must not be less than 1')
 
-        txns.append(_create_propose_txn(
-            signer,
-            ('hashblock.units.vote.approval_threshold',
-             str(args.approval_threshold))))
+    #     if args.approval_threshold > len(authorized_keys):
+    #         raise CliException(
+    #             'approval threshold must not be greater than the number of '
+    #             'authorized keys')
+
+    #     txns.append(_create_propose_txn(
+    #         signer,
+    #         ('hashblock.setting.unit.approval_threshold',
+    #          str(args.approval_threshold))))
 
     batch = _create_batch(signer, txns)
     batch_list = BatchList(batches=[batch])
@@ -236,27 +184,47 @@ def _do_config_genesis(args):
             'Unable to write to batch file: {}'.format(str(e)))
 
 
+def _create_setting(signer, dimension, action, key, value):
+    nonce = str(datetime.datetime.utcnow().timestamp())
+    setting = Setting(
+        key=key,
+        value=value)
+    payload = SettingPayload(
+        action=action,
+        dimension=dimension,
+        data=setting.SerializeToString())
+    # data=setting.SerializeToString())
+
+    return _make_setting_txn(signer, dimension, payload)
+
+
+def _make_setting_txn(signer, dimension, payload):
+    """Creates and signs a hashblock_units transaction with with a payload.
+    """
+    serialized_payload = payload.SerializeToString()
+    header = TransactionHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        family_name=Address.NAMESPACE_SETTING,
+        family_version='1.0.0',
+        inputs=[
+            _addresser.settings(dimension, Address.SETTING_AUTHKEYS),
+            _addresser.settings(dimension, Address.SETTING_APPTHRESH)],
+        outputs=[
+            _addresser.settings(dimension, Address.SETTING_AUTHKEYS),
+            _addresser.settings(dimension, Address.SETTING_APPTHRESH)],
+        dependencies=[],
+        payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
+        batcher_public_key=signer.get_public_key().as_hex()
+    ).SerializeToString()
+
+    return Transaction(
+        header=header,
+        header_signature=signer.sign(header),
+        payload=serialized_payload)
+
+
 def _get_proposals(rest_client):
-    state_leaf = rest_client.get_leaf(
-        _key_to_address('hashblock.units.vote.proposals'))
-
-    config_candidates = UnitCandidates()
-
-    if state_leaf is not None:
-        unit_bytes = b64decode(state_leaf['data'])
-        unit = Unit()
-        unit.ParseFromString(unit_bytes)
-
-        candidates_bytes = None
-        for entry in unit.entries:
-            if entry.key == 'hashblock.units.vote.proposals':
-                candidates_bytes = entry.value
-
-        if candidates_bytes is not None:
-            decoded = b64decode(candidates_bytes)
-            config_candidates.ParseFromString(decoded)
-
-    return config_candidates
+    pass
 
 
 def _read_signer(key_filename):
@@ -322,32 +290,14 @@ def _create_propose_txn(signer, unit_key_value):
     """Creates an individual hashblock_units transaction for the given key and
     value.
     """
-    unit_key, unit_value = unit_key_value
-    nonce = str(datetime.datetime.utcnow().timestamp())
-    proposal = UnitProposal(
-        code=unit_key,
-        value=unit_value,
-        nonce=nonce)
-    payload = UnitPayload(data=proposal.SerializeToString(),
-                              action=UnitPayload.PROPOSE)
-
-    return _make_txn(signer, unit_key, payload)
+    pass
 
 
 def _create_vote_txn(signer, proposal_id, unit_key, vote_value):
     """Creates an individual hashblock_units transaction for voting on a
     proposal for a particular unit key.
     """
-    if vote_value == 'accept':
-        vote_id = UnitVote.ACCEPT
-    else:
-        vote_id = UnitVote.REJECT
-
-    vote = UnitVote(proposal_id=proposal_id, vote=vote_id)
-    payload = UnitPayload(data=vote.SerializeToString(),
-                              action=UnitPayload.VOTE)
-
-    return _make_txn(signer, unit_key, payload)
+    pass
 
 
 def _make_txn(signer, unit_key, payload):
@@ -356,8 +306,8 @@ def _make_txn(signer, unit_key, payload):
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
         signer_public_key=signer.get_public_key().as_hex(),
-        family_name='hashblock_units',
-        family_version='0.1.0',
+        family_name=Address.NAMESPACE_SETTING,
+        family_version='1.0.0',
         inputs=_config_inputs(unit_key),
         outputs=_config_outputs(unit_key),
         dependencies=[],
@@ -375,39 +325,14 @@ def _config_inputs(key):
     """Creates the list of inputs for a hashblock_units transaction, for a
     given unit key.
     """
-    return [
-        _key_to_address('hashblock.units.vote.proposals'),
-        _key_to_address('hashblock.units.vote.authorized_keys'),
-        _key_to_address('hashblock.units.vote.approval_threshold'),
-        _key_to_address(key)
-    ]
+    return []
 
 
 def _config_outputs(key):
     """Creates the list of outputs for a hashblock_units transaction, for a
     given unit key.
     """
-    return [
-        _key_to_address('hashblock.units.vote.proposals'),
-        _key_to_address(key)
-    ]
-
-
-def _short_hash(in_str):
-    return hashlib.sha256(in_str.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
-
-
-def _key_to_address(key):
-    """Creates the state address for a given unit key.
-    """
-    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-    key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
-
-    return UNITS_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)
-
-
-def unit_key_to_address(key):
-    return _key_to_address(key)
+    return []
 
 
 def create_console_handler(verbose_level):

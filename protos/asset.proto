@@ -16,29 +16,37 @@
 
 syntax = "proto3";
 option java_multiple_files = true;
-option java_package = "hashblock.resource.protobuf";
+option java_package = "hashblock.asset.protobuf";
 
-// Resource Container for on-chain configuration key/value pairs
-message Resource {
-    // Contains a resource entry (or entries, in the case of collisions).
-    message Entry {
-        string key = 1;
-        string value = 2;
-    }
+// On chain unit of measure
 
-    // List of Resource entries - more than one implies a state key collision
-    repeated Entry entries = 1;
+message Unit {
+    string system = 1;
+    string key = 2;
+    string value = 3;
 }
 
-message ResourcePayload {
+// On chain resource
+
+message Resource {
+    string system = 1;
+    string key = 2;
+    string value = 3;
+    string sku = 4;
+}
+
+// Asset Payload
+// - Contains either a proposal or a vote.
+
+message AssetPayload {
     // The action indicates data is contained within this payload
     enum Action {
         ACTION_UNSET = 0;
 
-        // A proposal action - data will be a ResourceProposal
+        // A proposal action - data will be a AssetProposal
         PROPOSE = 1;
 
-        // A vote action - data will be a ResourceVote
+        // A vote action - data will be a AssetVote
         VOTE = 2;
     }
     // The action of this payload
@@ -48,60 +56,70 @@ message ResourcePayload {
     bytes data = 2;
 }
 
-// Resource Proposal
+// Asset Proposal
 //
-// This message proposes a change in a Resource value.
+// This message proposes an Asset.
 
-message ResourceProposal {
-    // The code key.  E.g. sawtooth.uom.authorization_type
-    string code = 1;
+message AssetProposal {
+    enum Type {
+        UNIT = 0;
+        RESOURCE = 1;
+    }
 
-    // The setting value. E.g. 'ballot'
-    string value = 2;
+    // The asset being proposed will be either Unit or Resource
+    bytes asset = 1;
+
+    // It's asset type identifier
+    Type type = 2;
 
     // allow duplicate proposals with different hashes
     // randomly created by the client
+
     string nonce = 3;
 }
 
-// Resource Vote
+// Asset Vote
 //
-// In ballot mode, a proposal must be voted on.  This message indicates an
-// acceptance or rejection of a proposal, where the proposal is identified
-// by its id.
+// This message votes on Asset Proposal
 
-message ResourceVote {
+message AssetVote {
     enum Vote {
         VOTE_UNSET = 0;
         ACCEPT = 1;
         REJECT = 2;
     }
 
-    // The id of the proposal, as found in the
-    // sawtooth.config.vote.proposals setting field
+    // The id of the proposal being voted on
+
     string proposal_id = 1;
 
     Vote vote = 2;
 }
 
+
 // Contains the vote counts for a given proposal.
 
-message ResourceCandidate {
+message AssetCandidate {
     // An individual vote record
     message VoteRecord {
+        enum Vote {
+            VOTE_UNSET = 0;
+            ACCEPT = 1;
+            REJECT = 2;
+        }
         // The public key of the voter
         string public_key = 1;
 
         // The voter's actual vote
-        ResourceVote.Vote vote = 2;
+        Vote vote = 2;
 
     }
 
     // The proposal id, a hash of the original proposal
     string proposal_id = 1;
 
-    // The active proposal
-    ResourceProposal proposal = 2;
+    // The active proposal itself
+    AssetProposal proposal = 2;
 
     // list of votes
     repeated VoteRecord votes = 3;
@@ -109,6 +127,7 @@ message ResourceCandidate {
 
 // Contains all the setting candiates up for vote.
 
-message ResourceCandidates {
-    repeated ResourceCandidate candidates = 1;
+message AssetCandidates {
+    repeated AssetCandidate candidates = 1;
 }
+

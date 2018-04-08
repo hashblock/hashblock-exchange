@@ -36,8 +36,17 @@ from protobuf.match_pb2 import MTXQ
 
 LOGGER = logging.getLogger(__name__)
 
+DOMAIN_NAME = 'hashblock'
 ADDRESS_PREFIX = 'match'
 FAMILY_NAME = 'hashblock_match'
+
+DOMAIN_PREFIX = hashlib.sha512(
+    DOMAIN_NAME.encode('utf-8')).hexdigest()[0:6]
+
+FAKE_ADDRESS_PREFIX = DOMAIN_PREFIX + \
+    hashlib.sha512(
+        ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
+
 
 MATCH_ADDRESS_PREFIX = hashlib.sha512(
     FAMILY_NAME.encode('utf-8')).hexdigest()[0:6]
@@ -70,7 +79,7 @@ class MatchTransactionHandler(TransactionHandler):
 
     @property
     def namespaces(self):
-        return [MATCH_ADDRESS_PREFIX]
+        return [FAKE_ADDRESS_PREFIX]  # [MATCH_ADDRESS_PREFIX]
 
     def apply(self, transaction, context):
 
