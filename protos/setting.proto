@@ -24,7 +24,7 @@ message Settings {
 
     // Contains a setting entry voting thresholds
     string auth_list = 1;
-    string threhold = 2;
+    string threshold = 2;
 
 }
 

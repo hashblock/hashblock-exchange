@@ -31,7 +31,7 @@ services:
       - ../../../hashblock-exchange/:/project/hashblock-exchange
       - ../../../sawtooth-core/:/project/sawtooth-core
     environment:
-      - PYTHONPATH=/project/exchange
+      - PYTHONPATH=/project/hashblock-exchange
      # Expose 5678 for remote debugging
     expose:
       - 5678
@@ -72,29 +72,29 @@ services:
       \""
     stop_signal: SIGKILL
 
-  # asset-processor:
-  #   build:
-  #     context: ../..
-  #     dockerfile: docker/hashblock-dev-asset-tp
-  #     args:
-  #       - http_proxy
-  #       - https_proxy
-  #       - no_proxy
-  #   image: hashblock-dev-asset-tp
-  #   container_name: hashblock-dev-asset-tp
-  #   volumes:
-  #     - ../../../hashblock-exchange/:/project/hashblock-exchange
-  #   environment:
-  #     - PYTHONPATH=/project/hashblock-exchange
-  #   # Expose 5679 for remote debugging
-  #   depends_on:
-  #     - setting-processor
-  #   command: "bash -c \"\
-  #       sleep 1 &&
-  #       asset-tp -vv \
-  #         -C tcp://validator:4004 \
-  #     \""
-  #   stop_signal: SIGKILL
+  asset-processor:
+    build:
+      context: ../..
+      dockerfile: docker/hashblock-dev-asset-tp
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    image: hashblock-dev-asset-tp
+    container_name: hashblock-dev-asset-tp
+    volumes:
+      - ../../../hashblock-exchange/:/project/hashblock-exchange
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
+    # Expose 5679 for remote debugging
+    depends_on:
+      - setting-processor
+    command: "bash -c \"\
+        sleep 1 &&
+        asset-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
 
   match-processor:
     build:

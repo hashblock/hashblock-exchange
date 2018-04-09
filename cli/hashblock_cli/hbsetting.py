@@ -176,7 +176,7 @@ def _create_setting(signer, dimension, action, auth_keys, threshold):
     # nonce = str(datetime.datetime.utcnow().timestamp())
     settings = Settings(
         auth_list=auth_keys,
-        threhold=threshold)
+        threshold=threshold)
     payload = SettingPayload(
         action=action,
         dimension=dimension,
@@ -188,13 +188,18 @@ def _create_setting(signer, dimension, action, auth_keys, threshold):
 def _make_setting_txn(signer, dimension, payload):
     """Creates and signs a hashblock_units transaction with with a payload.
     """
+    props = Address(Address.FAMILY_ASSET)
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
         signer_public_key=signer.get_public_key().as_hex(),
         family_name=Address.NAMESPACE_SETTING,
         family_version='1.0.0',
-        inputs=[_addresser.settings(dimension)],
-        outputs=[_addresser.settings(dimension)],
+        inputs=[
+            _addresser.settings(dimension),
+            props.proposals(dimension)],
+        outputs=[
+            _addresser.settings(dimension),
+            props.proposals(dimension)],
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex()

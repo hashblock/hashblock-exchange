@@ -23,6 +23,7 @@ from sawtooth_sdk.processor.exceptions import InternalError
 
 from protobuf.setting_pb2 import SettingPayload
 from protobuf.setting_pb2 import Settings
+from protobuf.asset_pb2 import AssetCandidates
 
 from sdk.python.address import Address
 
@@ -34,8 +35,12 @@ STATE_TIMEOUT_SEC = 10
 
 class SettingTransactionHandler(TransactionHandler):
 
-    _addresser = Address(Address.FAMILY_SETTING)
     _actions = [SettingPayload.CREATE, SettingPayload.UPDATE]
+
+    def __init__(self):
+        self._addresser = Address(Address.FAMILY_SETTING)
+        self._dimension = None
+        self._auth_list = None
 
     @property
     def family_name(self):
@@ -49,55 +54,95 @@ class SettingTransactionHandler(TransactionHandler):
     def namespaces(self):
         return [self._addresser.ns_family]
 
+    @property
+    def dimension(self):
+        return self._dimension
+
+    @property
+    def auth_list(self):
+        return self._auth_list
+
     def apply(self, transaction, context):
         txn_header = transaction.header
         public_key = txn_header.signer_public_key
 
         setting_payload = SettingPayload()
         setting_payload.ParseFromString(transaction.payload)
+        self._dimension = setting_payload.dimension
+        self._get_auth_list(context)
 
-        auth_keys = self._get_auth_keys(context, setting_payload.dimension)
-        if auth_keys and public_key not in auth_keys:
+        if self.auth_list and public_key not in self.auth_list:
             raise InvalidTransaction(
                 '{} is not authorized to change setting'.format(public_key))
         setting = Settings()
         setting.ParseFromString(setting_payload.data)
         if setting_payload.action in self._actions:
             return self._set_setting(
-                auth_keys,
                 public_key,
+                setting_payload.action,
                 context,
-                setting_payload.dimension,
-                self._addresser.settings(setting_payload.dimension),
                 setting)
         else:
             raise InvalidTransaction(
                 "Payload 'action' must be one of {CREATE, UPDATE")
 
-    def _validate_threshold(self, setting, auth_keys):
-        """Valudate the threshold setting
+    def _validate_create(self, context, setting):
+        """Valudate the setting during a create
         """
+        if self.auth_list:
+            raise InvalidTransaction(
+                "Settings already exists, can't re-create")
+        elif not setting.auth_list or not setting.threshold:
+            raise InvalidTransaction(
+                "Both auth_list and threshold are required")
+
+        props = Address(Address.FAMILY_ASSET)
+        candidates = _get_candidates(context, props.proposals(self.dimension))
+        if candidates:
+            raise InvalidTransaction(
+                "Invalide state. Proposals already exist")
+        auth_keys = _string_tolist(setting.auth_list)
+        threshold = int(setting.threshold)
+        if threshold <= 1:
+            raise InvalidTransaction(
+                "Threshold must be greater than 1")
+        elif threshold > len(auth_keys):
+            raise InvalidTransaction(
+                'Threshold must be less than'
+                ' count of auth_list keys')
+
+    def _validate_update(self, context, setting):
         pass
 
-    def _validate_authorization(self, context, setting, dimension):
-        """Valudate the authorization list setting
-        """
-        pass
-
-    def _get_auth_keys(self, context, dimension):
+    def _get_auth_list(self, context):
         """Retrieve the authorization keys for this dimension
         """
-        address = self._addresser.settings(dimension)
+        address = self._addresser.settings(self.dimension)
         result = _get_setting(context, address)
         if result:
-            return _string_tolist(result.auth_list)
+            self._auth_list = _string_tolist(result.auth_list)
+            return self._auth_list
         return result
 
-    def _set_setting(
-        self, auth_keys, public_key,
-            context, dimension, address, setting):
+    def _create_proposals(self, context):
+        candidates = AssetCandidates()
+        caddr = Address(Address.FAMILY_ASSET).proposals(self.dimension)
+        try:
+            context.set_state(
+                {caddr: candidates.SerializeToString()},
+                timeout=STATE_TIMEOUT_SEC)
+        except FutureTimeoutError:
+            LOGGER.warning(
+                'Timeout occured on set_state([%s, <value>])',
+                caddr)
+            raise InternalError('Unable to set {}'.format(caddr))
+
+    def _set_setting(self, public_key, action, context, setting):
         """Change the hashblock settings on the block
         """
+        if action == SettingPayload.CREATE:
+            self._validate_create(context, setting)
+        address = self._addresser.settings(self.dimension)
         try:
             context.set_state(
                 {address: setting.SerializeToString()},
@@ -107,6 +152,8 @@ class SettingTransactionHandler(TransactionHandler):
                 'Timeout occured on set_state([%s, <value>])',
                 address)
             raise InternalError('Unable to set {}'.format(address))
+        if action == SettingPayload.CREATE:
+            self._create_proposals(context)
 
 
 def _string_tolist(s):
@@ -119,16 +166,30 @@ def _get_setting(context, address, default_value=None):
     """Get a hashblock settings from the block
     """
     setting = Settings()
-    try:
-        results = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
-    except FutureTimeoutError:
-        LOGGER.warning(
-            'Timeout occured on context.get_state([%s])',
-            address)
-        raise InternalError('Unable to get {}'.format(address))
-
-    LOGGER.debug("_gs results = {}".format(results))
+    results = _get_state(context, address)
     if results:
         setting.ParseFromString(results[0].data)
         return setting
     return default_value
+
+
+def _get_candidates(context, address, default_value=None):
+    """Get a hashblock settings from the block
+    """
+    candidates = AssetCandidates()
+    results = _get_state(context, address)
+    if results:
+        candidates.ParseFromString(results[0].data)
+        return candidates
+    return default_value
+
+
+def _get_state(context, address):
+    try:
+        results = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
+    except FutureTimeoutError:
+        LOGGER.warning(
+            'Timeout occured on context.get_setting([%s])',
+            address)
+        raise InternalError('Unable to get {}'.format(address))
+    return results
