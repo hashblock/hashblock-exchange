@@ -39,8 +39,8 @@ class SettingTransactionHandler(TransactionHandler):
 
     def __init__(self):
         self._addresser = Address(Address.FAMILY_SETTING)
-        self._dimension = None
         self._auth_list = None
+        self._action = None
 
     @property
     def family_name(self):
@@ -55,12 +55,37 @@ class SettingTransactionHandler(TransactionHandler):
         return [self._addresser.ns_family]
 
     @property
+    def action(self):
+        return self._action
+
+    @action.setter
+    def action(self, action):
+        self._action = action
+
+    @property
     def dimension(self):
         return self._dimension
+
+    @dimension.setter
+    def dimension(self, dim):
+        self._dimension = dim
+        self.address = dim
+
+    @property
+    def address(self):
+        return self._address
+
+    @address.setter
+    def address(self, dim):
+        self._address = self._addresser.settings(dim)
 
     @property
     def auth_list(self):
         return self._auth_list
+
+    @auth_list.setter
+    def auth_list(self, alist):
+        self._auth_list = alist
 
     def apply(self, transaction, context):
         txn_header = transaction.header
@@ -68,7 +93,7 @@ class SettingTransactionHandler(TransactionHandler):
 
         setting_payload = SettingPayload()
         setting_payload.ParseFromString(transaction.payload)
-        self._dimension = setting_payload.dimension
+        self.dimension = setting_payload.dimension
         self._get_auth_list(context)
 
         if self.auth_list and public_key not in self.auth_list:
@@ -76,10 +101,10 @@ class SettingTransactionHandler(TransactionHandler):
                 '{} is not authorized to change setting'.format(public_key))
         setting = Settings()
         setting.ParseFromString(setting_payload.data)
-        if setting_payload.action in self._actions:
+        self.action = setting_payload.action
+        if self.action in self._actions:
             return self._set_setting(
                 public_key,
-                setting_payload.action,
                 context,
                 setting)
         else:
@@ -96,16 +121,18 @@ class SettingTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 "Both auth_list and threshold are required")
 
-        props = Address(Address.FAMILY_ASSET)
-        candidates = _get_candidates(context, props.proposals(self.dimension))
+        candidates = _get_candidates(
+            context,
+            Address(Address.FAMILY_ASSET).proposals(self.dimension))
+
         if candidates:
             raise InvalidTransaction(
                 "Invalide state. Proposals already exist")
         auth_keys = _string_tolist(setting.auth_list)
         threshold = int(setting.threshold)
-        if threshold <= 1:
+        if threshold <= 0:
             raise InvalidTransaction(
-                "Threshold must be greater than 1")
+                "Threshold must be greater than 0")
         elif threshold > len(auth_keys):
             raise InvalidTransaction(
                 'Threshold must be less than'
@@ -117,15 +144,16 @@ class SettingTransactionHandler(TransactionHandler):
     def _get_auth_list(self, context):
         """Retrieve the authorization keys for this dimension
         """
-        address = self._addresser.settings(self.dimension)
-        result = _get_setting(context, address)
+        result = _get_setting(context, self.address)
         if result:
-            self._auth_list = _string_tolist(result.auth_list)
-            return self._auth_list
+            self.auth_list = _string_tolist(result.auth_list)
+            return self.auth_list
+        else:
+            self.auth_list = None
         return result
 
     def _create_proposals(self, context):
-        candidates = AssetCandidates()
+        candidates = AssetCandidates(candidates=[])
         caddr = Address(Address.FAMILY_ASSET).proposals(self.dimension)
         try:
             context.set_state(
@@ -137,22 +165,24 @@ class SettingTransactionHandler(TransactionHandler):
                 caddr)
             raise InternalError('Unable to set {}'.format(caddr))
 
-    def _set_setting(self, public_key, action, context, setting):
+    def _set_setting(self, public_key, context, setting):
         """Change the hashblock settings on the block
         """
-        if action == SettingPayload.CREATE:
+        if self.action == SettingPayload.CREATE:
             self._validate_create(context, setting)
-        address = self._addresser.settings(self.dimension)
+        else:
+            self._validate_update(context, setting)
         try:
             context.set_state(
-                {address: setting.SerializeToString()},
+                {self.address: setting.SerializeToString()},
                 timeout=STATE_TIMEOUT_SEC)
         except FutureTimeoutError:
             LOGGER.warning(
                 'Timeout occured on set_state([%s, <value>])',
-                address)
-            raise InternalError('Unable to set {}'.format(address))
-        if action == SettingPayload.CREATE:
+                self.address)
+            raise InternalError(
+                'Unable to set {}'.format(self.address))
+        if self.action == SettingPayload.CREATE:
             self._create_proposals(context)
 
 

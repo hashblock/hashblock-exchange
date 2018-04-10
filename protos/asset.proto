@@ -52,8 +52,11 @@ message AssetPayload {
     // The action of this payload
     Action action = 1;
 
+    // The dimension for the asset
+    string dimension = 2;
+
     // The content of this payload
-    bytes data = 2;
+    bytes data = 3;
 }
 
 // Asset Proposal

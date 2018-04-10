@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,134 +17,155 @@
 import logging
 import hashlib
 import base64
-from functools import lru_cache
 
+from functools import lru_cache
 
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from protobuf.unit_pb2 import UnitPayload
-from protobuf.unit_pb2 import UnitProposal
-from protobuf.unit_pb2 import UnitVote
-from protobuf.unit_pb2 import UnitCandidate
-from protobuf.unit_pb2 import UnitCandidates
-from protobuf.unit_pb2 import Unit
+from protobuf.setting_pb2 import Settings
+from protobuf.asset_pb2 import AssetPayload
+from protobuf.asset_pb2 import AssetProposal
+from protobuf.asset_pb2 import AssetVote
+from protobuf.asset_pb2 import AssetCandidate
+from protobuf.asset_pb2 import AssetCandidates
+from processor.asset_type import AssetType
 
-from sdk.python.state import State
+from sdk.python.address import Address
 
 LOGGER = logging.getLogger(__name__)
 ADDRESS = ''
 
-unitState = State('unit')
 
 # Number of seconds to wait for state operations to succeed
 STATE_TIMEOUT_SEC = 10
 
 
-class UnitTransactionHandler(TransactionHandler):
-    def __init__(self, namespace_prefix):
-        global ADDRESS
-        ADDRESS = namespace_prefix
-        self._namespace_prefix = namespace_prefix
+class AssetTransactionHandler(TransactionHandler):
+
+    def __init__(self):
+        self._addresser = Address(Address.FAMILY_ASSET)
+        self._auth_list = None
+        self._action = None
 
     @property
     def family_name(self):
-        return 'hashblock_units'
+        return Address.NAMESPACE_ASSET
 
     @property
     def family_versions(self):
         return ['1.0.0']
-# [FAKE_ADDRESS_PREFIX]  # [self._namespace_prefix]
 
     @property
     def namespaces(self):
-        return [unitState.family_ns]
+        return [Address(Address.FAMILY_ASSET).ns_family]
+
+    @property
+    def asset_type(self):
+        return self._asset_type
+
+    @property
+    def dimension(self):
+        return [self._dimension]
+
+    @dimension.setter
+    def dimension(self, dimension):
+        self._dimension = dimension
+        self._asset_type = AssetType.type_instance(dimension)
 
     def apply(self, transaction, context):
         txn_header = transaction.header
         public_key = txn_header.signer_public_key
 
-        auth_keys = _get_auth_keys(context)
+        asset_payload = AssetPayload()
+        asset_payload.ParseFromString(transaction.payload)
+        self.domain = asset_payload.domain
+
+        auth_keys = self._get_auth_keys(context, self.asset_type)
         if auth_keys and public_key not in auth_keys:
             raise InvalidTransaction(
-                '{} is not authorized to change units'.format(public_key))
+                '{} is not authorized to change asset'.format(public_key))
 
-        units_payload = UnitPayload()
-        units_payload.ParseFromString(transaction.payload)
-
-        if units_payload.action == UnitPayload.PROPOSE:
+        if asset_payload.action == AssetPayload.PROPOSE:
             return self._apply_proposal(
-                auth_keys, public_key, units_payload.data, context)
-        elif units_payload.action == UnitPayload.VOTE:
-            return self._apply_vote(public_key, units_payload.data,
-                                    auth_keys, context)
+                public_key,
+                asset_payload.data,
+                context)
+        elif asset_payload.action == AssetPayload.VOTE:
+            return self._apply_vote(
+                public_key,
+                asset_payload.data,
+                auth_keys,
+                context)
         else:
             raise InvalidTransaction(
-                "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
+                "'action' must be one of {PROPOSE, VOTE}")
 
-    def _apply_proposal(self, auth_keys, public_key,
-                        units_proposal_data, context):
-        units_proposal = UnitProposal()
-        units_proposal.ParseFromString(units_proposal_data)
+    def _apply_proposal(self, public_key,
+                        asset_proposal_data, context):
+        asset_proposal = AssetProposal()
+        asset_proposal.ParseFromString(asset_proposal_data)
 
-        proposal_id = hashlib.sha256(units_proposal_data).hexdigest()
-        approval_threshold = _get_approval_threshold(context)
-        _validate_units(
-            auth_keys,
-            units_proposal.code,
-            units_proposal.value)
+        proposal_id = hashlib.sha256(asset_proposal_data).hexdigest()
+        approval_threshold = self._get_approval_threshold(
+            context,
+            self.asset_type)
+
+        # _validate_asset(
+        #     auth_keys,
+        #     asset_proposal.code,
+        #     asset_proposal.value)
 
         if approval_threshold > 1:
-            units_candidates = _get_units_candidates(context)
+            asset_candidates = self._get_candidates(context)
 
             existing_candidate = _first(
-                units_candidates.candidates,
+                asset_candidates.candidates,
                 lambda candidate: candidate.proposal_id == proposal_id)
 
             if existing_candidate is not None:
                 raise InvalidTransaction(
                     'Duplicate proposal for {}'.format(
-                        units_proposal.code))
+                        asset_proposal.type))
 
-            record = UnitCandidate.VoteRecord(
+            record = AssetCandidate.VoteRecord(
                 public_key=public_key,
-                vote=UnitVote.ACCEPT)
-            units_candidates.candidates.add(
+                vote=AssetVote.ACCEPT)
+            asset_candidates.candidates.add(
                 proposal_id=proposal_id,
-                proposal=units_proposal,
+                proposal=asset_proposal,
                 votes=[record]
             )
 
-            LOGGER.debug('Proposal made to set %s to %s',
-                         units_proposal.code,
-                         units_proposal.value)
-            _save_units_candidates(context, units_candidates)
+            LOGGER.debug('Proposal made to create {}'
+                         .format(asset_proposal.asset))
+            self._set_candidates(context, asset_candidates)
         else:
-            _set_units_value(
+            _set_asset_entry(
                 context,
-                units_proposal.code,
-                units_proposal.value)
+                asset_proposal.type,
+                asset_proposal.asset)
 
     def _apply_vote(self, public_key,
-                    units_vote_data, authorized_keys, context):
-        units_vote = UnitVote()
-        units_vote.ParseFromString(units_vote_data)
-        proposal_id = units_vote.proposal_id
+                    asset_vote_data, authorized_keys, context):
+        asset_vote = AssetVote()
+        asset_vote.ParseFromString(asset_vote_data)
+        proposal_id = asset_vote.proposal_id
 
-        units_candidates = _get_units_candidates(context)
+        asset_candidates = self._get_candidates(context)
         candidate = _first(
-            units_candidates.candidates,
+            asset_candidates.candidates,
             lambda candidate: candidate.proposal_id == proposal_id)
 
         if candidate is None:
             raise InvalidTransaction(
                 "Proposal {} does not exist.".format(proposal_id))
 
-        candidate_index = _index_of(units_candidates.candidates, candidate)
+        candidate_index = _index_of(asset_candidates.candidates, candidate)
 
-        approval_threshold = _get_approval_threshold(context)
+        approval_threshold = self._get_approval_threshold(context)
 
         vote_record = _first(candidate.votes,
                              lambda record: record.public_key == public_key)
@@ -154,14 +175,14 @@ class UnitTransactionHandler(TransactionHandler):
 
         candidate.votes.add(
             public_key=public_key,
-            vote=units_vote.vote)
+            vote=asset_vote.vote)
 
         accepted_count = 0
         rejected_count = 0
         for vote_record in candidate.votes:
-            if vote_record.vote == UnitVote.ACCEPT:
+            if vote_record.vote == AssetVote.ACCEPT:
                 accepted_count += 1
-            elif vote_record.vote == UnitVote.REJECT:
+            elif vote_record.vote == AssetVote.REJECT:
                 rejected_count += 1
 
         if accepted_count >= approval_threshold:
@@ -169,27 +190,64 @@ class UnitTransactionHandler(TransactionHandler):
                 context,
                 candidate.proposal.code,
                 candidate.proposal.value)
-            del units_candidates.candidates[candidate_index]
+            del asset_candidates.candidates[candidate_index]
         elif rejected_count >= approval_threshold or \
                 (rejected_count + accepted_count) == len(authorized_keys):
             LOGGER.debug('Proposal for %s was rejected',
                          candidate.proposal.code)
-            del units_candidates.candidates[candidate_index]
+            del asset_candidates.candidates[candidate_index]
         else:
             LOGGER.debug('Vote recorded for %s',
                          candidate.proposal.code)
 
-        _save_units_candidates(context, units_candidates)
+        _set_candidates(context, asset_candidates)
 
+    def _get_candidates(self, context):
+        candidates = _get_candidates(
+            context,
+            self.asset_type.candidates_address)
+        if not candidates:
+            raise InvalidTransaction(
+                'Proposals for {} '
+                'must exist.'.format(self.domain))
 
-def _get_units_candidates(context):
-    value = _get_units_value(context, 'hashblock.units.vote.proposals')
-    if not value:
-        return UnitCandidates(candidates={})
+        return candidates
 
-    unit_candidates = UnitCandidates()
-    unit_candidates.ParseFromString(base64.b64decode(value))
-    return unit_candidates
+    def _set_candidates(self, context, candidates):
+        _set_candidates(
+            context,
+            self.asset_type.candidates_address, candidates)
+        pass
+
+    def _get_auth_keys(self, context, asset_type):
+        """Retrieve the authorization keys for dimension
+        """
+        if not asset_type.settings:
+            asset_type.settings = _get_setting(
+                context,
+                asset_type.setting_address)
+
+        if asset_type.settings:
+            return _string_tolist(asset_type.settings.auth_list)
+        else:
+            raise InvalidTransaction(
+                'Asset auth_list settings for {} '
+                'must not be empty.'.format(self.domain))
+
+    def _get_approval_threshold(self, context, asset_type):
+        """Retrieve the threshold setting for dimension
+        """
+        if not asset_type.settings:
+            asset_type.settings = _get_setting(
+                context,
+                asset_type.setting_address)
+
+        if asset_type.settings:
+            return int(asset_type.settings.threshold)
+        else:
+            raise InvalidTransaction(
+                'Asset threshold settings for {} '
+                'must not be empty.'.format(self.domain))
 
 
 def _save_units_candidates(context, units_candidates):
@@ -199,51 +257,16 @@ def _save_units_candidates(context, units_candidates):
         base64.b64encode(units_candidates.SerializeToString()))
 
 
-def _get_approval_threshold(context):
-    return int(_get_units_value(
-        context, 'hashblock.setting.unit.approval_threshold', 1))
-
-
-def _get_auth_keys(context):
-    value = _get_units_value(
-        context, 'hashblock.setting.unit.authorized_keys', '')
-    return _split_ignore_empties(value)
-
-
 def _split_ignore_empties(value):
     return [v.strip() for v in value.split(',') if v]
 
 
-def _validate_units(auth_keys, units_code, value):
-    if not auth_keys and \
-            units_code != 'hashblock.setting.unit.authorized_keys':
-        raise InvalidTransaction(
-            'Cannot set {} until authorized_keys is set.'.format(units_code))
-
-    if units_code == 'hashblock.setting.unit.authorized_keys':
-        if not _split_ignore_empties(value):
-            raise InvalidTransaction('authorized_keys must not be empty.')
-
-    if units_code == 'hashblock.setting.unit.approval_threshold':
-        threshold = None
-        try:
-            threshold = int(value)
-        except ValueError:
-            raise InvalidTransaction('approval_threshold must be an integer')
-
-        if threshold > len(auth_keys):
-            raise InvalidTransaction(
-                'approval_threshold must be less than or equal to number of '
-                'authorized_keys')
-
-    if units_code == 'hashblock.units.vote.proposals':
-        raise InvalidTransaction(
-            'Setting hashblock.units.vote.proposals is read-only')
+def _validate_asset(auth_keys, units_code, value):
+    pass
 
 
-def _get_units_value(context, key, default_value=None):
-    address = _make_units_key(key)
-    units_entry = _get_units_entry(context, address)
+def _get_units_value(context, asset, address, default_value=None):
+    units_entry = _get_asset_entry(context, address)
     for entry in units_entry.entries:
         if key == entry.key:
             return entry.value
@@ -289,8 +312,18 @@ def _set_units_value(context, key, value):
         attributes=[("updated", key)])
 
 
-def _get_units_entry(context, address):
-    units_setting = Unit()
+def _set_asset_entry(context, asset_type):
+    # Use address to see if entry type exists
+    # If exists, update with current type entry
+    # set entry
+
+    # Get an empty from the type
+    # Get the address and pass to _get_asset_entry
+
+    pass
+
+
+def _get_asset_entry(context, asset, address):
 
     try:
         entries_list = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
@@ -299,9 +332,63 @@ def _get_units_entry(context, address):
         raise InternalError('Unable to get {}'.format(address))
 
     if entries_list:
-        units_setting.ParseFromString(entries_list[0].data)
+        asset.ParseFromString(entries_list[0].data)
 
-    return units_setting
+    return asset
+
+
+def _string_tolist(s):
+    """Convert the authorization comma separated string to list
+    """
+    return [v.strip() for v in s.split(',') if v]
+
+
+def _get_setting(context, address, default_value=None):
+    """Get a hashblock settings from the block
+    """
+    setting = Settings()
+    results = _get_state(context, address)
+    if results:
+        setting.ParseFromString(results[0].data)
+        return setting
+    return default_value
+
+
+def _get_candidates(context, address, default_value=None):
+    candidates = AssetCandidates()
+    results = _get_state(context, address)
+    if results:
+        candidates.ParseFromString(results[0].data)
+        return candidates
+    return default_value
+
+
+def _set_candidates(context, address, candidates):
+    addresses = _set_state(context, address, candidates)
+    if len(addresses) != 1:
+        LOGGER.warning(
+            'Failed to save candidates on address %s', address)
+        raise InternalError(
+            'Unable to save candidate block value {}'.format(candidates))
+
+
+def _get_state(context, address):
+    try:
+        results = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
+    except FutureTimeoutError:
+        raise InternalError('State timeout: Unable to get {}'.format(address))
+    return results
+
+
+def _set_state(context, address, object):
+    try:
+        addresses = list(context.set_state(
+            {address: object.SerializeToString()},
+            timeout=STATE_TIMEOUT_SEC))
+    except FutureTimeoutError:
+        raise InternalError('State timeout: Unable to set {}'.format(object))
+
+    return addresses
 
 
 def _to_hash(value):

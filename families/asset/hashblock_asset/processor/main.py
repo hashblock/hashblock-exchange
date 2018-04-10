@@ -14,7 +14,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 import argparse
 import logging
 import os
@@ -22,23 +21,20 @@ import sys
 import pkg_resources
 
 from colorlog import ColoredFormatter
-
-# UnitTransactionHandler
-
 from sawtooth_sdk.processor.core import TransactionProcessor
 from sawtooth_sdk.processor.log import init_console_logging
 from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from processor.handler import UnitTransactionHandler
-from processor.config.units import UnitConfig
-from processor.config.units import \
-    load_default_unit_config
-from processor.config.units import \
-    load_toml_unit_config
-from processor.config.units import \
-    merge_unit_config
+from processor.handler import AssetTransactionHandler
+from processor.config.asset import AssetConfig
+from processor.config.asset import \
+    load_default_asset_config
+from processor.config.asset import \
+    load_toml_asset_config
+from processor.config.asset import \
+    merge_asset_config
 
 DISTRIBUTION_NAME = 'hashblock-units'
 
@@ -72,11 +68,11 @@ def create_console_handler(verbose_level):
 
 
 def setup_loggers(verbose_level, processor):
-    log_config = get_log_config(filename="units_log_config.toml")
+    log_config = get_log_config(filename="asset_log_config.toml")
 
     # If no toml, try loading yaml
     if log_config is None:
-        log_config = get_log_config(filename="units_log_config.yaml")
+        log_config = get_log_config(filename="asset_log_config.yaml")
 
     if log_config is not None:
         log_configuration(log_config=log_config)
@@ -85,7 +81,7 @@ def setup_loggers(verbose_level, processor):
         # use the transaction processor zmq identity for filename
         log_configuration(
             log_dir=log_dir,
-            name="units-" + str(processor.zmq_id)[2:-1])
+            name="asset-" + str(processor.zmq_id)[2:-1])
 
     init_console_logging(verbose_level=verbose_level)
 
@@ -93,9 +89,9 @@ def setup_loggers(verbose_level, processor):
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
         prog=prog_name,
-        description='Starts a hashblock-units transaction processor.',
+        description='Starts a hashblock-asset transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
-               'Unit used by the Sawtooth platform.',
+               'Assets used in the Hashblock system.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
@@ -117,7 +113,7 @@ def create_parser(prog_name):
     parser.add_argument(
         '-V', '--version',
         action='version',
-        version=(DISTRIBUTION_NAME + ' (Hashblock Sawtooth) version {}')
+        version=(DISTRIBUTION_NAME + ' (Hashblock Exchange) version {}')
         .format(version),
         help='display version information')
 
@@ -126,17 +122,17 @@ def create_parser(prog_name):
 
 def load_settings_config(first_config):
     default_settings_config = \
-        load_default_unit_config()
+        load_default_asset_config()
     conf_file = os.path.join(get_config_dir(), 'units.toml')
 
-    toml_config = load_toml_unit_config(conf_file)
+    toml_config = load_toml_asset_config(conf_file)
 
-    return merge_unit_config(
+    return merge_asset_config(
         configs=[first_config, toml_config, default_settings_config])
 
 
 def create_settings_config(args):
-    return UnitConfig(connect=args.connect)
+    return AssetConfig(connect=args.connect)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
@@ -162,10 +158,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     # The prefix should eventually be looked up from the
     # validator's namespace registry.
-    units_prefix = \
-        hashlib.sha512('units'.encode("utf-8")).hexdigest()[0:6]
     handler = \
-        UnitTransactionHandler(namespace_prefix=units_prefix)
+        AssetTransactionHandler()
 
     processor.add_handler(handler)
 

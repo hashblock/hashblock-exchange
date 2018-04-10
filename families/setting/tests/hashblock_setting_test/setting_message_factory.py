@@ -17,9 +17,6 @@
 import logging
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from protobuf.unit_pb2 import UnitPayload
-from protobuf.unit_pb2 import UnitProposal
-from protobuf.unit_pb2 import UnitVote
 from protobuf.units_pb2 import Unit
 
 from protobuf.setting_pb2 import SettingPayload
@@ -27,9 +24,6 @@ from protobuf.setting_pb2 import Setting
 from sdk.python.address import Address
 
 LOGGER = logging.getLogger(__name__)
-
-_MAX_KEY_PARTS = 4
-_ADDRESS_PART_SIZE = 16
 
 
 class SettingMessageFactory(object):
@@ -46,16 +40,6 @@ class SettingMessageFactory(object):
     def public_key(self):
         return self._factory.get_public_key()
 
-    def _key_to_address(self, key):
-        key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-        key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
-
-        def _short_hash(in_str):
-            return self._factory.sha256(in_str.encode())[:16]
-
-        return self._factory.namespace + \
-            ''.join(_short_hash(x) for x in key_parts)
-
     def create_tp_register(self):
         return self._factory.create_tp_register()
 
@@ -63,32 +47,26 @@ class SettingMessageFactory(object):
         return self._factory.create_tp_response(status)
 
     def _create_tp_process_request(self, dimension, payload):
-
-        inputs = [
-            self._addresser.settings(dimension, Address.SETTING_AUTHKEYS),
-            self._addresser.settings(dimension, Address.SETTING_APPTHRESH)]
-
-        outputs = [
-            self._addresser.settings(dimension, Address.SETTING_AUTHKEYS),
-            self._addresser.settings(dimension, Address.SETTING_APPTHRESH)]
-
+        address = self._addresser.settings(dimension)
+        inputs = [address]
+        outputs = [address]
         return self._factory.create_tp_process_request(
             payload.SerializeToString(), inputs, outputs, [])
 
-    def create_setting_transaction(self, key, value, dimension, action):
-        setting = Setting(key=key, value=value)
+    def create_setting_transaction(self, auth_keys, thresh, dimension, action):
+        setting = Setting(auth_list=auth_keys, threshold=thresh)
         payload = SettingPayload(
             action=action,
             dimension=dimension,
             data=setting.SerializeToString())
         return self._create_tp_process_request(dimension, payload)
 
-    def create_get_request(self, code):
-        addresses = [self._key_to_address(code)]
+    def create_get_request(self, dimension):
+        addresses = [self._addresser.settings(dimension)]
         return self._factory.create_get_request(addresses)
 
-    def create_get_response(self, code, value=None):
-        address = self._key_to_address(code)
+    def create_get_response(self, dimension, alist, thresh=None):
+        address = self._addresser.settings(dimension)
 
         if value is not None:
             entry = Unit.Entry(key=code, value=value)
@@ -98,8 +76,8 @@ class SettingMessageFactory(object):
 
         return self._factory.create_get_response({address: data})
 
-    def create_set_request(self, code, value=None):
-        address = self._key_to_address(code)
+    def create_set_request(self, dimension, code, value=None):
+        address = self._addresser.settings(dimension)
 
         if value is not None:
             entry = Unit.Entry(key=code, value=value)
@@ -109,13 +87,13 @@ class SettingMessageFactory(object):
 
         return self._factory.create_set_request({address: data})
 
-    def create_set_response(self, code):
-        addresses = [self._key_to_address(code)]
+    def create_set_response(self, dimension):
+        addresses = [self._addresser.settings(dimension)]
         return self._factory.create_set_response(addresses)
 
     def create_add_event_request(self, key):
         return self._factory.create_add_event_request(
-            "units/update",
+            "hashblock.setting/update",
             [("updated", key)])
 
     def create_add_event_response(self):

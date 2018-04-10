@@ -39,7 +39,7 @@ from processor.config.setting import \
 from processor.config.setting import \
     merge_setting_config
 
-DISTRIBUTION_NAME = 'hashblock-resource'
+DISTRIBUTION_NAME = 'hashblock-setting'
 
 
 def create_console_handler(verbose_level):

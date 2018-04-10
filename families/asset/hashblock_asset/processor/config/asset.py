@@ -25,16 +25,16 @@ from sawtooth_sdk.processor.exceptions import LocalConfigurationError
 LOGGER = logging.getLogger(__name__)
 
 
-def load_default_unit_config():
+def load_default_asset_config():
     """
     Returns the default UnitConfig
     """
-    return UnitConfig(
+    return AssetConfig(
         connect='tcp://localhost:4004'
     )
 
 
-def load_toml_unit_config(filename):
+def load_toml_asset_config(filename):
     """Returns a UnitConfig created by loading a TOML file from the
     filesystem.
 
@@ -42,7 +42,7 @@ def load_toml_unit_config(filename):
         filename (string): The name of the file to load the config from
 
     Returns:
-        config (UnitConfig): The UnitConfig created from the stored
+        config (AssetConfig): The AssetConfig created from the stored
             toml file.
 
     Raises:
@@ -52,7 +52,7 @@ def load_toml_unit_config(filename):
         LOGGER.info(
             "Skipping transaction proccesor config loading from non-existent"
             " config file: %s", filename)
-        return UnitConfig()
+        return AssetConfig()
 
     LOGGER.info("Loading transaction processor information from config: %s",
                 filename)
@@ -73,25 +73,25 @@ def load_toml_unit_config(filename):
             "Invalid keys in transaction processor config: "
             "{}".format(", ".join(sorted(list(invalid_keys)))))
 
-    config = UnitConfig(
+    config = AssetConfig(
         connect=toml_config.get("connect", None)
     )
 
     return config
 
 
-def merge_unit_config(configs):
+def merge_asset_config(configs):
     """
-    Given a list of UnitConfig objects, merges them into a single
-    UnitConfig, giving priority in the order of the configs
+    Given a list of AssetConfig objects, merges them into a single
+    AssetConfig, giving priority in the order of the configs
     (first has highest priority).
 
     Args:
-        config (list of UnitConfigs): The list of units configs that
+        config (list of AssetConfigs): The list of asset configs that
             must be merged together
 
     Returns:
-        config (UnitConfig): one UnitConfig that combines all of the
+        config (AssetConfig): one AssetConfig that combines all of the
             passed in configs.
     """
     connect = None
@@ -100,10 +100,10 @@ def merge_unit_config(configs):
         if config.connect is not None:
             connect = config.connect
 
-    return UnitConfig(connect=connect)
+    return AssetConfig(connect=connect)
 
 
-class UnitConfig:
+class AssetConfig:
     def __init__(self, connect=None):
         self._connect = connect
 

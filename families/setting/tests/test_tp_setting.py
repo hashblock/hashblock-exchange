@@ -22,6 +22,7 @@ from protobuf.setting_pb2 import UnitVote
 from protobuf.setting_pb2 import UnitCandidate
 from protobuf.setting_pb2 import UnitCandidates
 
+from protobuf.asset_pb2 import AssetCandidates
 from protobuf.setting_pb2 import SettingPayload
 from protobuf.setting_pb2 import Setting
 from sdk.python.address import Address
@@ -37,7 +38,7 @@ def _to_hash(value):
     return hashlib.sha256(value).hexdigest()
 
 
-EMPTY_CANDIDATES = UnitCandidates(candidates=[]).SerializeToString()
+EMPTY_CANDIDATES = AssetCandidates(candidates=[]).SerializeToString()
 
 
 class TestSetting(TransactionProcessorTestCase):
@@ -47,11 +48,11 @@ class TestSetting(TransactionProcessorTestCase):
         super().setUpClass()
         cls.factory = SettingMessageFactory()
 
-    def _expect_get(self, key, value=None):
+    def _expect_get(self, dimension, key, value=None):
         received = self.validator.expect(
-            self.factory.create_get_request(key))
+            self.factory.create_get_request(dimension))
         self.validator.respond(
-            self.factory.create_get_response(key, value),
+            self.factory.create_get_response(dimension, key, value),
             received)
 
     def _expect_set(self, key, expected_value):
@@ -79,9 +80,9 @@ class TestSetting(TransactionProcessorTestCase):
         self.validator.expect(
             self.factory.create_tp_response("INTERNAL_ERROR"))
 
-    def _set_setting(self, key, value, dimension, action):
+    def _set_setting(self, auth_list, threshold, dimension, action):
         self.validator.send(self.factory.create_setting_transaction(
-            key, value, dimension, action))
+            auth_list, threshold, dimension, action))
 
     @property
     def _public_key(self):
@@ -91,7 +92,11 @@ class TestSetting(TransactionProcessorTestCase):
         """
         Tests setting an invalid approval_threshold.
         """
-        self._propose("hashblock.units.vote.approval_threshold", "foo")
+        self._set_setting(
+            self._public_key,
+            "2",
+            Address.DIMENSION_UNIT,
+            SettingPayload.CREATE)
 
         self._expect_get('hashblock.units.vote.authorized_keys',
                          self._public_key)
