@@ -123,11 +123,11 @@ class SettingTransactionHandler(TransactionHandler):
 
         candidates = _get_candidates(
             context,
-            Address(Address.FAMILY_ASSET).proposals(self.dimension))
+            Address(Address.FAMILY_ASSET).candidates(self.dimension))
 
         if candidates:
             raise InvalidTransaction(
-                "Invalide state. Proposals already exist")
+                "Invalide state. Candidates already exist")
         auth_keys = _string_tolist(setting.auth_list)
         threshold = int(setting.threshold)
         if threshold <= 0:
@@ -152,9 +152,9 @@ class SettingTransactionHandler(TransactionHandler):
             self.auth_list = None
         return result
 
-    def _create_proposals(self, context):
+    def _create_candidates(self, context):
         candidates = AssetCandidates(candidates=[])
-        caddr = Address(Address.FAMILY_ASSET).proposals(self.dimension)
+        caddr = Address(Address.FAMILY_ASSET).candidates(self.dimension)
         try:
             context.set_state(
                 {caddr: candidates.SerializeToString()},
@@ -183,7 +183,7 @@ class SettingTransactionHandler(TransactionHandler):
             raise InternalError(
                 'Unable to set {}'.format(self.address))
         if self.action == SettingPayload.CREATE:
-            self._create_proposals(context)
+            self._create_candidates(context)
 
 
 def _string_tolist(s):

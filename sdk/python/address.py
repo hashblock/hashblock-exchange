@@ -41,14 +41,14 @@ class Address():
     SETTING_APPTHRESH = "approval-threshold"
 
     # Proposals
-    ASSET_PROPOSAL = "proposals"
+    ASSET_CANDIDATES = "candidates"
 
     _namespace_hash = hashlib.sha512(
         NAMESPACE.encode("utf-8")).hexdigest()[0:6]
     _filler_hash26 = hashlib.sha512('filler'.encode("utf-8")).hexdigest()[0:52]
     _filler_hash23 = _filler_hash26[0:46]
-    _proposal_hash = hashlib.sha512(
-        ASSET_PROPOSAL.encode("utf-8")).hexdigest()[0:6]
+    _candidates_hash = hashlib.sha512(
+        ASSET_CANDIDATES.encode("utf-8")).hexdigest()[0:6]
 
     def __init__(self, family):
         self._family = family
@@ -71,11 +71,11 @@ class Address():
     # 6-8 proposals
     # 9-11 dimension
     # 12-34 filler23
-    def proposals(self, dimension):
+    def candidates(self, dimension):
         """Create the dimensions proposal address
         """
         return self.ns_family \
-            + self._proposal_hash \
+            + self._candidates_hash \
             + self.hashup(dimension)[0:6] \
             + self._filler_hash23
 

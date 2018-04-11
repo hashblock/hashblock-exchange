@@ -44,6 +44,7 @@ services:
         python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
         pip3 install ptvsd==3.0.0.0 && \
         pip3 install ply && \
+        sawtooth keygen my_key && \
         sawtooth keygen your_key && \
         tail -f /dev/null \
         \""
@@ -155,8 +156,8 @@ services:
         sawtooth keygen my_key && \
         sawtooth keygen your_key && \
         sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
-        /project/hashblock-exchange/bin/hbsetting genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
-        sawadm genesis /etc/config-settings.batch /etc/config-units.batch && \
+        /project/hashblock-exchange/bin/hbsetting genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-hbsettings.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
+        sawadm genesis /etc/config-settings.batch /etc/config-hbsettings.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \

@@ -18,6 +18,7 @@ from abc import ABC, abstractmethod
 
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 
+from protobuf.asset_pb2 import AssetProposal
 from protobuf.asset_pb2 import Unit
 from protobuf.asset_pb2 import Resource
 
@@ -34,13 +35,9 @@ class AssetType(ABC):
     @classmethod
     def type_instance(cls, dimension):
         if dimension == Address.DIMENSION_UNIT:
-            return TypeUnit(
-                dimension,
-                Address(Address.FAMILY_SETTING).settings(dimension))
+            return TypeUnit(dimension)
         elif dimension == Address.DIMENSION_RESOURCE:
-            return TypeResource(
-                dimension,
-                Address(Address.FAMILY_SETTING).settings(dimension))
+            return TypeResource(dimension)
         else:
             raise InvalidTransaction(
                 'Invalid asset type {}'.format(dimension))
@@ -51,12 +48,31 @@ class AssetType(ABC):
 
     @property
     @abstractmethod
+    def asset(self):
+        pass
+
+    @asset.setter
+    @abstractmethod
+    def asset(self, asset):
+        pass
+
+    @property
+    @abstractmethod
     def setting_address(self):
         pass
 
     @property
     @abstractmethod
     def candidates_address(self):
+        pass
+
+    @property
+    @abstractmethod
+    def asset_address(self):
+        pass
+
+    @abstractmethod
+    def asset_from_proposal(self, proposal):
         pass
 
     @property
@@ -74,7 +90,17 @@ class BaseAssetType(AssetType):
     def __init__(self, dimension):
         self._settings = None
         self._dimension = dimension
+        self._candidates_addr = self.addresser.candidates(
+            dimension)
         self._sett_addr = Address(Address.FAMILY_SETTING).settings(dimension)
+
+    @property
+    def asset(self):
+        return self._asset
+
+    @asset.setter
+    def asset(self, asset):
+        self.asset = asset
 
     @property
     def setting_address(self):
@@ -91,6 +117,18 @@ class BaseAssetType(AssetType):
     @settings.setter
     def settings(self, settings):
         self._settings = settings
+
+    def asset_from_proposal(self, proposal):
+        x = self.empty_asset()
+        x.ParseFromString(proposal.asset)
+        self.asset = x
+
+    @property
+    def asset_address(self):
+        self.addresser.asset_item(
+            self.dimension,
+            self.asset.system,
+            self.asset.key)
 
 
 class TypeUnit(BaseAssetType):

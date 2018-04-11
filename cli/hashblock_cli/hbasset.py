@@ -33,11 +33,12 @@ from colorlog import ColoredFormatter
 from hashblock_cli.exceptions import CliException
 from hashblock_cli.rest_client import RestClient
 
-from hashblock_cli.protobuf.resource_pb2 import ResourcePayload
-from hashblock_cli.protobuf.resource_pb2 import ResourceProposal
-from hashblock_cli.protobuf.resource_pb2 import ResourceVote
-from hashblock_cli.protobuf.resource_pb2 import ResourceCandidates
-from hashblock_cli.protobuf.resource_pb2 import Resource
+from hashblock_cli.protobuf.asset_pb2 import AssetPayload
+from hashblock_cli.protobuf.asset_pb2 import AssetProposal
+from hashblock_cli.protobuf.asset_pb2 import AssetVote
+from hashblock_cli.protobuf.asset_pb2 import AssetCandidates
+from hashblock_cli.protobuf.asset_pb2 import Resource
+from hashblock_cli.protobuf.asset_pb2 import Unit
 from hashblock_cli.protobuf.transaction_pb2 import TransactionHeader
 from hashblock_cli.protobuf.transaction_pb2 import Transaction
 from hashblock_cli.protobuf.batch_pb2 import BatchHeader
@@ -49,9 +50,13 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
-DISTRIBUTION_NAME = 'resset'
+from sdk.python.address import Address
 
-FAMILY_NAME = 'hashblock_resource'
+DISTRIBUTION_NAME = 'hbasset'
+
+_addresser = Address(Address.FAMILY_ASSET)
+
+FAMILY_NAME = 'hashblock_asset'
 RESOURCE_NAMESPACE = hashlib.sha512(
     FAMILY_NAME.encode("utf-8")).hexdigest()[0:6]
 
@@ -77,20 +82,63 @@ def add_config_parser(subparsers, parent_parser):
     config_parsers.required = True
 
 
+def _do_create_asset(type_map):
+
+    asset_type = type_map['asset']
+    asset_list = ['unit', 'resource']
+    if asset_type:
+        if asset_type in asset_list:
+            if asset_type == 'unit':
+                type_map['proposal_type'] = AssetProposal.UNIT
+                asset = Unit(
+                    system=type_map['system'],
+                    key=type_map['key'],
+                    value=type_map['value'])
+            elif asset_type == 'resource':
+                type_map['proposal_type'] = AssetProposal.RESOURCE
+                asset = Resource(
+                    system=type_map['system'],
+                    key=type_map['key'],
+                    value=type_map['value'],
+                    sku=type_map['sku'])
+            else:
+                raise AssertionError(
+                    'Asset must be one of {}'.format(asset_list))
+    else:
+        raise AssertionError('Unknown format {}'.format(args.format))
+
+    return(type_map, asset)
+
+
 def _do_config_proposal_create(args):
     """Executes the 'proposal create' subcommand.  Given a key file, and a
     series of code/value pairs, it generates batches of hashblock_resource
     transactions in a BatchList instance.  The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
-    resources = [s.split('=', 1) for s in args.resource]
 
+    type_map = dict()
+    for s in args.asset:
+        keypair = s.split('=', 1)
+        type_map[keypair[0]] = keypair[1]
+    # resources = [s.split('=', 1) for s in args.resource]
+    type_map, asset = _do_create_asset(type_map)
+    print("Asset = {} from {}".format(asset, type_map))
     signer = _read_signer(args.key)
 
-    txns = [_create_propose_txn(signer, resource)
-            for resource in resources]
+    txn = [_create_propose_txn(
+        signer,
+        asset,
+        type_map['asset'],
+        _addresser.asset_item(
+            type_map['asset'],
+            type_map['system'],
+            type_map['key']),
+        type_map['proposal_type'])]
+    # txns = [_create_propose_txn(signer, resource)
+    #         for resource in resources]
 
-    batch = _create_batch(signer, txns)
+    batch = _create_batch(signer, txn)
 
     batch_list = BatchList(batches=[batch])
 
@@ -103,7 +151,8 @@ def _do_config_proposal_create(args):
                 'Unable to write to batch file: {}'.format(str(e)))
     elif args.url is not None:
         rest_client = RestClient(args.url)
-        rest_client.send_batches(batch_list)
+        x = rest_client.send_batches(batch_list)
+        print("Rest returns {}".format(x))
     else:
         raise AssertionError('No target for create set.')
 
@@ -119,12 +168,18 @@ def _do_config_proposal_list(args):
         # Check to see if the first public key matches the given public key
         # (if it is not None).  This public key belongs to the user that
         # created it.
-        has_pub_key = (not public_key
-                       or candidate.votes[0].public_key == public_key)
-        has_prefix = candidate.proposal.code.startswith(prefix)
-        return has_prefix and has_pub_key
+        has_pub_key = (not public_key or
+                    candidate.votes[0].public_key == public_key)
+        return has_pub_key
 
-    candidates_payload = _get_proposals(RestClient(args.url))
+    if args.filter == 'unit':
+        dimension = Address.DIMENSION_UNIT
+    elif args.filter == 'resource':
+        dimension = Address.DIMENSION_RESOURCE
+    else:
+        raise AssertionError('Arg filter must be one of {unit, resource')
+
+    candidates_payload = _get_proposals(RestClient(args.url), dimension)
     candidates = [
         c for c in candidates_payload.candidates
         if _accept(c, args.public_key, args.filter)
@@ -132,21 +187,37 @@ def _do_config_proposal_list(args):
 
     if args.format == 'default':
         for candidate in candidates:
-            print('{}: {} => {}'.format(
-                candidate.proposal_id,
-                candidate.proposal.code,
-                candidate.proposal.value))
+            if candidate.proposal.type == AssetProposal.UNIT:
+                proposal_asset = Unit()
+                proposal_asset.ParseFromString(candidate.proposal.asset)
+                print("{}: system '{}' key '{}' => value '{}'".format(
+                    candidate.proposal_id,
+                    proposal_asset.system,
+                    proposal_asset.key,
+                    proposal_asset.value))
+            else:
+                proposal_asset = Resource()
+                proposal_asset.ParseFromString(candidate.proposal.asset)
+                print("{}: system '{}' key '{}' => value '{}' sku '{}'".format(
+                    candidate.proposal_id,
+                    proposal_asset.system,
+                    proposal_asset.key,
+                    proposal_asset.value,
+                    proposal_asset.sku))
+
+            # candidate.proposal.asset.sku))
     elif args.format == 'csv':
         writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
-        writer.writerow(['PROPOSAL_ID', 'CODE', 'VALUE'])
+        writer.writerow(['PROPOSAL_ID', 'SYSTEM', 'KEY', 'VALUE', 'SKU'])
         for candidate in candidates:
             writer.writerow([
-                candidate.proposal_id,
-                candidate.proposal.code,
-                candidate.proposal.value])
+                candidate.proposal.asset.system,
+                candidate.proposal.asset.key,
+                candidate.proposal.asset.value,
+                candidate.proposal.asset.sku])
     elif args.format == 'json' or args.format == 'yaml':
         candidates_snapshot = \
-            {c.proposal_id: {c.proposal.code: c.proposal.value}
+            {c.proposal_id: {c.proposal.asset.key: c.proposal.asset.value}
              for c in candidates}
 
         if args.format == 'json':
@@ -167,7 +238,7 @@ def _do_config_proposal_vote(args):
     signer = _read_signer(args.key)
     rest_client = RestClient(args.url)
 
-    proposals = _get_proposals(rest_client)
+    proposals = _get_proposals(rest_client, Address.DIMENSION_RESOURCE)
 
     proposal = None
     for candidate in proposals.candidates:
@@ -237,25 +308,14 @@ def _do_config_genesis(args):
             'Unable to write to batch file: {}'.format(str(e)))
 
 
-def _get_proposals(rest_client):
-    state_leaf = rest_client.get_leaf(
-        _key_to_address('hashblock.resource.vote.proposals'))
+def _get_proposals(rest_client, asset_str):
 
-    config_candidates = ResourceCandidates()
-
-    if state_leaf is not None:
-        resource_bytes = b64decode(state_leaf['data'])
-        resource = Resource()
-        resource.ParseFromString(resource_bytes)
-
-        candidates_bytes = None
-        for entry in resource.entries:
-            if entry.key == 'hashblock.resource.vote.proposals':
-                candidates_bytes = entry.value
-
+    state_leaf = rest_client.get_leaf(_addresser.candidates(asset_str))
+    config_candidates = AssetCandidates()
+    if state_leaf:
+        candidates_bytes = b64decode(state_leaf['data'])
         if candidates_bytes is not None:
-            decoded = b64decode(candidates_bytes)
-            config_candidates.ParseFromString(decoded)
+            config_candidates.ParseFromString(candidates_bytes)
 
     return config_candidates
 
@@ -319,20 +379,24 @@ def _create_batch(signer, transactions):
         transactions=transactions)
 
 
-def _create_propose_txn(signer, resource_key_value):
-    """Creates an individual hashblock_resource transaction for the given key and
+def _create_propose_txn(signer, asset, dimension, asset_addr, proposal_type):
+    """Creates an individual hashblock_asset transaction for the given key and
     value.
     """
-    resource_key, resource_value = resource_key_value
-    nonce = str(datetime.datetime.utcnow().timestamp())
-    proposal = ResourceProposal(
-        code=resource_key,
-        value=resource_value,
-        nonce=nonce)
-    payload = ResourcePayload(data=proposal.SerializeToString(),
-                              action=ResourcePayload.PROPOSE)
 
-    return _make_txn(signer, resource_key, payload)
+    nonce = str(datetime.datetime.utcnow().timestamp())
+    proposal = AssetProposal(
+        type=proposal_type,
+        asset=asset.SerializeToString(),
+        nonce=nonce)
+
+    payload = AssetPayload(
+        data=proposal.SerializeToString(),
+        dimension=dimension,
+        action=AssetPayload.PROPOSE)
+
+    print("Payload = {}".format(payload))
+    return _make_txn(signer, dimension, asset_addr, payload)
 
 
 def _create_vote_txn(signer, proposal_id, resource_key, vote_value):
@@ -351,16 +415,16 @@ def _create_vote_txn(signer, proposal_id, resource_key, vote_value):
     return _make_txn(signer, resource_key, payload)
 
 
-def _make_txn(signer, resource_key, payload):
-    """Creates and signs a hashblock_resource transaction with with a payload.
+def _make_txn(signer, dimension, asset_addr, payload):
+    """Creates and signs a hashblock_asset transaction with with a payload.
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
         signer_public_key=signer.get_public_key().as_hex(),
-        family_name='hashblock_resource',
+        family_name=Address.NAMESPACE_ASSET,
         family_version='1.0.0',
-        inputs=_config_inputs(resource_key),
-        outputs=_config_outputs(resource_key),
+        inputs=_config_inputs(asset_addr, dimension),
+        outputs=_config_outputs(asset_addr, dimension),
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex()
@@ -372,25 +436,24 @@ def _make_txn(signer, resource_key, payload):
         payload=serialized_payload)
 
 
-def _config_inputs(key):
-    """Creates the list of inputs for a hashblock_resource transaction, for a
+def _config_inputs(asset_addr, dimension):
+    """Creates the list of inputs for a hashblock_asset transaction, for a
     given unit key.
     """
     return [
-        _key_to_address('hashblock.resource.vote.proposals'),
-        _key_to_address('hashblock.setting.resource.authorized_keys'),
-        _key_to_address('hashblock.setting.resource.approval_threshold'),
-        _key_to_address(key)
+        asset_addr,
+        _addresser.candidates(dimension),
+        Address(Address.FAMILY_SETTING).settings(dimension)
     ]
 
 
-def _config_outputs(key):
+def _config_outputs(asset_addr, dimension):
     """Creates the list of outputs for a hashblock_resource transaction, for a
     given unit key.
     """
     return [
-        _key_to_address('hashblock.resource.vote.proposals'),
-        _key_to_address(key)
+        asset_addr,
+        _addresser.candidates(dimension),
     ]
 
 
@@ -520,7 +583,7 @@ def create_parser(prog_name):
         'proposal',
         help='Views, creates, or votes on resource change proposals',
         description='Provides subcommands to view, create, or vote on '
-                    'proposed resource')
+                    'proposed asset')
     proposal_parsers = proposal_parser.add_subparsers(
         title='subcommands',
         dest='proposal_cmd')
@@ -528,7 +591,7 @@ def create_parser(prog_name):
 
     prop_parser = proposal_parsers.add_parser(
         'create',
-        help='Creates proposals for unit changes',
+        help='Creates proposals for asset changes',
         description='Create proposals for resource changes. The change '
                     'may be applied immediately or after a series of votes, '
                     'depending on the vote threshold unit.'
@@ -552,16 +615,17 @@ def create_parser(prog_name):
         default='http://rest-api:8008')
 
     prop_parser.add_argument(
-        'resource',
+        'asset',
         type=str,
         nargs='+',
-        help='configuration resource as key/value pair with the '
-        'format <code>=<value>')
+        help="""Asset unit defined as name/value pairs
+        Unit Asset pairs: asset=unit system='' key='' value=''
+        Resource Asset pairs: asset=resource system='' key='' value='' sku=''""")
 
     proposal_list_parser = proposal_parsers.add_parser(
         'list',
-        help='Lists the currently proposed (not active) resource',
-        description='Lists the currently proposed (not active) resource. '
+        help='Lists the currently proposed (not active) assets',
+        description='Lists the currently proposed (not active) assets. '
                     'Use this list of proposals to find proposals to '
                     'vote on.')
 

@@ -196,10 +196,10 @@ def _make_setting_txn(signer, dimension, payload):
         family_version='1.0.0',
         inputs=[
             _addresser.settings(dimension),
-            props.proposals(dimension)],
+            props.candidates(dimension)],
         outputs=[
             _addresser.settings(dimension),
-            props.proposals(dimension)],
+            props.candidates(dimension)],
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_public_key=signer.get_public_key().as_hex()
