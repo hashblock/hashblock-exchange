@@ -14,6 +14,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
+
 from abc import ABC, abstractmethod
 
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
@@ -23,6 +25,8 @@ from protobuf.asset_pb2 import Unit
 from protobuf.asset_pb2 import Resource
 
 from sdk.python.address import Address
+
+LOGGER = logging.getLogger(__name__)
 
 
 class AssetType(ABC):
@@ -88,6 +92,7 @@ class AssetType(ABC):
 
 class BaseAssetType(AssetType):
     def __init__(self, dimension):
+        self._asset = None
         self._settings = None
         self._dimension = dimension
         self._candidates_addr = self.addresser.candidates(
@@ -100,15 +105,7 @@ class BaseAssetType(AssetType):
 
     @asset.setter
     def asset(self, asset):
-        self.asset = asset
-
-    @property
-    def setting_address(self):
-        return self._sett_addr
-
-    @property
-    def candidates_address(self):
-        return self._candidates_addr
+        self._asset = asset
 
     @property
     def settings(self):
@@ -118,6 +115,18 @@ class BaseAssetType(AssetType):
     def settings(self, settings):
         self._settings = settings
 
+    @property
+    def dimension(self):
+        return self._dimension
+
+    @property
+    def candidates_address(self):
+        return self._candidates_addr
+
+    @property
+    def setting_address(self):
+        return self._sett_addr
+
     def asset_from_proposal(self, proposal):
         x = self.empty_asset()
         x.ParseFromString(proposal.asset)
@@ -125,7 +134,7 @@ class BaseAssetType(AssetType):
 
     @property
     def asset_address(self):
-        self.addresser.asset_item(
+        return self.addresser.asset_item(
             self.dimension,
             self.asset.system,
             self.asset.key)

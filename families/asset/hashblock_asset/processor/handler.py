@@ -16,9 +16,6 @@
 
 import logging
 import hashlib
-import base64
-
-from functools import lru_cache
 
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
@@ -51,6 +48,10 @@ class AssetTransactionHandler(TransactionHandler):
         self._action = None
 
     @property
+    def addresser(self):
+        return self._addresser
+
+    @property
     def family_name(self):
         return Address.NAMESPACE_ASSET
 
@@ -60,7 +61,7 @@ class AssetTransactionHandler(TransactionHandler):
 
     @property
     def namespaces(self):
-        return [Address(Address.FAMILY_ASSET).ns_family]
+        return [self.addresser.ns_family]
 
     @property
     def asset_type(self):
@@ -97,25 +98,25 @@ class AssetTransactionHandler(TransactionHandler):
         elif asset_payload.action == AssetPayload.VOTE:
             return self._apply_vote(
                 public_key,
-                asset_payload.data,
                 auth_keys,
+                asset_payload.data,
                 context)
         else:
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE}")
 
-    def _apply_proposal(self, public_key,
-                        asset_proposal_data, context):
+    def _apply_proposal(self, public_key, asset_proposal_data, context):
         asset_proposal = AssetProposal()
         asset_proposal.ParseFromString(asset_proposal_data)
 
-        proposal_id = hashlib.sha256(asset_proposal_data).hexdigest()
+        self.asset_type.asset_from_proposal(asset_proposal)
+        proposal_id = (self.asset_type.asset_address)
+
         approval_threshold = self._get_approval_threshold(
             context,
             self.asset_type)
         if approval_threshold > 1:
             asset_candidates = self._get_candidates(context)
-            LOGGER.debug("Candidates = {}".format(asset_candidates))
             existing_candidate = _first(
                 asset_candidates.candidates,
                 lambda candidate: candidate.proposal_id == proposal_id)
@@ -138,12 +139,10 @@ class AssetTransactionHandler(TransactionHandler):
                          .format(asset_proposal.asset))
             self._set_candidates(context, asset_candidates)
         else:
-            self.asset_type.asset_from_proposal(asset_proposal)
             _set_asset(context, self.asset_type)
             LOGGER.debug('Set asset {}'.format(self.asset_type.asset))
 
-    def _apply_vote(self, public_key,
-                    asset_vote_data, authorized_keys, context):
+    def _apply_vote(self, public_key, authorized_keys, asset_vote_data, context):
         asset_vote = AssetVote()
         asset_vote.ParseFromString(asset_vote_data)
         proposal_id = asset_vote.proposal_id
@@ -159,10 +158,13 @@ class AssetTransactionHandler(TransactionHandler):
 
         candidate_index = _index_of(asset_candidates.candidates, candidate)
 
-        approval_threshold = self._get_approval_threshold(context)
+        approval_threshold = self._get_approval_threshold(
+            context,
+            self.asset_type)
 
         vote_record = _first(candidate.votes,
                              lambda record: record.public_key == public_key)
+
         if vote_record is not None:
             raise InvalidTransaction(
                 '{} has already voted'.format(public_key))
@@ -173,25 +175,31 @@ class AssetTransactionHandler(TransactionHandler):
 
         accepted_count = 0
         rejected_count = 0
-        self.asset_type.asset_from_proposal(candidate.proposal)
         for vote_record in candidate.votes:
             if vote_record.vote == AssetVote.ACCEPT:
                 accepted_count += 1
             elif vote_record.vote == AssetVote.REJECT:
                 rejected_count += 1
 
+        LOGGER.debug(
+            "Vote tally accepted {} rejected {}"
+            .format(accepted_count, rejected_count))
+
+        self.asset_type.asset_from_proposal(candidate.proposal)
+
         if accepted_count >= approval_threshold:
             _set_asset(context, self.asset_type)
-            LOGGER.debug('Set asset {}'.format(self.asset_type.asset))
             del asset_candidates.candidates[candidate_index]
+            self._set_candidates(context, asset_candidates)
         elif rejected_count >= approval_threshold or \
                 (rejected_count + accepted_count) == len(authorized_keys):
             LOGGER.debug(
                 'Proposal for {} was rejected'.format(self.asset_type.asset))
             del asset_candidates.candidates[candidate_index]
+            self._set_candidates(context, asset_candidates)
         else:
             LOGGER.debug('Vote recorded for {}'.format(self.asset_type.asset))
-            _set_candidates(context, asset_candidates)
+            self._set_candidates(context, asset_candidates)
 
     def _get_candidates(self, context):
         candidates = _get_candidates(
@@ -207,8 +215,8 @@ class AssetTransactionHandler(TransactionHandler):
     def _set_candidates(self, context, candidates):
         _set_candidates(
             context,
-            self.asset_type.candidates_address, candidates)
-        pass
+            self.asset_type.candidates_address,
+            candidates)
 
     def _get_auth_keys(self, context, asset_type):
         """Retrieve the authorization keys for dimension
@@ -281,7 +289,7 @@ def _set_asset(context, asset_type):
     # Get an empty from the type
     # Get the address and pass to _get_asset_entry
     address = asset_type.asset_address
-    addresses = list(_set_state(address, asset_type.asset))
+    addresses = list(_set_state(context, address, asset_type.asset))
 
     if len(addresses) != 1:
         LOGGER.warning(

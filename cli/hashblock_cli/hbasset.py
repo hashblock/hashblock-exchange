@@ -121,9 +121,8 @@ def _do_config_proposal_create(args):
     for s in args.asset:
         keypair = s.split('=', 1)
         type_map[keypair[0]] = keypair[1]
-    # resources = [s.split('=', 1) for s in args.resource]
+
     type_map, asset = _do_create_asset(type_map)
-    print("Asset = {} from {}".format(asset, type_map))
     signer = _read_signer(args.key)
 
     txn = [_create_propose_txn(
@@ -157,6 +156,10 @@ def _do_config_proposal_create(args):
         raise AssertionError('No target for create set.')
 
 
+# bin/hbasset proposal create \
+# -k /root/.sawtooth/keys/my_key.priv \
+# asset='unit' system='imperial' key='unity' value='1'
+
 def _do_config_proposal_list(args):
     """Executes the 'proposal list' subcommand.
 
@@ -168,16 +171,15 @@ def _do_config_proposal_list(args):
         # Check to see if the first public key matches the given public key
         # (if it is not None).  This public key belongs to the user that
         # created it.
-        has_pub_key = (not public_key or
+        return (not public_key or
                     candidate.votes[0].public_key == public_key)
-        return has_pub_key
 
-    if args.filter == 'unit':
+    if args.dimension == 'unit':
         dimension = Address.DIMENSION_UNIT
-    elif args.filter == 'resource':
+    elif args.dimension == 'resource':
         dimension = Address.DIMENSION_RESOURCE
     else:
-        raise AssertionError('Arg filter must be one of {unit, resource')
+        raise AssertionError('Dimension must be one of {unit, resource')
 
     candidates_payload = _get_proposals(RestClient(args.url), dimension)
     candidates = [
@@ -190,7 +192,7 @@ def _do_config_proposal_list(args):
             if candidate.proposal.type == AssetProposal.UNIT:
                 proposal_asset = Unit()
                 proposal_asset.ParseFromString(candidate.proposal.asset)
-                print("{}: system '{}' key '{}' => value '{}'".format(
+                print("PK {}: system '{}' key '{}' => value '{}'".format(
                     candidate.proposal_id,
                     proposal_asset.system,
                     proposal_asset.key,
@@ -198,7 +200,7 @@ def _do_config_proposal_list(args):
             else:
                 proposal_asset = Resource()
                 proposal_asset.ParseFromString(candidate.proposal.asset)
-                print("{}: system '{}' key '{}' => value '{}' sku '{}'".format(
+                print("PK {}: system '{}' key '{}' => value '{}' sku '{}'".format(
                     candidate.proposal_id,
                     proposal_asset.system,
                     proposal_asset.key,
@@ -238,7 +240,14 @@ def _do_config_proposal_vote(args):
     signer = _read_signer(args.key)
     rest_client = RestClient(args.url)
 
-    proposals = _get_proposals(rest_client, Address.DIMENSION_RESOURCE)
+    if args.dimension == 'unit':
+        dimension = Address.DIMENSION_UNIT
+    elif args.dimension == 'resource':
+        dimension = Address.DIMENSION_RESOURCE
+    else:
+        raise AssertionError('Dimension must be one of {unit, resource')
+
+    proposals = _get_proposals(rest_client, dimension)
 
     proposal = None
     for candidate in proposals.candidates:
@@ -254,16 +263,19 @@ def _do_config_proposal_vote(args):
             raise CliException(
                 'A vote has already been recorded with this signing key')
 
+    print("Proposing to vote")
+
     txn = _create_vote_txn(
         signer,
         args.proposal_id,
-        proposal.proposal.code,
+        dimension,
         args.vote_value)
     batch = _create_batch(signer, [txn])
 
     batch_list = BatchList(batches=[batch])
 
-    rest_client.send_batches(batch_list)
+    x = rest_client.send_batches(batch_list)
+    print("Rest returns {}".format(x))
 
 
 def _do_config_genesis(args):
@@ -399,20 +411,24 @@ def _create_propose_txn(signer, asset, dimension, asset_addr, proposal_type):
     return _make_txn(signer, dimension, asset_addr, payload)
 
 
-def _create_vote_txn(signer, proposal_id, resource_key, vote_value):
+def _create_vote_txn(signer, proposal_id, dimension, vote_value):
     """Creates an individual hashblock_resource transaction for voting on a
-    proposal for a particular unit key.
+    proposal for a particular asset. The proposal_id is the asset address
     """
     if vote_value == 'accept':
-        vote_id = ResourceVote.ACCEPT
+        vote_id = AssetVote.ACCEPT
     else:
-        vote_id = ResourceVote.REJECT
+        vote_id = AssetVote.REJECT
 
-    vote = ResourceVote(proposal_id=proposal_id, vote=vote_id)
-    payload = ResourcePayload(data=vote.SerializeToString(),
-                              action=ResourcePayload.VOTE)
+    vote = AssetVote(
+        proposal_id=proposal_id,
+        vote=vote_id)
+    payload = AssetPayload(
+        data=vote.SerializeToString(),
+        dimension=dimension,
+        action=AssetPayload.VOTE)
 
-    return _make_txn(signer, resource_key, payload)
+    return _make_txn(signer, dimension, proposal_id, payload)
 
 
 def _make_txn(signer, dimension, asset_addr, payload):
@@ -642,10 +658,17 @@ def create_parser(prog_name):
         help='filter proposals from a particular public key')
 
     proposal_list_parser.add_argument(
-        '--filter',
+        '-d', '--dimension',
+        type=str,
+        default='unit',
+        choices=['unit', 'resource'],
+        help='choose the dimension of asset to list')
+
+    proposal_list_parser.add_argument(
+        '-f', '--filter',
         type=str,
         default='',
-        help='filter codes that begin with this value')
+        help='filter asset that begin with this value')
 
     proposal_list_parser.add_argument(
         '--format',
@@ -674,6 +697,13 @@ def create_parser(prog_name):
         'proposal_id',
         type=str,
         help='identify the proposal to vote on')
+
+    vote_parser.add_argument(
+        '-d', '--dimension',
+        type=str,
+        default='unit',
+        choices=['unit', 'resource'],
+        help='choose the dimension of asset to list')
 
     vote_parser.add_argument(
         'vote_value',
