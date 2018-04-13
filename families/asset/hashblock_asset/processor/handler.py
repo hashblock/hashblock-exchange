@@ -105,9 +105,9 @@ class AssetTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE}")
 
-    def _apply_proposal(self, public_key, asset_proposal_data, context):
+    def _apply_proposal(self, public_key, proposal_data, context):
         asset_proposal = AssetProposal()
-        asset_proposal.ParseFromString(asset_proposal_data)
+        asset_proposal.ParseFromString(proposal_data)
 
         self.asset_type.asset_from_proposal(asset_proposal)
         proposal_id = (self.asset_type.asset_address)
@@ -142,9 +142,9 @@ class AssetTransactionHandler(TransactionHandler):
             _set_asset(context, self.asset_type)
             LOGGER.debug('Set asset {}'.format(self.asset_type.asset))
 
-    def _apply_vote(self, public_key, authorized_keys, asset_vote_data, context):
+    def _apply_vote(self, public_key, authorized_keys, vote_data, context):
         asset_vote = AssetVote()
-        asset_vote.ParseFromString(asset_vote_data)
+        asset_vote.ParseFromString(vote_data)
         proposal_id = asset_vote.proposal_id
 
         asset_candidates = self._get_candidates(context)

@@ -65,17 +65,25 @@ class Address():
         """
         return hashlib.sha512(value.encode("utf-8")).hexdigest()
 
-    # E.g. hashblock.asset.proposal.unit
+    # E.g. hashblock.asset.candidates
     # 0-2 namespace
     # 3-5 family
-    # 6-8 proposals
+    # 6-8 candidates
+    @property
+    def candidates_base(self):
+        return self.ns_family \
+            + self._candidates_hash
+
+    # E.g. hashblock.asset.candidates.dimension.filler
+    # 0-2 namespace
+    # 3-5 family
+    # 6-8 candidates
     # 9-11 dimension
     # 12-34 filler23
     def candidates(self, dimension):
         """Create the dimensions proposal address
         """
-        return self.ns_family \
-            + self._candidates_hash \
+        return self.candidates_base \
             + self.hashup(dimension)[0:6] \
             + self._filler_hash23
 

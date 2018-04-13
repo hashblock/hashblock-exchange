@@ -56,14 +56,6 @@ DISTRIBUTION_NAME = 'hbasset'
 
 _addresser = Address(Address.FAMILY_ASSET)
 
-FAMILY_NAME = 'hashblock_asset'
-RESOURCE_NAMESPACE = hashlib.sha512(
-    FAMILY_NAME.encode("utf-8")).hexdigest()[0:6]
-
-_MIN_PRINT_WIDTH = 15
-_MAX_KEY_PARTS = 4
-_ADDRESS_PART_SIZE = 16
-
 
 def add_config_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the config command and
@@ -83,7 +75,8 @@ def add_config_parser(subparsers, parent_parser):
 
 
 def _do_create_asset(type_map):
-
+    """Parses command line arguments into an asset object
+    """
     asset_type = type_map['asset']
     asset_list = ['unit', 'resource']
     if asset_type:
@@ -134,8 +127,6 @@ def _do_config_proposal_create(args):
             type_map['system'],
             type_map['key']),
         type_map['proposal_type'])]
-    # txns = [_create_propose_txn(signer, resource)
-    #         for resource in resources]
 
     batch = _create_batch(signer, txn)
 
@@ -150,8 +141,7 @@ def _do_config_proposal_create(args):
                 'Unable to write to batch file: {}'.format(str(e)))
     elif args.url is not None:
         rest_client = RestClient(args.url)
-        x = rest_client.send_batches(batch_list)
-        print("Rest returns {}".format(x))
+        rest_client.send_batches(batch_list)
     else:
         raise AssertionError('No target for create set.')
 
@@ -167,32 +157,37 @@ def _do_config_proposal_list(args):
     the current pending proposals for resource changes.
     """
 
-    def _accept(candidate, public_key, prefix):
+    def _accept(candidate, public_key):
         # Check to see if the first public key matches the given public key
         # (if it is not None).  This public key belongs to the user that
         # created it.
         return (not public_key or
-                    candidate.votes[0].public_key == public_key)
+                candidate.votes[0].public_key == public_key)
 
-    if args.dimension == 'unit':
-        dimension = Address.DIMENSION_UNIT
-    elif args.dimension == 'resource':
-        dimension = Address.DIMENSION_RESOURCE
+    rclient = RestClient(args.url)
+
+    if args.unit:
+        candidates_payload = [_get_proposals(rclient, Address.DIMENSION_UNIT)]
+    elif args.resource:
+        candidates_payload = [
+            _get_proposals(rclient, Address.DIMENSION_RESOURCE)]
+    elif args.all:
+        candidates_payload = _get_all_proposals(rclient)
     else:
-        raise AssertionError('Dimension must be one of {unit, resource')
+        raise AssertionError(
+            'Dimension must be one of {-a[ll] -u[nit], -r[esource]}')
 
-    candidates_payload = _get_proposals(RestClient(args.url), dimension)
     candidates = [
-        c for c in candidates_payload.candidates
-        if _accept(c, args.public_key, args.filter)
-    ]
+        item for sublist in candidates_payload
+        for item in sublist.candidates
+        if _accept(item, args.public_key)]
 
     if args.format == 'default':
         for candidate in candidates:
             if candidate.proposal.type == AssetProposal.UNIT:
                 proposal_asset = Unit()
                 proposal_asset.ParseFromString(candidate.proposal.asset)
-                print("PK {}: system '{}' key '{}' => value '{}'".format(
+                print("UNIT {}: system '{}' key '{}' => value '{}'".format(
                     candidate.proposal_id,
                     proposal_asset.system,
                     proposal_asset.key,
@@ -200,14 +195,12 @@ def _do_config_proposal_list(args):
             else:
                 proposal_asset = Resource()
                 proposal_asset.ParseFromString(candidate.proposal.asset)
-                print("PK {}: system '{}' key '{}' => value '{}' sku '{}'".format(
+                print("RESOURCE {}: system '{}' key '{}' => value '{}' sku '{}'".format(
                     candidate.proposal_id,
                     proposal_asset.system,
                     proposal_asset.key,
                     proposal_asset.value,
                     proposal_asset.sku))
-
-            # candidate.proposal.asset.sku))
     elif args.format == 'csv':
         writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
         writer.writerow(['PROPOSAL_ID', 'SYSTEM', 'KEY', 'VALUE', 'SKU'])
@@ -233,19 +226,19 @@ def _do_config_proposal_list(args):
 
 def _do_config_proposal_vote(args):
     """Executes the 'proposal vote' subcommand.  Given a key file, a proposal
-    id and a vote value, it generates a batch of hashblock_resource transactions
-    in a BatchList instance.  The BatchList is file or submitted to a
-    validator.
+    id and a vote value, generate a batch of hashblock_asset transactions
+    in a BatchList instance.  The BatchList is saved to a file or
+    submitted to a validator.
     """
     signer = _read_signer(args.key)
     rest_client = RestClient(args.url)
 
-    if args.dimension == 'unit':
+    if args.unit:
         dimension = Address.DIMENSION_UNIT
-    elif args.dimension == 'resource':
+    elif args.resource:
         dimension = Address.DIMENSION_RESOURCE
     else:
-        raise AssertionError('Dimension must be one of {unit, resource')
+        raise AssertionError('Dimension must be one of {-u[nit], -r[esource]}')
 
     proposals = _get_proposals(rest_client, dimension)
 
@@ -278,51 +271,23 @@ def _do_config_proposal_vote(args):
     print("Rest returns {}".format(x))
 
 
-def _do_config_genesis(args):
-    signer = _read_signer(args.key)
-    public_key = signer.get_public_key().as_hex()
-
-    authorized_keys = args.authorized_key if args.authorized_key else \
-        [public_key]
-    if public_key not in authorized_keys:
-        authorized_keys.append(public_key)
-
-    txns = []
-
-    txns.append(_create_propose_txn(
-        signer,
-        ('hashblock.setting.resource.authorized_keys',
-         ','.join(authorized_keys))))
-
-    if args.approval_threshold is not None:
-        if args.approval_threshold < 1:
-            raise CliException('approval threshold must not be less than 1')
-
-        if args.approval_threshold > len(authorized_keys):
-            raise CliException(
-                'approval threshold must not be greater than the number of '
-                'authorized keys')
-
-        txns.append(_create_propose_txn(
-            signer,
-            ('hashblock.setting.resource.approval_threshold',
-             str(args.approval_threshold))))
-
-    batch = _create_batch(signer, txns)
-    batch_list = BatchList(batches=[batch])
-
-    try:
-        with open(args.output, 'wb') as batch_file:
-            batch_file.write(batch_list.SerializeToString())
-        print('Generated {}'.format(args.output))
-    except IOError as e:
-        raise CliException(
-            'Unable to write to batch file: {}'.format(str(e)))
+def _get_all_proposals(rest_client):
+    """Return a list of proposals for all dimensions {unit, resource}"""
+    candidates_list = []
+    state_leaf = rest_client.list_state(_addresser.candidates_base)
+    if state_leaf:
+        for x in state_leaf['data']:
+            candidate_bytes = b64decode(x['data'])
+            if candidate_bytes is not None:
+                candidate = AssetCandidates()
+                candidate.ParseFromString(candidate_bytes)
+                candidates_list.append(candidate)
+    return candidates_list
 
 
-def _get_proposals(rest_client, asset_str):
-
-    state_leaf = rest_client.get_leaf(_addresser.candidates(asset_str))
+def _get_proposals(rest_client, dimension):
+    """Returns proposals for a specific dimension {unit, resource}"""
+    state_leaf = rest_client.get_leaf(_addresser.candidates(dimension))
     config_candidates = AssetCandidates()
     if state_leaf:
         candidates_bytes = b64decode(state_leaf['data'])
@@ -407,7 +372,6 @@ def _create_propose_txn(signer, asset, dimension, asset_addr, proposal_type):
         dimension=dimension,
         action=AssetPayload.PROPOSE)
 
-    print("Payload = {}".format(payload))
     return _make_txn(signer, dimension, asset_addr, payload)
 
 
@@ -436,6 +400,7 @@ def _make_txn(signer, dimension, asset_addr, payload):
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
+        nonce=str(datetime.datetime.utcnow().timestamp()),
         signer_public_key=signer.get_public_key().as_hex(),
         family_name=Address.NAMESPACE_ASSET,
         family_version='1.0.0',
@@ -471,23 +436,6 @@ def _config_outputs(asset_addr, dimension):
         asset_addr,
         _addresser.candidates(dimension),
     ]
-
-
-def _short_hash(in_str):
-    return hashlib.sha256(in_str.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
-
-
-def _key_to_address(key):
-    """Creates the state address for a given unit key.
-    """
-    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-    key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
-
-    return RESOURCE_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)
-
-
-def resource_key_to_address(key):
-    return _key_to_address(key)
 
 
 def create_console_handler(verbose_level):
@@ -538,7 +486,7 @@ def create_parent_parser(prog_name):
     parent_parser.add_argument(
         '-V', '--version',
         action='version',
-        version=(DISTRIBUTION_NAME + ' (Hashblock Exchange) version {}')
+        version=(DISTRIBUTION_NAME + ' (Hashblock Asset Utility) version {}')
         .format(version),
         help='display version information')
 
@@ -549,46 +497,12 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        description='Provides subcommands to change genesis block resource '
-        'and to view, create, and vote on resource proposals.',
+        description='Provides subcommands to '
+        'view, create, and vote on asset proposals.',
         parents=[parent_parser])
 
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
     subparsers.required = True
-
-    # The following parser is for the `genesis` subcommand.
-    # This command creates a batch that contains all of the initial
-    # transactions for resource settings
-    genesis_parser = subparsers.add_parser(
-        'genesis',
-        help='Creates a genesis batch file of resource transactions',
-        description='Creates a Batch of resource proposals that can be '
-                    'consumed by "resourceadm genesis" and used '
-                    'during genesis hashblock construction.'
-    )
-    genesis_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='specify signing key for resulting batches '
-             'and initial authorized key')
-
-    genesis_parser.add_argument(
-        '-o', '--output',
-        type=str,
-        default='config-resource.batch',
-        help='specify the output file for the resulting batches')
-
-    genesis_parser.add_argument(
-        '-T', '--approval-threshold',
-        type=int,
-        help='set the number of votes required to enable a setting change')
-
-    genesis_parser.add_argument(
-        '-A', '--authorized-key',
-        type=str,
-        action='append',
-        help='specify a public key for the user authorized to submit '
-             'config transactions')
 
     # The following parser is for the `proposal` subcommand group. These
     # commands allow the user to create proposals which may be applied
@@ -657,18 +571,35 @@ def create_parser(prog_name):
         default='',
         help='filter proposals from a particular public key')
 
-    proposal_list_parser.add_argument(
-        '-d', '--dimension',
-        type=str,
-        default='unit',
-        choices=['unit', 'resource'],
-        help='choose the dimension of asset to list')
+    proposal_list_type_group = \
+        proposal_list_parser.add_mutually_exclusive_group(required=True)
+
+    proposal_list_type_group.add_argument(
+        '-unit',
+        action='store_true',
+        help='list outstanding unit proposals')
+
+    proposal_list_type_group.add_argument(
+        '-resource',
+        action='store_true',
+        help='list outstanding resource proposals')
+
+    proposal_list_type_group.add_argument(
+        '-all',
+        action='store_true',
+        help='list all outstanding proposals')
 
     proposal_list_parser.add_argument(
-        '-f', '--filter',
+        '-fk', '--filter-key',
         type=str,
         default='',
-        help='filter asset that begin with this value')
+        help='filter assets by key')
+
+    proposal_list_parser.add_argument(
+        '-fs', '--filter-system',
+        type=str,
+        default='',
+        help='filter assets by system')
 
     proposal_list_parser.add_argument(
         '--format',
@@ -680,7 +611,7 @@ def create_parser(prog_name):
         'vote',
         help='Votes for specific unit change proposals',
         description='Votes for a specific resource change proposal. Use '
-                    '"resourceset proposal list" to find the proposal id.')
+                    '"hbasset proposal list" to find the proposal id.')
 
     vote_parser.add_argument(
         '--url',
@@ -698,12 +629,18 @@ def create_parser(prog_name):
         type=str,
         help='identify the proposal to vote on')
 
-    vote_parser.add_argument(
-        '-d', '--dimension',
-        type=str,
-        default='unit',
-        choices=['unit', 'resource'],
-        help='choose the dimension of asset to list')
+    vote_type_group = \
+        vote_parser.add_mutually_exclusive_group(required=True)
+
+    vote_type_group.add_argument(
+        '-unit',
+        action='store_true',
+        help='list outstanding unit proposals')
+
+    vote_type_group.add_argument(
+        '-resource',
+        action='store_true',
+        help='list outstanding resource proposals')
 
     vote_parser.add_argument(
         'vote_value',
@@ -734,8 +671,6 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         _do_config_proposal_list(args)
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
         _do_config_proposal_vote(args)
-    elif args.subcommand == 'genesis':
-        _do_config_genesis(args)
     else:
         raise CliException(
             '"{}" is not a valid subcommand of "config"'.format(
@@ -758,4 +693,3 @@ def main_wrapper():
     except:
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
-
