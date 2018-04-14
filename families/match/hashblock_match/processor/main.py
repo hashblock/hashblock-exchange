@@ -39,7 +39,7 @@ from processor.config.match import \
 from processor.config.match import \
     merge_match_config
 
-DISTRIBUTION_NAME = 'hashblock-exchanges'
+DISTRIBUTION_NAME = 'hashblock-match'
 
 
 def create_console_handler(verbose_level):

@@ -23,6 +23,8 @@ from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
+
+from sdk.python.address import Address
 # from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 from protobuf.match_pb2 import MatchEvent
@@ -39,14 +41,6 @@ LOGGER = logging.getLogger(__name__)
 DOMAIN_NAME = 'hashblock'
 ADDRESS_PREFIX = 'match'
 FAMILY_NAME = 'hashblock_match'
-
-DOMAIN_PREFIX = hashlib.sha512(
-    DOMAIN_NAME.encode('utf-8')).hexdigest()[0:6]
-
-FAKE_ADDRESS_PREFIX = DOMAIN_PREFIX + \
-    hashlib.sha512(
-        ADDRESS_PREFIX.encode('utf-8')).hexdigest()[0:6]
-
 
 MATCH_ADDRESS_PREFIX = hashlib.sha512(
     FAMILY_NAME.encode('utf-8')).hexdigest()[0:6]
@@ -69,17 +63,24 @@ reciprocateActionSet = frozenset([
 
 class MatchTransactionHandler(TransactionHandler):
 
+    def __init__(self):
+        self._addresser = Address(Address.FAMILY_MATCH)
+
+    @property
+    def addresser(self):
+        return self._addresser
+
     @property
     def family_name(self):
-        return FAMILY_NAME
+        return Address.NAMESPACE_MATCH
 
     @property
     def family_versions(self):
-        return ['0.2.0']
+        return ['1.0.0']
 
     @property
     def namespaces(self):
-        return [FAKE_ADDRESS_PREFIX]  # [MATCH_ADDRESS_PREFIX]
+        return [self.addresser.ns_family]
 
     def apply(self, transaction, context):
 
@@ -94,7 +95,6 @@ class MatchTransactionHandler(TransactionHandler):
                 "'action' must be one of {} or {}".
                 format([initiateActionSet, reciprocateActionSet]))
 
-        (exchange_payload, context)
         generateTxnSuccessFor(exchange_payload, context)
 
 
@@ -136,8 +136,7 @@ def generateTxnFailEvent(context, payload, msg):
 
 
 def compose(*functions):
-    """
-    Fancy construction of a composition
+    """Fancy construction of a composition
     """
     return functools.reduce(
         lambda f, g: lambda x: f(g(x)),
@@ -146,13 +145,14 @@ def compose(*functions):
 
 
 def throw_invalid(msg):
-    """
-    Generic invalid stringaction
+    """Generic invalid transaction
     """
     raise InvalidTransaction(msg)
 
 
 def _timeout_error(basemsg, data):
+    """Generic timeout error for state get/set/delete
+    """
     LOGGER.warning('Timeout occured on %s ([%s])', basemsg, data)
     raise InternalError('Unable to get {}'.format(data))
 
