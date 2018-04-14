@@ -26,7 +26,7 @@
 # 	2. Copies relevant files from base
 # Build:
 #   $ cd hashblock-exchange
-#   $ docker build . -f docker/hashblock-match-tp -t hashblock/hashblock_match-tp:latest
+#   $ docker build . -f docker/hashblock-match-tp -t hashblock/hashblock-match-tp:latest
 #
 
 FROM python:3.4-slim as base

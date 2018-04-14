@@ -108,15 +108,6 @@ def _do_config_proposal_list(args):
     pass
 
 
-def _do_config_proposal_vote(args):
-    """Executes the 'proposal vote' subcommand.  Given a key file, a proposal
-    id and a vote value, it generates a batch of hashblock_units transactions
-    in a BatchList instance.  The BatchList is file or submitted to a
-    validator.
-    """
-    pass
-
-
 def _do_config_genesis(args):
     signer = _read_signer(args.key)
     public_key = signer.get_public_key().as_hex()
@@ -130,6 +121,16 @@ def _do_config_genesis(args):
 
     keys = ','.join(authorized_keys)
     threshold = str(args.approval_threshold)
+
+    if args.approval_threshold is not None:
+        if args.approval_threshold < 1:
+            raise CliException('approval threshold must not be less than 1')
+
+        if args.approval_threshold > len(authorized_keys):
+            raise CliException(
+                'approval threshold must not be greater than the number of '
+                'authorized keys')
+
     txns.append(_create_setting(
         signer,
         Address.DIMENSION_UNIT,
@@ -140,25 +141,6 @@ def _do_config_genesis(args):
         Address.DIMENSION_RESOURCE,
         SettingPayload.CREATE,
         keys, threshold))
-
-    # txns.append(_create_propose_txn(
-    #     signer,
-    #     ('hashblock.setting.unit.authorized_keys',
-    #      ','.join(authorized_keys))))
-
-    # if args.approval_threshold is not None:
-    #     if args.approval_threshold < 1:
-    #         raise CliException('approval threshold must not be less than 1')
-
-    #     if args.approval_threshold > len(authorized_keys):
-    #         raise CliException(
-    #             'approval threshold must not be greater than the number of '
-    #             'authorized keys')
-
-    #     txns.append(_create_propose_txn(
-    #         signer,
-    #         ('hashblock.setting.unit.approval_threshold',
-    #          str(args.approval_threshold))))
 
     batch = _create_batch(signer, txns)
     batch_list = BatchList(batches=[batch])
@@ -191,6 +173,7 @@ def _make_setting_txn(signer, dimension, payload):
     props = Address(Address.FAMILY_ASSET)
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
+        nonce=str(datetime.datetime.utcnow().timestamp()),
         signer_public_key=signer.get_public_key().as_hex(),
         family_name=Address.NAMESPACE_SETTING,
         family_version='1.0.0',
@@ -293,6 +276,7 @@ def _make_txn(signer, unit_key, payload):
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
+        nonce=str(datetime.datetime.utcnow().timestamp()),
         signer_public_key=signer.get_public_key().as_hex(),
         family_name=Address.NAMESPACE_SETTING,
         family_version='1.0.0',
@@ -382,8 +366,8 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        description='Provides subcommands to change genesis block units '
-        'and to view, create, and vote on units proposals.',
+        description='Provides subcommands to create genesis block '
+        'and to view, create, and update hashblock asset settings.',
         parents=[parent_parser])
 
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
@@ -391,12 +375,12 @@ def create_parser(prog_name):
 
     # The following parser is for the `genesis` subcommand.
     # This command creates a batch that contains all of the initial
-    # transactions for units settings
+    # transactions for settings
     genesis_parser = subparsers.add_parser(
         'genesis',
-        help='Creates a genesis batch file of units transactions',
-        description='Creates a Batch of units proposals that can be '
-                    'consumed by "unitsadm genesis" and used '
+        help='Creates a genesis batch file of settings transactions',
+        description='Creates a Batch of asset settings that can be '
+                    'consumed by "sawadm genesis" and used '
                     'during genesis hashblock construction.'
     )
     genesis_parser.add_argument(
@@ -501,34 +485,6 @@ def create_parser(prog_name):
         choices=['default', 'csv', 'json', 'yaml'],
         help='choose the output format')
 
-    vote_parser = proposal_parsers.add_parser(
-        'vote',
-        help='Votes for specific unit change proposals',
-        description='Votes for a specific units change proposal. Use '
-                    '"unitsset proposal list" to find the proposal id.')
-
-    vote_parser.add_argument(
-        '--url',
-        type=str,
-        help="identify the URL of a validator's REST API",
-        default='http://rest-api:8008')
-
-    vote_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='specify a signing key for the resulting transaction batch')
-
-    vote_parser.add_argument(
-        'proposal_id',
-        type=str,
-        help='identify the proposal to vote on')
-
-    vote_parser.add_argument(
-        'vote_value',
-        type=str,
-        choices=['accept', 'reject'],
-        help='specify the value of the vote')
-
     return parser
 
 
@@ -550,8 +506,6 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         _do_config_proposal_create(args)
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
         _do_config_proposal_list(args)
-    elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
-        _do_config_proposal_vote(args)
     elif args.subcommand == 'genesis':
         _do_config_genesis(args)
     else:

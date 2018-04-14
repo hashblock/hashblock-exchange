@@ -30,14 +30,14 @@ protos() {
 	bin/build_python
 }
 
-RESOURCETP="hashblock-resource-tp"
-RESOURCETAG="hashblock/hashblock-resource-tp:latest"
+ASSETTP="hashblock-asset-tp"
+ASSETTAG="hashblock/hashblock-asset-tp:latest"
 
 MATCHTP="hashblock-match-tp"
 MATCHTAG="hashblock/hashblock-match-tp:latest"
 
-UNITTP="hashblock-units-tp"
-UNITTAG="hashblock/hashblock-units-tp:latest"
+SETTINGSTP="hashblock-setting-tp"
+SETTINGTAG="hashblock/hashblock-setting-tp:latest"
 
 docker_build() {
     image=$1
@@ -60,9 +60,9 @@ main() {
 
     info "Building hashblock distribution images from: $top_dir"
     protos
-    docker_build $top_dir/docker/$RESOURCETP . $RESOURCETAG
+    docker_build $top_dir/docker/$ASSETTP . $ASSETTAG
     docker_build $top_dir/docker/$MATCHTP . $MATCHTAG
-    docker_build $top_dir/docker/$UNITTP . $UNITTAG
+    docker_build $top_dir/docker/$SETTINGTP . $SETTINGTAG
 
     info "Production image builds complete. Listing..."
     docker images --filter=reference='hashblock/*'

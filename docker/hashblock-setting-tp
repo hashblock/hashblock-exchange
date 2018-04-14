@@ -25,7 +25,7 @@
 # 	2. Copies relevant files from base
 # Build:
 #   $ cd hashblock-exchange
-#   $ docker build . -f docker/hashblock-resource-tp -t hashblock/hashblock_resource-tp:latest
+#   $ docker build . -f docker/hashblock-setting-tp -t hashblock/hashblock-setting-tp:latest
 #
 
 FROM python:3.4-slim as base
@@ -54,11 +54,11 @@ RUN	pip3 install \
 	sawtooth-sdk && \
 	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
-  	mkdir -p /project/hashblock-exchange/families/resource && \
+  	mkdir -p /project/hashblock-exchange/families/setting && \
   	mkdir -p /var/log/sawtooth
 
-COPY --from=base /builder/bin/resource-tp /project/hashblock-exchange/bin
-COPY --from=base /builder/families/resource/hashblock_resource /project/hashblock-exchange/families/resource/hashblock_resource
+COPY --from=base /builder/bin/setting-tp /project/hashblock-exchange/bin
+COPY --from=base /builder/families/resource/hashblock_setting /project/hashblock-exchange/families/setting/hashblock_setting
 
 WORKDIR /project/hashblock-exchange
 ENV PATH $PATH:/project/hashblock-exchange/bin

@@ -15,7 +15,7 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds a deployable production image for our hashblock-units-tp
+#   Builds a deployable production image for our hashblock-asset-tp
 #
 # base image:
 # 	1. Installs protobuf
@@ -25,7 +25,7 @@
 # 	2. Copies relevant files from base
 # Build:
 #   $ cd hashblock-exchange
-#   $ docker build . -f docker/hashblock-units-tp -t hashblock/hashblock_units-tp:latest
+#   $ docker build . -f docker/hashblock-asset-tp -t hashblock/hashblock-asset-tp:latest
 #
 
 FROM python:3.4-slim as base
@@ -54,11 +54,11 @@ RUN	pip3 install \
 	sawtooth-sdk && \
 	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
-  	mkdir -p /project/hashblock-exchange/families/units && \
+  	mkdir -p /project/hashblock-exchange/families/asset && \
   	mkdir -p /var/log/sawtooth
 
-COPY --from=base /builder/bin/units-tp /project/hashblock-exchange/bin
-COPY --from=base /builder/families/units/hashblock_units /project/hashblock-exchange/families/units/hashblock_units
+COPY --from=base /builder/bin/asset-tp /project/hashblock-exchange/bin
+COPY --from=base /builder/families/asset/hashblock_asset /project/hashblock-exchange/families/asset/hashblock_asset
 
 WORKDIR /project/hashblock-exchange
 ENV PATH $PATH:/project/hashblock-exchange/bin

@@ -18,30 +18,30 @@ version: '2.1'
 
 services:
 
-  units-processor:
-    image: hashblock/hashblock-units-tp:latest
-    container_name: hashblock-units-tp-latest
+  setting-processor:
+    image: hashblock/hashblock-setting-tp:latest
+    container_name: hashblock-setting-tp-latest
     restart: always
     depends_on:
       - validator
     command: "bash -c \"\
-       sleep 1 && \
-       units-tp -vv \
-         -C tcp://validator:4004 \
-     \""
-    stop_signal: SIGKILL
-
-  resource-processor:
-    image: hashblock/hashblock-resource-tp:latest
-    container_name: hashblock-resource-tp-latest
-    restart: always
-    depends_on:
-      - units-processor
-    command: "bash -c \"\
          sleep 1 && \
-         resource-tp -vv \
+         setting-tp -vv \
            -C tcp://validator:4004 \
        \""
+    stop_signal: SIGKILL
+
+  asset-processor:
+    image: hashblock/hashblock-asset-tp:latest
+    container_name: hashblock-asset-tp-latest
+    restart: always
+    depends_on:
+      - setting-processor
+    command: "bash -c \"\
+       sleep 1 && \
+       asset-tp -vv \
+         -C tcp://validator:4004 \
+     \""
     stop_signal: SIGKILL
 
   match-processor:
@@ -49,7 +49,7 @@ services:
     container_name: hashblock-match-tp-latest
     restart: always
     depends_on:
-      - resource-processor
+      - asset-processor
     command: "bash -c \"\
         sleep 1 && \
         match-tp -vv \
