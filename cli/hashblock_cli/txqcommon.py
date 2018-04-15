@@ -14,23 +14,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
-
-INITIATE_EVENT_KEY = 'utxq'
-RECIPROCATE_EVENT_KEY = 'mtxq'
-ADDRESS_PREFIX = 'hashblock_match'
-
-MATCH_NAMESPACE = hashlib.sha512(
-    ADDRESS_PREFIX.encode("utf-8")).hexdigest()[0:6]
-INITIATE_LIST_ADDRESS = MATCH_NAMESPACE + \
-    hashlib.sha512(INITIATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
-RECIPROCATE_LIST_ADDRESS = MATCH_NAMESPACE + \
-    hashlib.sha512(RECIPROCATE_EVENT_KEY.encode("utf-8")).hexdigest()[0:6]
-
-_MIN_PRINT_WIDTH = 15
-_MAX_KEY_PARTS = 4
-_ADDRESS_PART_SIZE = 16
-
 
 hash_lookup = {
     "bag": 2,

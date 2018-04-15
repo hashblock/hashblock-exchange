@@ -149,7 +149,7 @@ def __gensub(subprs, subcnd, nblock):
         p.add_argument(arg, **kwds)
 
 
-def create_txq_cli_parser(parent_parser):
+def create_match_parser(parent_parser):
     """
     Creates the command line parser from the
     parent_parser and sets up all the options

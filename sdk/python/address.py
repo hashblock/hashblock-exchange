@@ -113,6 +113,23 @@ class Address():
             + self.hashup(system)[0:6] \
             + self.hashup(item)[0:46]
 
+    # E.g. hashblock.match.utxq.ask
+    # 0-2 namespace
+    # 3-5 family
+    # 6-8 dimension
+    def txq_dimension(self, dimension):
+        return self.ns_family \
+            + self.hashup(dimension)[0:6]
+
+    # E.g. hashblock.match.utxq.ask
+    # 0-2 namespace
+    # 3-5 family
+    # 6-8 dimension
+    # 9-11 ops
+    def txq_list(self, dimension, ops):
+        return self.txq_dimension(dimension) \
+            + self.hashup(ops)[0:6]
+
     # E.g. hashblock.match.utxq.ask.ident
     # 0-2 namespace
     # 3-5 family
@@ -122,7 +139,5 @@ class Address():
     def txq_item(self, dimension, ops, ident):
         """Create a specific match address based on dimenstion, operation and id
         """
-        return self.ns_family \
-            + self.hashup(dimension)[0:6] \
-            + self.hashup(ops)[0:6] \
+        return self.txq_list(dimension, ops) \
             + self.hashup(ident)[0:46]

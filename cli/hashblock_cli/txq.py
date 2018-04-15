@@ -32,7 +32,7 @@ import yaml
 import pkg_resources
 from colorlog import ColoredFormatter
 
-from .sdk.python.state import State
+# from sdk.python.state import State
 
 from hashblock_cli.exceptions import CliException
 from hashblock_cli.rest_client import RestClient
@@ -55,14 +55,15 @@ from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from hashblock_cli.txqcommon import hash_lookup
-from hashblock_cli.txqcommon import ADDRESS_PREFIX
-from hashblock_cli.txqcommon import INITIATE_LIST_ADDRESS
-from hashblock_cli.txqcommon import RECIPROCATE_LIST_ADDRESS
-from hashblock_cli.txqcliparser import create_txq_cli_parser
+from hashblock_cli.matchcliparser import create_match_parser
 from hashblock_cli.txqlist import listing_of
 from hashblock_cli.txqlist import exchange_list_for
 
-DISTRIBUTION_NAME = 'txn'
+from sdk.python.address import Address
+_addresser = Address(Address.FAMILY_MATCH)
+
+DISTRIBUTION_NAME = 'match-cli'
+
 INITIATE_CMDSET = frozenset(["ask", "offer", "commitment", "give"])
 RECIPROCATE_CMDSET = frozenset(["tell", "accept", "obligation", "take"])
 
@@ -291,8 +292,11 @@ def _create_reciprocate_txn(icmd, signer, event_address, quantity, ratio):
         quantity=quantity)
 
     # initiate_event_id=event_id)
-    event_key = __make_match_address(
-        RECIPROCATE_LIST_ADDRESS, icmd, str(uuid.uuid4()))
+    # event_key = _addresser.txq_item()
+    event_key = _addresser.txq_item(
+        Address.DIMENSION_MTXQ,
+        icmd,
+        str(uuid.uuid4()))
 
     input_keys = [event_address]
     output_keys = [event_key, event_address]
@@ -426,8 +430,10 @@ def _create_initiate_txn(icmd, signer, quantity_value_unit_resource):
         minus=b'minus_public_key',
         quantity=quantity)
 
-    event_key = __make_match_address(
-        INITIATE_LIST_ADDRESS, icmd, str(uuid.uuid4()))
+    event_key = _addresser.txq_item(
+        Address.DIMENSION_UTXQ,
+        icmd,
+        str(uuid.uuid4()))
     output_keys = [event_key]
     payload = MatchEvent(
         data=initiateEvent.SerializeToString(),
@@ -441,9 +447,10 @@ def _make_txn(signer, input_keys, output_keys, payload):
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
+        nonce=str(datetime.datetime.utcnow().timestamp()),
         signer_public_key=signer.get_public_key().as_hex(),
-        family_name=ADDRESS_PREFIX,
-        family_version='0.2.0',
+        family_name=_addresser.NAMESPACE_MATCH,
+        family_version='1.0.0',
         inputs=input_keys,
         outputs=output_keys,
         dependencies=[],
@@ -455,12 +462,6 @@ def _make_txn(signer, input_keys, output_keys, payload):
         header=header,
         header_signature=signer.sign(header),
         payload=serialized_payload)
-
-
-def __make_match_address(base, sublist, data):
-    return base + \
-        hashlib.sha512(sublist.encode('utf-8')).hexdigest()[0:6] + \
-        hashlib.sha512(data.encode('utf-8')).hexdigest()[-52:]
 
 
 def create_console_handler(verbose_level):
@@ -520,7 +521,7 @@ def create_parent_parser(prog_name):
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
          with_loggers=True):
-    parser = create_txq_cli_parser(create_parent_parser(prog_name))
+    parser = create_match_parser(create_parent_parser(prog_name))
     # parser = create_parser(prog_name)
     if args is None:
         args = sys.argv[1:]

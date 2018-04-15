@@ -15,8 +15,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import hashlib
-import base64
 import functools
 
 from sawtooth_sdk.processor.handler import TransactionHandler
@@ -37,13 +35,6 @@ from protobuf.match_pb2 import MTXQ
 
 
 LOGGER = logging.getLogger(__name__)
-
-DOMAIN_NAME = 'hashblock'
-ADDRESS_PREFIX = 'match'
-FAMILY_NAME = 'hashblock_match'
-
-MATCH_ADDRESS_PREFIX = hashlib.sha512(
-    FAMILY_NAME.encode('utf-8')).hexdigest()[0:6]
 
 # Number of seconds to wait for key operations to succeed
 STATE_TIMEOUT_SEC = 10
@@ -278,32 +269,3 @@ def __complete_reciprocate_exchange(
     """
     __set_exchange(context, exchange_reciprocate, reciprocateFQNAddress)
     LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
-
-
-def _to_hash(value):
-    return hashlib.sha256(value.encode()).hexdigest()
-
-
-_MAX_KEY_PARTS = 4
-_ADDRESS_PART_SIZE = 16
-_EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
-
-
-def make_exchanges_address(data):
-    return MATCH_ADDRESS_PREFIX + hashlib.sha512(
-        data.encode('utf-8')).hexdigest()[-64:]
-
-
-def make_fqnaddress(key, keyUUID):
-    return _make_exchanges_key(''.join([key, keyUUID]))
-
-
-@functools.lru_cache(maxsize=128)
-def _make_exchanges_key(key):
-    # split the key into 4 parts, maximum
-    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-    # compute the short hash of each part
-    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
-    # pad the parts with the empty hash, if needed
-    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-    return make_exchanges_address(''.join(addr_parts))

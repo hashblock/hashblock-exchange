@@ -14,7 +14,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 import csv
 import sys
 from base64 import b64decode
@@ -22,43 +21,34 @@ from hashblock_cli.protobuf.match_pb2 import UTXQ
 from hashblock_cli.protobuf.match_pb2 import MTXQ
 
 from hashblock_cli.txqcommon import hash_lookup
-from hashblock_cli.txqcommon import ADDRESS_PREFIX
-from hashblock_cli.txqcommon import MATCH_NAMESPACE
-from hashblock_cli.txqcommon import INITIATE_LIST_ADDRESS
-from hashblock_cli.txqcommon import RECIPROCATE_LIST_ADDRESS
 
+from sdk.python.address import Address
+
+_addresser = Address(Address.FAMILY_MATCH)
 
 _QUERY_KEY_MAP = {
-    'ask': INITIATE_LIST_ADDRESS +
-    hashlib.sha512('ask'.encode("utf-8")).hexdigest()[0:6],
-    'tell': RECIPROCATE_LIST_ADDRESS +
-    hashlib.sha512('tell'.encode("utf-8")).hexdigest()[0:6],
-    'offer': INITIATE_LIST_ADDRESS +
-    hashlib.sha512('offer'.encode("utf-8")).hexdigest()[0:6],
-    'accept': RECIPROCATE_LIST_ADDRESS +
-    hashlib.sha512('accept'.encode("utf-8")).hexdigest()[0:6],
-    'commitment': RECIPROCATE_LIST_ADDRESS +
-    hashlib.sha512('commitment'.encode("utf-8")).hexdigest()[0:6],
-    'obligation': INITIATE_LIST_ADDRESS +
-    hashlib.sha512('obligation'.encode("utf-8")).hexdigest()[0:6],
-    'give': INITIATE_LIST_ADDRESS +
-    hashlib.sha512('give'.encode("utf-8")).hexdigest()[0:6],
-    'take': RECIPROCATE_LIST_ADDRESS +
-    hashlib.sha512('take'.encode("utf-8")).hexdigest()[0:6]}
+    'ask': _addresser.txq_list(Address.DIMENSION_UTXQ, 'ask'),
+    'tell': _addresser.txq_list(Address.DIMENSION_MTXQ, 'tell'),
+    'offer': _addresser.txq_list(Address.DIMENSION_UTXQ, 'offer'),
+    'accept': _addresser.txq_list(Address.DIMENSION_MTXQ, 'accept'),
+    'commitment': _addresser.txq_list(Address.DIMENSION_UTXQ, 'commitment'),
+    'obligation': _addresser.txq_list(Address.DIMENSION_MTXQ, 'obligation'),
+    'give': _addresser.txq_list(Address.DIMENSION_UTXQ, 'give'),
+    'take': _addresser.txq_list(Address.DIMENSION_MTXQ, 'take')}
 
 
 # Addresses are string length 70 where:
-# Chars 0-5 are family (e.g. hashblock_match vs. hashblock_units, etc.)
-# Chars 6-11 are class (e.g. UTXQ vs. MTXQ)
-# Chars 12-17 are subtypes (e.g. ask vs. tell, etc.)
+# Chars 0-11 are family (e.g. hashblock match)
+# Chars 12-17 are class (e.g. UTXQ vs. MTXQ)
+# Chars 17-23 are subtypes (e.g. ask vs. tell, etc.)
 
 _META_FAMILY = {
-    MATCH_NAMESPACE: ADDRESS_PREFIX
+    _addresser.ns_family: Address.NAMESPACE_MATCH
 }
 
 _META_CLASS = {
-    INITIATE_LIST_ADDRESS: 'UTXQ',
-    RECIPROCATE_LIST_ADDRESS: 'MTXQ'
+    _addresser.hashup(Address.DIMENSION_UTXQ)[0:6]: Address.DIMENSION_UTXQ,
+    _addresser.hashup(Address.DIMENSION_MTXQ)[0:6]: Address.DIMENSION_MTXQ
 }
 
 _META_SUBTYPE = {
@@ -82,25 +72,29 @@ def __hash_reverse_lookup(lookup_value):
 def __meta_dictionary(address):
     """Address classifier
     """
-    meta_dict = {'family': None, 'class': 'all', 'subtype': 'all'}
-    meta_dict['family'] = _META_FAMILY[address[0:6]]
+    meta_dict = {
+        'family': _META_FAMILY[address[0:12]],
+        'class': 'all',
+        'subtype': 'all'}
     if len(address) >= 12:
-        meta_dict['class'] = _META_CLASS[address[0:12]]
+        meta_dict['class'] = _META_CLASS[address[12:18]]
     if len(address) >= 18:
-        meta_dict['subtype'] = _META_SUBTYPE[address[0:18]]
+        meta_dict['subtype'] = _META_SUBTYPE[address[0:24]]
     return meta_dict
 
 
 def __print_default(instance=None, event_id=None, meta_data=None):
+
     value_magnitude = int.from_bytes(
         instance.quantity.value, byteorder='little')
     value_units = __hash_reverse_lookup(
         int.from_bytes(instance.quantity.valueUnit, byteorder='little'))
     value_unit = value_units[0]
-    if value_magnitude > 1 and value_unit.endswith('s') is False:
+    if value_magnitude > 1 and value_unit.endswith('s') is True:
         value_unit = value_units[1]
     resource_unit = __hash_reverse_lookup(
         int.from_bytes(instance.quantity.resourceUnit, byteorder='little'))[0]
+
     print('{} => [{}:{}] {}.{}{}'.format(
         event_id,
         meta_data['class'],
@@ -127,23 +121,22 @@ OUTPUT_MAP = {
 
 def __get_query_address(listing_type):
     if listing_type == 'all':
-            qadd = MATCH_NAMESPACE
+            qadd = _addresser.ns_family
     elif listing_type == 'utxq':
-        qadd = INITIATE_LIST_ADDRESS
+        qadd = _addresser.txq_dimension(Address.DIMENSION_UTXQ)
     elif listing_type == 'mtxq':
-        qadd = RECIPROCATE_LIST_ADDRESS
+        qadd = _addresser.txq_dimension(Address.DIMENSION_MTXQ)
     else:
         qadd = _QUERY_KEY_MAP[listing_type]
 
-    print(listing_type, "=> ", qadd)
     return qadd
 
 
 def __instance_for(address, edata):
-    if address[:12] == INITIATE_LIST_ADDRESS:
+    if address[0:18] == _addresser.txq_dimension(Address.DIMENSION_UTXQ):
         data = UTXQ()
         data.ParseFromString(b64decode(edata))
-    elif address[:12] == RECIPROCATE_LIST_ADDRESS:
+    elif address[0:18] == _addresser.txq_dimension(Address.DIMENSION_MTXQ):
         data = MTXQ()
         data.ParseFromString(b64decode(edata))
     else:
