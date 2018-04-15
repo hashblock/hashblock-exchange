@@ -68,8 +68,8 @@ def add_config_parser(subparsers, parent_parser):
     config_parsers.required = True
 
 
-def _do_config_proposal_create(args):
-    """Executes the 'proposal create' subcommand.  Given a key file, and a
+def _do_config_setting_create(args):
+    """Executes the 'settings create' subcommand.  Given a key file, and a
     series of code/value pairs, it generates batches of hashblock_units
     transactions in a BatchList instance.  The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
@@ -99,8 +99,8 @@ def _do_config_proposal_create(args):
         raise AssertionError('No target for create set.')
 
 
-def _do_config_proposal_list(args):
-    """Executes the 'proposal list' subcommand.
+def _do_config_setting_list(args):
+    """Executes the 'setting list' subcommand.
 
     Given a url, optional filters on prefix and public key, this command lists
     the current pending proposals for units changes.
@@ -407,83 +407,70 @@ def create_parser(prog_name):
         help='specify a public key for the user authorized to submit '
              'config transactions')
 
+    # The following parser is for listing settings
+
+    setting_list_parser = subparsers.add_parser(
+        'list',
+        help='Lists the assets setting',
+        description='Lists the asset (all, unit or resource) settings. ')
+
+    setting_list_parser.add_argument(
+        '--url',
+        type=str,
+        help="identify the URL of a validator's REST API",
+        default='http://rest-api:8008')
+
+    setting_list_parser.add_argument(
+        '--format',
+        default='default',
+        choices=['default', 'csv', 'json', 'yaml'],
+        help='choose the output format')
+
     # The following parser is for the `proposal` subcommand group. These
     # commands allow the user to create proposals which may be applied
     # immediately or placed in ballot mode, depending on the current on-chain
     # units.
 
-    proposal_parser = subparsers.add_parser(
-        'proposal',
-        help='Views, creates, or votes on units change proposals',
-        description='Provides subcommands to view, create, or vote on '
-                    'proposed units')
-    proposal_parsers = proposal_parser.add_subparsers(
+    setting_parser = subparsers.add_parser(
+        'setting',
+        help='Views, creates, or modifies settings for assets',
+        description='Provides subcommands to view, create, '
+        'or modify settings ')
+    setting_parsers = setting_parser.add_subparsers(
         title='subcommands',
-        dest='proposal_cmd')
-    proposal_parsers.required = True
+        dest='setting_cmd')
+    setting_parsers.required = True
 
-    prop_parser = proposal_parsers.add_parser(
+    create_parser = setting_parsers.add_parser(
         'create',
-        help='Creates proposals for unit changes',
-        description='Create proposals for units changes. The change '
-                    'may be applied immediately or after a series of votes, '
-                    'depending on the vote threshold unit.'
+        help='Creates setting',
+        description='Create settings key value for asset management. '
+                    'The change is applied immediately.'
     )
 
-    prop_parser.add_argument(
+    create_parser.add_argument(
         '-k', '--key',
         type=str,
         help='specify a signing key for the resulting batches')
 
-    prop_target_group = prop_parser.add_mutually_exclusive_group()
-    prop_target_group.add_argument(
+    create_target_group = create_parser.add_mutually_exclusive_group()
+    create_target_group.add_argument(
         '-o', '--output',
         type=str,
         help='specify the output file for the resulting batches')
 
-    prop_target_group.add_argument(
+    create_target_group.add_argument(
         '--url',
         type=str,
         help="identify the URL of a validator's REST API",
         default='http://rest-api:8008')
 
-    prop_parser.add_argument(
+    create_parser.add_argument(
         'unit',
         type=str,
         nargs='+',
         help='configuration unit as key/value pair with the '
         'format <code>=<value>')
-
-    proposal_list_parser = proposal_parsers.add_parser(
-        'list',
-        help='Lists the currently proposed (not active) units',
-        description='Lists the currently proposed (not active) units. '
-                    'Use this list of proposals to find proposals to '
-                    'vote on.')
-
-    proposal_list_parser.add_argument(
-        '--url',
-        type=str,
-        help="identify the URL of a validator's REST API",
-        default='http://rest-api:8008')
-
-    proposal_list_parser.add_argument(
-        '--public-key',
-        type=str,
-        default='',
-        help='filter proposals from a particular public key')
-
-    proposal_list_parser.add_argument(
-        '--filter',
-        type=str,
-        default='',
-        help='filter codes that begin with this value')
-
-    proposal_list_parser.add_argument(
-        '--format',
-        default='default',
-        choices=['default', 'csv', 'json', 'yaml'],
-        help='choose the output format')
 
     return parser
 
@@ -502,10 +489,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.subcommand == 'proposal' and args.proposal_cmd == 'create':
-        _do_config_proposal_create(args)
-    elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
-        _do_config_proposal_list(args)
+    if args.subcommand == 'setting' and args.setting_cmd == 'create':
+        _do_config_setting_create(args)
+    elif args.subcommand == 'list':
+        _do_config_setting_list(args)
     elif args.subcommand == 'genesis':
         _do_config_genesis(args)
     else:
