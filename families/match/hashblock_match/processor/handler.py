@@ -15,14 +15,14 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import hashlib
-import base64
 import functools
 
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
+
+from sdk.python.address import Address
 # from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 from protobuf.match_pb2 import MatchEvent
@@ -35,12 +35,6 @@ from protobuf.match_pb2 import MTXQ
 
 
 LOGGER = logging.getLogger(__name__)
-
-ADDRESS_PREFIX = 'match'
-FAMILY_NAME = 'hashblock_match'
-
-MATCH_ADDRESS_PREFIX = hashlib.sha512(
-    FAMILY_NAME.encode('utf-8')).hexdigest()[0:6]
 
 # Number of seconds to wait for key operations to succeed
 STATE_TIMEOUT_SEC = 10
@@ -60,17 +54,24 @@ reciprocateActionSet = frozenset([
 
 class MatchTransactionHandler(TransactionHandler):
 
+    def __init__(self):
+        self._addresser = Address(Address.FAMILY_MATCH)
+
+    @property
+    def addresser(self):
+        return self._addresser
+
     @property
     def family_name(self):
-        return FAMILY_NAME
+        return Address.NAMESPACE_MATCH
 
     @property
     def family_versions(self):
-        return ['0.2.0']
+        return ['0.1.0']
 
     @property
     def namespaces(self):
-        return [MATCH_ADDRESS_PREFIX]
+        return [self.addresser.ns_family]
 
     def apply(self, transaction, context):
 
@@ -85,7 +86,6 @@ class MatchTransactionHandler(TransactionHandler):
                 "'action' must be one of {} or {}".
                 format([initiateActionSet, reciprocateActionSet]))
 
-        (exchange_payload, context)
         generateTxnSuccessFor(exchange_payload, context)
 
 
@@ -127,8 +127,7 @@ def generateTxnFailEvent(context, payload, msg):
 
 
 def compose(*functions):
-    """
-    Fancy construction of a composition
+    """Fancy construction of a composition
     """
     return functools.reduce(
         lambda f, g: lambda x: f(g(x)),
@@ -137,13 +136,14 @@ def compose(*functions):
 
 
 def throw_invalid(msg):
-    """
-    Generic invalid stringaction
+    """Generic invalid transaction
     """
     raise InvalidTransaction(msg)
 
 
 def _timeout_error(basemsg, data):
+    """Generic timeout error for state get/set/delete
+    """
     LOGGER.warning('Timeout occured on %s ([%s])', basemsg, data)
     raise InternalError('Unable to get {}'.format(data))
 
@@ -269,32 +269,3 @@ def __complete_reciprocate_exchange(
     """
     __set_exchange(context, exchange_reciprocate, reciprocateFQNAddress)
     LOGGER.debug("Added reciprocate %s to state", reciprocateFQNAddress)
-
-
-def _to_hash(value):
-    return hashlib.sha256(value.encode()).hexdigest()
-
-
-_MAX_KEY_PARTS = 4
-_ADDRESS_PART_SIZE = 16
-_EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
-
-
-def make_exchanges_address(data):
-    return MATCH_ADDRESS_PREFIX + hashlib.sha512(
-        data.encode('utf-8')).hexdigest()[-64:]
-
-
-def make_fqnaddress(key, keyUUID):
-    return _make_exchanges_key(''.join([key, keyUUID]))
-
-
-@functools.lru_cache(maxsize=128)
-def _make_exchanges_key(key):
-    # split the key into 4 parts, maximum
-    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-    # compute the short hash of each part
-    addr_parts = [_to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts]
-    # pad the parts with the empty hash, if needed
-    addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
-    return make_exchanges_address(''.join(addr_parts))

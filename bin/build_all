@@ -202,9 +202,9 @@ if [[ $BUILD_MODE == $MOUNTED ]]
 then
     build_python() {
         docker_build $top_dir/docker/hashblock-dev-python docker/ hashblock-dev-python
-        docker_build $top_dir/docker/hashblock-dev-units-tp docker/ hashblock-dev-units-tp
+        docker_build $top_dir/docker/hashblock-dev-asset-tp docker/ hashblock-dev-asset-tp
         docker_build $top_dir/docker/hashblock-dev-match-tp docker/ hashblock-dev-match-tp
-        docker_build $top_dir/docker/hashblock-dev-resource-tp docker/ hashblock-dev-resource-tp
+        docker_build $top_dir/docker/hashblock-dev-setting-tp docker/ hashblock-dev-setting-tp
         docker_run hashblock-dev-python
     }
 fi
@@ -228,14 +228,14 @@ then
         cp $top_dir/docker/hashblock-int-* $build_dir/
         ls $build_dir
 
-        docker_build $build_dir/hashblock-int-units-tp \
-            $build_dir/ hashblock-units-tp
+        docker_build $build_dir/hashblock-int-asset-tp \
+            $build_dir/ hashblock-asset-tp
 
         docker_build $build_dir/hashblock-int-match-tp \
             $build_dir/ hashblock-match-tp
 
-        docker_build $build_dir/hashblock-int-resource-tp \
-            $build_dir/ hashblock-resource-tp
+        docker_build $build_dir/hashblock-int-setting-tp \
+            $build_dir/ hashblock-setting-tp
     }
 fi
 

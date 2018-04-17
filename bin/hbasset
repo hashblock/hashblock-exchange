@@ -1,4 +1,5 @@
-# ------------------------------------------------------------------------------
+#!/usr/bin/env python3
+
 # Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,14 +15,22 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
+import sys
+import sysconfig
 
-hash_lookup = {
-    "bag": 2,
-    "bags": 2,
-    "{peanuts}": 3,
-    "$": 5,
-    "{usd}": 7,
-    "bale": 11,
-    "bales": 11,
-    "{hay}": 13
-}
+build_str = "lib.{}-{}.{}".format(
+    sysconfig.get_platform(),
+    sys.version_info.major, sys.version_info.minor)
+
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'cli'))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'signing'))
+
+from hashblock_cli.hbasset import main_wrapper
+
+if __name__ == '__main__':
+    main_wrapper()

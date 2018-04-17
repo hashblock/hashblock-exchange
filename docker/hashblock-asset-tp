@@ -1,4 +1,3 @@
-
 # ------------------------------------------------------------------------------
 # Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
@@ -16,7 +15,7 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds a deployable production image for our hashblock-match-tp
+#   Builds a deployable production image for our hashblock-asset-tp
 #
 # base image:
 # 	1. Installs protobuf
@@ -26,7 +25,7 @@
 # 	2. Copies relevant files from base
 # Build:
 #   $ cd hashblock-exchange
-#   $ docker build . -f docker/hashblock-match-tp -t hashblock/hashblock-match-tp:latest
+#   $ docker build . -f docker/hashblock-asset-tp -t hashblock/hashblock-asset-tp:latest
 #
 
 FROM python:3.4-slim as base
@@ -55,11 +54,11 @@ RUN	pip3 install \
 	sawtooth-sdk==1.0.1 && \
 	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
-  	mkdir -p /project/hashblock-exchange/families/match && \
+  	mkdir -p /project/hashblock-exchange/families/asset && \
   	mkdir -p /var/log/sawtooth
 
-COPY --from=base /builder/bin/match-tp /project/hashblock-exchange/bin
-COPY --from=base /builder/families/match/hashblock_match /project/hashblock-exchange/families/match/hashblock_match
+COPY --from=base /builder/bin/asset-tp /project/hashblock-exchange/bin
+COPY --from=base /builder/families/asset/hashblock_asset /project/hashblock-exchange/families/asset/hashblock_asset
 
 WORKDIR /project/hashblock-exchange
 ENV PATH $PATH:/project/hashblock-exchange/bin

@@ -22,7 +22,7 @@ import pkg_resources
 
 from colorlog import ColoredFormatter
 
-# UnitTransactionHandler
+# ResourceTransactionHandler
 
 from sawtooth_sdk.processor.core import TransactionProcessor
 from sawtooth_sdk.processor.log import init_console_logging
@@ -30,16 +30,16 @@ from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from processor.handler import MatchTransactionHandler
-from processor.config.match import MatchConfig
-from processor.config.match import \
-    load_default_match_config
-from processor.config.match import \
-    load_toml_match_config
-from processor.config.match import \
-    merge_match_config
+from processor.handler import SettingTransactionHandler
+from processor.config.setting import SettingConfig
+from processor.config.setting import \
+    load_default_setting_config
+from processor.config.setting import \
+    load_toml_setting_config
+from processor.config.setting import \
+    merge_setting_config
 
-DISTRIBUTION_NAME = 'hashblock-match'
+DISTRIBUTION_NAME = 'hashblock-setting'
 
 
 def create_console_handler(verbose_level):
@@ -71,11 +71,11 @@ def create_console_handler(verbose_level):
 
 
 def setup_loggers(verbose_level, processor):
-    log_config = get_log_config(filename="match_log_config.toml")
+    log_config = get_log_config(filename="setting_log_config.toml")
 
     # If no toml, try loading yaml
     if log_config is None:
-        log_config = get_log_config(filename="match_log_config.yaml")
+        log_config = get_log_config(filename="setting_log_config.yaml")
 
     if log_config is not None:
         log_configuration(log_config=log_config)
@@ -84,7 +84,7 @@ def setup_loggers(verbose_level, processor):
         # use the transaction processor zmq identity for filename
         log_configuration(
             log_dir=log_dir,
-            name="match-" + str(processor.zmq_id)[2:-1])
+            name="setting-" + str(processor.zmq_id)[2:-1])
 
     init_console_logging(verbose_level=verbose_level)
 
@@ -92,9 +92,9 @@ def setup_loggers(verbose_level, processor):
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
         prog=prog_name,
-        description='Starts a hashblock-match transaction processor.',
+        description='Starts a hashblock-setting transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
-               'hashblock-match used by the Sawtooth platform.',
+               'Setting used by the Sawtooth platform.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
@@ -116,7 +116,7 @@ def create_parser(prog_name):
     parser.add_argument(
         '-V', '--version',
         action='version',
-        version=(DISTRIBUTION_NAME + ' (Hashblock Match) version {}')
+        version=(DISTRIBUTION_NAME + ' (Hashblock Exchange) version {}')
         .format(version),
         help='display version information')
 
@@ -124,18 +124,15 @@ def create_parser(prog_name):
 
 
 def load_settings_config(first_config):
-    default_settings_config = \
-        load_default_match_config()
-    conf_file = os.path.join(get_config_dir(), 'exchanges.toml')
-
-    toml_config = load_toml_match_config(conf_file)
-
-    return merge_match_config(
+    default_settings_config = load_default_setting_config()
+    conf_file = os.path.join(get_config_dir(), 'setting.toml')
+    toml_config = load_toml_setting_config(conf_file)
+    return merge_setting_config(
         configs=[first_config, toml_config, default_settings_config])
 
 
 def create_settings_config(args):
-    return MatchConfig(connect=args.connect)
+    return SettingConfig(connect=args.connect)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
@@ -146,8 +143,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     args = parser.parse_args(args)
 
     arg_config = create_settings_config(args)
-    match_config = load_settings_config(arg_config)
-    processor = TransactionProcessor(url=match_config.connect)
+    setting_config = load_settings_config(arg_config)
+    processor = TransactionProcessor(url=setting_config.connect)
 
     if with_loggers is True:
         if args.verbose is None:
@@ -158,9 +155,13 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     my_logger = logging.getLogger(__name__)
     my_logger.debug("Processor loaded")
-    handler = MatchTransactionHandler()
+
+    handler = SettingTransactionHandler()
+
     processor.add_handler(handler)
-    my_logger.debug("Handler instantiated, starting processor thread...")
+
+    my_logger.debug(
+        "Hashblock setting instantiated, starting setting processor thread...")
 
     try:
         processor.start()
