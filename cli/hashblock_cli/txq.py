@@ -450,7 +450,7 @@ def _make_txn(signer, input_keys, output_keys, payload):
         nonce=str(datetime.datetime.utcnow().timestamp()),
         signer_public_key=signer.get_public_key().as_hex(),
         family_name=_addresser.NAMESPACE_MATCH,
-        family_version='1.0.0',
+        family_version='0.1.0',
         inputs=input_keys,
         outputs=output_keys,
         dependencies=[],

@@ -52,7 +52,7 @@ COPY bin bin
 FROM python:3.4-slim
 
 RUN	pip3 install \
-	sawtooth-sdk && \
+	sawtooth-sdk==1.0.1 && \
 	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
   	mkdir -p /project/hashblock-exchange/families/match && \

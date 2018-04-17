@@ -67,7 +67,7 @@ class MatchTransactionHandler(TransactionHandler):
 
     @property
     def family_versions(self):
-        return ['1.0.0']
+        return ['0.1.0']
 
     @property
     def namespaces(self):

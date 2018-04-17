@@ -176,7 +176,7 @@ def _make_setting_txn(signer, dimension, payload):
         nonce=str(datetime.datetime.utcnow().timestamp()),
         signer_public_key=signer.get_public_key().as_hex(),
         family_name=Address.NAMESPACE_SETTING,
-        family_version='1.0.0',
+        family_version='0.1.0',
         inputs=[
             _addresser.settings(dimension),
             props.candidates(dimension)],

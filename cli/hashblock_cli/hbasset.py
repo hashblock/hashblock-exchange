@@ -403,7 +403,7 @@ def _make_txn(signer, dimension, asset_addr, payload):
         nonce=str(datetime.datetime.utcnow().timestamp()),
         signer_public_key=signer.get_public_key().as_hex(),
         family_name=Address.NAMESPACE_ASSET,
-        family_version='1.0.0',
+        family_version='0.1.0',
         inputs=_config_inputs(asset_addr, dimension),
         outputs=_config_outputs(asset_addr, dimension),
         dependencies=[],

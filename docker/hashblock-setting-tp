@@ -51,14 +51,14 @@ COPY bin bin
 FROM python:3.4-slim
 
 RUN	pip3 install \
-	sawtooth-sdk && \
+	sawtooth-sdk==1.0.1 && \
 	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
   	mkdir -p /project/hashblock-exchange/families/setting && \
   	mkdir -p /var/log/sawtooth
 
 COPY --from=base /builder/bin/setting-tp /project/hashblock-exchange/bin
-COPY --from=base /builder/families/resource/hashblock_setting /project/hashblock-exchange/families/setting/hashblock_setting
+COPY --from=base /builder/families/setting/hashblock_setting /project/hashblock-exchange/families/setting/hashblock_setting
 
 WORKDIR /project/hashblock-exchange
 ENV PATH $PATH:/project/hashblock-exchange/bin
