@@ -62,7 +62,7 @@ main() {
     protos
     docker_build $top_dir/docker/$ASSETTP . $ASSETTAG
     docker_build $top_dir/docker/$MATCHTP . $MATCHTAG
-    docker_build $top_dir/docker/$SETTINGTP . $SETTINGTAG
+    docker_build $top_dir/docker/$SETTINGSTP . $SETTINGTAG
 
     info "Production image builds complete. Listing..."
     docker images --filter=reference='hashblock/*'

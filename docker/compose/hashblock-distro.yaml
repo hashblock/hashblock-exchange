@@ -22,19 +22,13 @@ version: '2.1'
 
 services:
   shell:
-    build:
-      context: ../..
-      dockerfile: docker/hashblock-dev-python
     image: hashblock-dev-python
-    container_name: hashblock-shell
+    container_name: hbshell
     volumes:
       - ../../../hashblock-exchange/:/project/hashblock-exchange
       - ../../../sawtooth-core/:/project/sawtooth-core
-     # Expose 5678 for remote debugging
-    expose:
-      - 5678
-    ports:
-      - "5678:5678"
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - validator
       - rest-api
@@ -47,48 +41,39 @@ services:
         \""
     stop_signal: SIGKILL
 
-  units-processor:
-    image: hashblock/hashblock-units-tp
-    container_name: units-tp
-    # Expose 5679 for remote debugging
-    expose:
-      - 5679
-    ports:
-      - "5679:5679"
+  asset-processor:
+    image: hashblock/hashblock-asset-tp:latest
+    container_name: hbasset-tp
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - validator
     command: "bash -c \"\
         sleep 1 &&
-        units-tp -vv \
+        asset-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL
 
-  resource-processor:
-    image: hashblock/hashblock-resource-tp
-    container_name: resource-tp
-    # Expose 5679 for remote debugging
-    expose:
-      - 5671
-    ports:
-      - "5671:5671"
+  setting-processor:
+    image: hashblock/hashblock-setting-tp:latest
+    container_name: hbsetting-tp
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - validator
     command: "bash -c \"\
         sleep 1 &&
-        resource-tp -vv \
+        setting-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL
 
   match-processor:
-    image: hashblock/hashblock-match-tp
-    container_name: match-tp
-    # Expose 5679 for remote debugging
-    expose:
-      - 5670
-    ports:
-      - "5670:5670"
+    image: hashblock/hashblock-match-tp:latest
+    container_name: hbmatch-tp
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - validator
     command: "bash -c \"\
@@ -114,24 +99,20 @@ services:
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core
       - ../../:/project/hashblock-exchange
-    # Expose 5700 for remote debugging
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
     expose:
       - 4004
-      - 5700
     ports:
       - "4004:4004"
-      - "5700:5700"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth keygen my_key && \
         sawtooth keygen your_key && \
-        sawtooth keygen my_key2 && \
-        sawtooth keygen your_key2 && \
         sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
-        /project/hashblock-exchange/bin/unitsset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-units.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
-        /project/hashblock-exchange/bin/resset genesis -k /root/.sawtooth/keys/my_key2.priv -o /etc/config-resource.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key2.pub) && \
-        sawadm genesis /etc/config-settings.batch /etc/config-units.batch /etc/config-resource.batch && \
+        /project/hashblock-exchange/bin/hbsetting genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-hbsettings.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
+        sawadm genesis /etc/config-settings.batch /etc/config-hbsettings.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
