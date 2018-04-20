@@ -14,9 +14,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 
 from protobuf.setting_pb2 import Settings
+from protobuf.asset_pb2 import AssetPayload
 from protobuf.asset_pb2 import AssetProposal
 from protobuf.asset_pb2 import AssetVote
 from protobuf.asset_pb2 import AssetCandidate
@@ -35,9 +35,7 @@ from sdk.python.address import Address
 _asset_addr = Address(Address.FAMILY_ASSET)
 _setting_addr = Address(Address.FAMILY_SETTING)
 
-
-def _to_hash(value):
-    return hashlib.sha256(value).hexdigest()
+VOTER2 = "59c272cb554c7100dd6c1e38b5c77f158146be29373329e503bfcb81e70d1ddd"
 
 
 EMPTY_CANDIDATES = AssetCandidates(candidates=[]).SerializeToString()
@@ -49,11 +47,8 @@ class TestAsset(TransactionProcessorTestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.factory = AssetMessageFactory()
-        cls.setting_keys = [
-            cls.factory.public_key,
-            "59c272cb554c7100dd6c1e38b5c77f158146be29373329e503bfcb81e70d1ddd"]
         cls.setting = Settings(
-            auth_list=','.join(cls.setting_keys),
+            auth_list=','.join([cls.factory.public_key, VOTER2]),
             threshold='2').SerializeToString()
 
     def _expect_get(self, address, data):
@@ -127,6 +122,42 @@ class TestAsset(TransactionProcessorTestCase):
                 proposal_id=proposal_id,
                 proposal=proposal,
                 votes=[record])]).SerializeToString()
+
+    def test_bad_authlist(self):
+        """Bad auth_list, good threshold
+        """
+        unit = Unit(system="imperial", key='unity', value='1')
+        self._propose(unit, Address.DIMENSION_UNIT)
+        self._expect_get(
+            _setting_addr.settings(Address.DIMENSION_UNIT),
+            Settings(
+                auth_list='',
+                threshold='2').SerializeToString())
+        self._expect_invalid_transaction()
+
+    def test_bad_threshold(self):
+        """Good auth_list, bad threshold
+        """
+        unit = Unit(system="imperial", key='unity', value='1')
+        self._propose(unit, Address.DIMENSION_UNIT)
+        self._expect_get(
+            _setting_addr.settings(Address.DIMENSION_UNIT),
+            Settings(
+                auth_list=','.join([self._public_key, VOTER2]),
+                threshold='').SerializeToString())
+        self._expect_invalid_transaction()
+
+    def test_not_authorized(self):
+        """Bad auth_list, good threshold
+        """
+        unit = Unit(system="imperial", key='unity', value='1')
+        self._propose(unit, Address.DIMENSION_UNIT)
+        self._expect_get(
+            _setting_addr.settings(Address.DIMENSION_UNIT),
+            Settings(
+                auth_list=','.join([VOTER2]),
+                threshold='2').SerializeToString())
+        self._expect_invalid_transaction()
 
     def _test_valid_propose(self, asset, dimension):
         """Sunny day proposal for asset type

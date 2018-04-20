@@ -227,12 +227,12 @@ class AssetTransactionHandler(TransactionHandler):
                 context,
                 asset_type.setting_address)
 
-        if asset_type.settings:
+        if asset_type.settings and asset_type.settings.auth_list:
             return _string_tolist(asset_type.settings.auth_list)
         else:
             raise InvalidTransaction(
                 'Asset auth_list settings for {} '
-                'must not be empty.'.format(self.dimension))
+                'does not exist.'.format(self.dimension))
 
     def _get_approval_threshold(self, context, asset_type):
         """Retrieve the threshold setting for dimension
@@ -242,12 +242,12 @@ class AssetTransactionHandler(TransactionHandler):
                 context,
                 asset_type.setting_address)
 
-        if asset_type.settings:
+        if asset_type.settings and asset_type.settings.threshold:
             return int(asset_type.settings.threshold)
         else:
             raise InvalidTransaction(
                 'Asset threshold settings for {} '
-                'must not be empty.'.format(self.dimension))
+                'does not exist.'.format(self.dimension))
 
 
 def _validate_asset(auth_keys, units_code, value):
