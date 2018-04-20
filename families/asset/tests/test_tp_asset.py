@@ -110,33 +110,50 @@ class TestAsset(TransactionProcessorTestCase):
     def _public_key(self):
         return self.factory.public_key
 
+    def _build_first_candidate(self, asset, dimension):
+        proposal_id = _asset_addr.asset_item(
+            dimension, asset.system, asset.key)
+        proposal = AssetProposal(
+            asset=asset.SerializeToString(),
+            type=AssetProposal.UNIT
+            if dimension is Address.DIMENSION_UNIT
+            else AssetProposal.RESOURCE,
+            nonce="somenonce")
+        record = AssetCandidate.VoteRecord(
+            public_key=self._public_key,
+            vote=AssetVote.ACCEPT)
+        return AssetCandidates(candidates=[
+            AssetCandidate(
+                proposal_id=proposal_id,
+                proposal=proposal,
+                votes=[record])]).SerializeToString()
+
+    def _test_valid_propose(self, asset, dimension):
+        """Sunny day proposal for asset type
+        """
+        self._propose(asset, dimension)
+        self._get_setting(dimension)
+        self._get_empty_candidates(dimension)
+        self._expect_set(
+            _asset_addr.candidates(dimension),
+            self._build_first_candidate(
+                asset,
+                dimension))
+        self._expect_ok()
+
     def test_propose_asset_unit(self):
         """Test a valid proposition for unit-of-measure asset
         This assumes basic setting and empty candidates in state
         """
         unit = Unit(system="imperial", key='unity', value='1')
-        self._propose(unit, Address.DIMENSION_UNIT)
-        self._get_setting(Address.DIMENSION_UNIT)
-        self._get_empty_candidates(Address.DIMENSION_UNIT)
+        self._test_valid_propose(unit, Address.DIMENSION_UNIT)
 
-        proposal_id = _asset_addr.asset_item(
-            Address.DIMENSION_UNIT, "imperial", "unity")
-        proposal = AssetProposal(
-            asset=unit.SerializeToString(),
-            type=AssetProposal.UNIT,
-            nonce="somenonce")
-        record = AssetCandidate.VoteRecord(
-            public_key=self._public_key,
-            vote=AssetVote.ACCEPT)
-        candi = AssetCandidates(candidates=[
-            AssetCandidate(
-                proposal_id=proposal_id,
-                proposal=proposal,
-                votes=[record])]).SerializeToString()
-        self._expect_set(
-            _asset_addr.candidates(Address.DIMENSION_UNIT),
-            candi)
-        self._expect_ok()
+    def test_propose_asset_resource(self):
+        """Test a valid proposition for resource asset
+        This assumes basic setting and empty candidates in state
+        """
+        resource = Resource(system="imperial", key='peanuts', value='food')
+        self._test_valid_propose(resource, Address.DIMENSION_RESOURCE)
 
     # def test_vote_asset_unit(self):
     #     """Test a valid vote for unit-of-measure asset
@@ -144,11 +161,6 @@ class TestAsset(TransactionProcessorTestCase):
     #     """
     #     pass
 
-    # def test_propose_asset_resource(self):
-    #     """Test a valid proposition for resource asset
-    #     This assumes setting and candidates in state
-    #     """
-    #     pass
 
     # def test_vote_asset_resource(self):
     #     """Test a valid vote for resource asset
