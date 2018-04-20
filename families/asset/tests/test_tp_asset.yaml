@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,34 +19,37 @@ version: "2.1"
 services:
 
   units-processor:
-    image: hashblock-dev-units-tp:latest
-    container_name: hashblock-units-dev-tp
+    image: hashblock-dev-asset-tp:latest
+    container_name: hashblock-asset-dev-tp
     volumes:
-      - ../../..:/project/exchange
+      - ../../..:/project/hashblock-exchange
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
     expose:
       - 4004
-    command: units-tp -vv -C tcp://test-tp-units:4004        
+    command: asset-tp -vv -C tcp://test-tp-asset:4004
     stop_signal: SIGKILL
 
 
-  test-tp-units:
+  test-tp-asset:
     image: sawtooth-dev-python:latest
     volumes:
-      - ../../..:/devprj/exchange
+      - ../../..:/project/hashblock-exchange
       - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
     command: nose2-3
-        -c /devprj/exchange/families/units/nose2.cfg
+        -c /project/hashblock-exchange/families/asset/nose2.cfg
         -v
-        -s /devprj/exchange/families/units/tests
-        test_tp_units
+        -s /project/hashblock-exchange/families/asset/tests
+        test_tp_asset
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/devprj/exchange/families/units/hashblock_units:\
-            /devprj/exchange/families/units/tests:\
-            /devprj/exchange/sdk/python:\
+        PYTHONPATH: "/project/hashblock-exchange/families/asset/hashblock_asset:\
+            /project/hashblock-exchange:\
+            /project/hashblock-exchange/families/units/tests:\
+            /project/hashblock-exchange/sdk/python:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"

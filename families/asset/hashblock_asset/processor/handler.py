@@ -86,6 +86,7 @@ class AssetTransactionHandler(TransactionHandler):
         LOGGER.debug("Received transaction for {}".format(self.dimension))
 
         auth_keys = self._get_auth_keys(context, self.asset_type)
+
         if auth_keys and public_key not in auth_keys:
             raise InvalidTransaction(
                 '{} is not authorized to change asset'.format(public_key))

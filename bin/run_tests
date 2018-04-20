@@ -18,8 +18,9 @@
 # MODULE_LIST determines the order in which modules are run.
 # Quicker tests should run before slower ones.
 MODULE_LIST="
-    units
-    events
+    asset
+    match
+    setting
 "
 
 usage() {
@@ -88,10 +89,10 @@ MODULES="$INCLUDE $MODULES"
 main() {
 
 # Start in project directory
-    cd $PROJECT_DIR    
+    cd $PROJECT_DIR
 
     for module in $MODULES
-    do        
+    do
 
 # Check if we are skipping this module
         skip=0
@@ -113,11 +114,14 @@ main() {
                 all)
                     test_all
                     ;;
-                units)
-                    test_units
+                match)
+                    test_match
                     ;;
-                exchanges)
-                    test_exchanges
+                asset)
+                    test_asset
+                    ;;
+                setting)
+                    test_setting
                     ;;
                 *)
                     echo "Module '$module' not found."
@@ -127,21 +131,29 @@ main() {
     done
 }
 
-test_units() {
-    run_docker_test ./families/units/tests/test_tp_units.yaml
+test_asset() {
+    run_docker_test ./families/asset/tests/test_tp_asset.yaml
     # copy_coverage .coverage.units.config
 }
 
-test_exchanges() {
-    run_docker_test ./families/exchanges/tests/test_tp_events.yaml
-    copy_coverage .coverage.exchanges.python
+test_match() {
+    echo "Match tests disabled"
+    #run_docker_test ./families/match/tests/test_tp_match.yaml
+    #copy_coverage .coverage.exchanges.python
+}
+
+test_setting() {
+    echo "Setting tests disabled"
+    #run_docker_test ./families/setting/tests/test_tp_setting.yaml
+    #copy_coverage .coverage.exchanges.python
 }
 
 test_all() {
-    run_docker_test ./families/units/tests/test_tp_units.yaml
+    run_docker_test ./families/asset/tests/test_tp_units.yaml
     # copy_coverage .coverage.units.python
-    run_docker_test ./families/exchanges/tests/test_tp_events.yaml
+    # run_docker_test ./families/match/tests/test_tp_match.yaml
     # copy_coverage .coverage.events.python
+    # run_docker_test ./families/setting/tests/test_tp_setting.yaml
 }
 
 

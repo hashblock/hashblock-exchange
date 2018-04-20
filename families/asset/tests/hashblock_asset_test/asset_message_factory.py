@@ -17,38 +17,28 @@
 import logging
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from protobuf.unit_pb2 import UnitPayload
-from protobuf.unit_pb2 import UnitProposal
-from protobuf.unit_pb2 import UnitVote
-from protobuf.units_pb2 import Unit
+from protobuf.asset_pb2 import AssetProposal
+from protobuf.asset_pb2 import AssetVote
+from protobuf.asset_pb2 import AssetPayload
+
+from sdk.python.address import Address
 
 LOGGER = logging.getLogger(__name__)
 
-_MAX_KEY_PARTS = 4
-_ADDRESS_PART_SIZE = 16
 
-
-class UnitMessageFactory(object):
+class AssetMessageFactory(object):
     def __init__(self, signer=None):
+        self._asset_addr = Address(Address.FAMILY_ASSET)
+        self._setting_addr = Address(Address.FAMILY_SETTING)
         self._factory = MessageFactory(
-            family_name="hashblock_units",
+            family_name=Address.NAMESPACE_ASSET,
             family_version="0.1.0",
-            namespace=[MessageFactory.sha512('units'.encode("utf-8"))[0:6]],
+            namespace=[self._asset_addr.ns_family],
             signer=signer)
 
     @property
     def public_key(self):
         return self._factory.get_public_key()
-
-    def _key_to_address(self, key):
-        key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
-        key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
-
-        def _short_hash(in_str):
-            return self._factory.sha256(in_str.encode())[:16]
-
-        return self._factory.namespace + \
-            ''.join(_short_hash(x) for x in key_parts)
 
     def create_tp_register(self):
         return self._factory.create_tp_register()
@@ -56,71 +46,64 @@ class UnitMessageFactory(object):
     def create_tp_response(self, status):
         return self._factory.create_tp_response(status)
 
-    def _create_tp_process_request(self, code, payload):
+    def _create_tp_process_request(self, asset, dimension, payload):
+        asset_address = self._asset_addr.asset_item(
+            dimension,
+            asset.system,
+            asset.key)
         inputs = [
-            self._key_to_address('hashblock.units.vote.proposals'),
-            self._key_to_address('hashblock.units.vote.authorized_keys'),
-            self._key_to_address('hashblock.units.vote.approval_threshold'),
-            self._key_to_address(code)
+            self._setting_addr.settings(dimension),
+            self._asset_addr.candidates(dimension),
+            asset_address
         ]
 
         outputs = [
-            self._key_to_address('hashblock.units.vote.proposals'),
-            self._key_to_address(code)
+            self._asset_addr.candidates(dimension),
+            asset_address
         ]
 
         return self._factory.create_tp_process_request(
             payload.SerializeToString(), inputs, outputs, [])
 
-    def create_proposal_transaction(self, code, value, nonce):
-        proposal = UnitProposal(code=code, value=value, nonce=nonce)
-        payload = UnitPayload(
-            action=UnitPayload.PROPOSE,
+    def create_proposal_transaction(self, asset, dimension, nonce):
+        proposal = AssetProposal(
+            asset=asset.SerializeToString(),
+            type=AssetProposal.UNIT
+            if dimension is Address.DIMENSION_UNIT
+            else AssetProposal.RESOURCE,
+            nonce=nonce)
+        payload = AssetPayload(
+            action=AssetPayload.PROPOSE,
+            dimension=dimension,
             data=proposal.SerializeToString())
 
-        return self._create_tp_process_request(code, payload)
+        return self._create_tp_process_request(asset, dimension, payload)
 
-    def create_vote_proposal(self, proposal_id, code, vote):
-        vote = UnitVote(proposal_id=proposal_id, vote=vote)
-        payload = UnitPayload(
-            action=UnitPayload.VOTE,
+    def create_vote_transaction(self, proposal_id, asset, dimension, vote):
+        vote = AssetVote(proposal_id=proposal_id, vote=vote)
+        payload = AssetPayload(
+            action=AssetPayload.VOTE,
             data=vote.SerializeToString())
 
-        return self._create_tp_process_request(code, payload)
+        return self._create_tp_process_request(asset, dimension, payload)
 
-    def create_get_request(self, code):
-        addresses = [self._key_to_address(code)]
+    def create_get_request(self, address):
+        addresses = [address]
         return self._factory.create_get_request(addresses)
 
-    def create_get_response(self, code, value=None):
-        address = self._key_to_address(code)
-
-        if value is not None:
-            entry = Unit.Entry(key=code, value=value)
-            data = Unit(entries=[entry]).SerializeToString()
-        else:
-            data = None
-
+    def create_get_response(self, address, data):
         return self._factory.create_get_response({address: data})
 
-    def create_set_request(self, code, value=None):
-        address = self._key_to_address(code)
-
-        if value is not None:
-            entry = Unit.Entry(key=code, value=value)
-            data = Unit(entries=[entry]).SerializeToString()
-        else:
-            data = None
-
+    def create_set_request(self, address, data):
         return self._factory.create_set_request({address: data})
 
-    def create_set_response(self, code):
-        addresses = [self._key_to_address(code)]
+    def create_set_response(self, address):
+        addresses = [address]
         return self._factory.create_set_response(addresses)
 
     def create_add_event_request(self, key):
         return self._factory.create_add_event_request(
-            "units/update",
+            "asset/update",
             [("updated", key)])
 
     def create_add_event_response(self):
