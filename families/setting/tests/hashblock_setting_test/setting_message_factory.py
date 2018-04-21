@@ -14,26 +14,22 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import logging
-
 from sawtooth_processor_test.message_factory import MessageFactory
-from protobuf.units_pb2 import Unit
 
 from protobuf.setting_pb2 import SettingPayload
-from protobuf.setting_pb2 import Setting
+from protobuf.setting_pb2 import Settings
 from sdk.python.address import Address
-
-LOGGER = logging.getLogger(__name__)
 
 
 class SettingMessageFactory(object):
-    _addresser = Address(Address.FAMILY_SETTING)
 
     def __init__(self, signer=None):
+        self._asset_addr = Address(Address.FAMILY_ASSET)
+        self._setting_addr = Address(Address.FAMILY_SETTING)
         self._factory = MessageFactory(
             family_name=Address.NAMESPACE_SETTING,
-            family_version="1.0.0",
-            namespace=[self._addresser.ns_family],
+            family_version="0.1.0",
+            namespace=[self._setting_addr.ns_family],
             signer=signer)
 
     @property
@@ -47,49 +43,34 @@ class SettingMessageFactory(object):
         return self._factory.create_tp_response(status)
 
     def _create_tp_process_request(self, dimension, payload):
-        address = self._addresser.settings(dimension)
-        inputs = [address]
-        outputs = [address]
+        address = self._setting_addr.settings(dimension)
+        inputs = [address, self._asset_addr.candidates(dimension)]
+        outputs = [address, self._asset_addr.candidates(dimension)]
         return self._factory.create_tp_process_request(
             payload.SerializeToString(), inputs, outputs, [])
 
-    def create_setting_transaction(self, auth_keys, thresh, dimension, action):
-        setting = Setting(auth_list=auth_keys, threshold=thresh)
+    def create_payload_request(self, settings, dimension, action):
         payload = SettingPayload(
             action=action,
             dimension=dimension,
-            data=setting.SerializeToString())
+            data=settings.SerializeToString())
         return self._create_tp_process_request(dimension, payload)
 
-    def create_get_request(self, dimension):
-        addresses = [self._addresser.settings(dimension)]
-        return self._factory.create_get_request(addresses)
+    def create_setting_transaction(self, auth_keys, thresh, dimension, action):
+        setting = Settings(auth_list=auth_keys, threshold=thresh)
+        return self.create_payload_request(setting, dimension, action)
 
-    def create_get_response(self, dimension, alist, thresh=None):
-        address = self._addresser.settings(dimension)
+    def create_get_request(self, address):
+        return self._factory.create_get_request([address])
 
-        if value is not None:
-            entry = Unit.Entry(key=code, value=value)
-            data = Unit(entries=[entry]).SerializeToString()
-        else:
-            data = None
-
+    def create_get_response(self, address, data=None):
         return self._factory.create_get_response({address: data})
 
-    def create_set_request(self, dimension, code, value=None):
-        address = self._addresser.settings(dimension)
+    def create_set_request(self, address, setting=None):
+        return self._factory.create_set_request({address: setting})
 
-        if value is not None:
-            entry = Unit.Entry(key=code, value=value)
-            data = Unit(entries=[entry]).SerializeToString()
-        else:
-            data = None
-
-        return self._factory.create_set_request({address: data})
-
-    def create_set_response(self, dimension):
-        addresses = [self._addresser.settings(dimension)]
-        return self._factory.create_set_response(addresses)
+    def create_set_response(self, address):
+        return self._factory.create_set_response([address])
 
     def create_add_event_request(self, key):
         return self._factory.create_add_event_request(

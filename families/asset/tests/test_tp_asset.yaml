@@ -18,7 +18,7 @@ version: "2.1"
 
 services:
 
-  units-processor:
+  asset-processor:
     image: hashblock-dev-asset-tp:latest
     container_name: hashblock-asset-dev-tp
     volumes:

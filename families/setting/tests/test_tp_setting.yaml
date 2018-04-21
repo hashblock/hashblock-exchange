@@ -23,30 +23,33 @@ services:
     container_name: hashblock-setting-dev-tp
     volumes:
       - ../../..:/project/hashblock-exchange
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
     expose:
       - 4004
     command: setting-tp -vv -C tcp://test-tp-setting:4004
     stop_signal: SIGKILL
 
 
-  test-tp-units:
+  test-tp-setting:
     image: sawtooth-dev-python:latest
     volumes:
-      - ../../..:/devprj/hashblock-exchange
+      - ../../..:/project/hashblock-exchange
       - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
     command: nose2-3
-        -c /devprj/hashblock-exchange/families/setting/nose2.cfg
+        -c /project/hashblock-exchange/families/setting/nose2.cfg
         -v
-        -s /devprj/hashblock-exchange/families/setting/tests
+        -s /project/hashblock-exchange/families/setting/tests
         test_tp_setting
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/devprj/hashblock-exchange/families/setting/hashblock_setting:\
-            /devprj/hashblock-exchange/families/setting/tests:\
-            /devprj/hashblock-exchange/sdk/python:\
+        PYTHONPATH: "/project/hashblock-exchange/families/setting/hashblock_setting:\
+            /project/hashblock-exchange:\
+            /project/hashblock-exchange/families/setting/tests:\
+            /project/hashblock-exchange/sdk/python:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"

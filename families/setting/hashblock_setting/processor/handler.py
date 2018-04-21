@@ -94,22 +94,34 @@ class SettingTransactionHandler(TransactionHandler):
         setting_payload = SettingPayload()
         setting_payload.ParseFromString(transaction.payload)
         self.dimension = setting_payload.dimension
-        self._get_auth_list(context)
-
-        if self.auth_list and public_key not in self.auth_list:
-            raise InvalidTransaction(
-                '{} is not authorized to change setting'.format(public_key))
         setting = Settings()
         setting.ParseFromString(setting_payload.data)
         self.action = setting_payload.action
         if self.action in self._actions:
-            return self._set_setting(
-                public_key,
-                context,
-                setting)
+            self._validate_transaction(context, public_key)
         else:
             raise InvalidTransaction(
                 "Payload 'action' must be one of {CREATE, UPDATE")
+
+        return self._set_setting(public_key, context, setting)
+
+    def _validate_transaction(self, context, public_key):
+        self._get_auth_list(context)
+        if self.action == SettingPayload.CREATE:
+            if self.auth_list:
+                raise InvalidTransaction(
+                    'Settings for {} already exist'.
+                    format(self.dimension))
+        elif not self.auth_list:
+            raise InvalidTransaction(
+                'Settings not in place for {}'.
+                format(self.dimension))
+        elif public_key not in self.auth_list:
+                raise InvalidTransaction(
+                    '{} is not authorized to change setting'.
+                    format(public_key))
+        else:
+            return public_key
 
     def _validate_create(self, context, setting):
         """Valudate the setting during a create
@@ -121,13 +133,6 @@ class SettingTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 "Both auth_list and threshold are required")
 
-        candidates = _get_candidates(
-            context,
-            Address(Address.FAMILY_ASSET).candidates(self.dimension))
-
-        if candidates:
-            raise InvalidTransaction(
-                "Invalide state. Candidates already exist")
         auth_keys = _string_tolist(setting.auth_list)
         threshold = int(setting.threshold)
         if threshold <= 0:
@@ -168,6 +173,8 @@ class SettingTransactionHandler(TransactionHandler):
     def _set_setting(self, public_key, context, setting):
         """Change the hashblock settings on the block
         """
+        LOGGER.debug("Processing setting payload")
+
         if self.action == SettingPayload.CREATE:
             self._validate_create(context, setting)
         else:
