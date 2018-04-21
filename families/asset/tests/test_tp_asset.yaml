@@ -48,7 +48,7 @@ services:
         TEST_BIND: "tcp://eth0:4004"
         PYTHONPATH: "/project/hashblock-exchange/families/asset/hashblock_asset:\
             /project/hashblock-exchange:\
-            /project/hashblock-exchange/families/units/tests:\
+            /project/hashblock-exchange/families/asset/tests:\
             /project/hashblock-exchange/sdk/python:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\

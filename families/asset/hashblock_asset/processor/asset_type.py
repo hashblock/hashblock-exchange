@@ -14,19 +14,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import logging
-
 from abc import ABC, abstractmethod
 
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 
-from protobuf.asset_pb2 import AssetProposal
 from protobuf.asset_pb2 import Unit
 from protobuf.asset_pb2 import Resource
 
 from sdk.python.address import Address
-
-LOGGER = logging.getLogger(__name__)
 
 
 class AssetType(ABC):

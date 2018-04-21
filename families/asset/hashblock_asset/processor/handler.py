@@ -15,7 +15,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import hashlib
 
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
@@ -195,7 +194,7 @@ class AssetTransactionHandler(TransactionHandler):
         elif rejected_count >= approval_threshold or \
                 (rejected_count + accepted_count) == len(authorized_keys):
             LOGGER.debug(
-                'Proposal for {} was rejected'.format(self.asset_type.asset))
+                'Proposal for {} was rejected'.format(proposal_id))
             del asset_candidates.candidates[candidate_index]
             self._set_candidates(context, asset_candidates)
         else:

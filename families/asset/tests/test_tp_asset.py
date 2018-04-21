@@ -16,7 +16,6 @@
 
 
 from protobuf.setting_pb2 import Settings
-from protobuf.asset_pb2 import AssetPayload
 from protobuf.asset_pb2 import AssetProposal
 from protobuf.asset_pb2 import AssetVote
 from protobuf.asset_pb2 import AssetCandidate
@@ -50,6 +49,8 @@ class TestAsset(TransactionProcessorTestCase):
         cls.setting = Settings(
             auth_list=','.join([cls.factory.public_key, VOTER2]),
             threshold='2').SerializeToString()
+        cls.unit = Unit(system="imperial", key='unity', value='1')
+        cls.resource = Resource(system="imperial", key='peanuts', value='food')
 
     def _expect_get(self, address, data):
         received = self.validator.expect(
@@ -64,9 +65,9 @@ class TestAsset(TransactionProcessorTestCase):
         self.validator.respond(
             self.factory.create_set_response(address), received)
 
-    def _expect_add_event(self, key):
+    def _expect_add_event(self, address):
         received = self.validator.expect(
-            self.factory.create_add_event_request(key))
+            self.factory.create_add_event_request(address))
 
         self.validator.respond(
             self.factory.create_add_event_response(),
@@ -93,6 +94,11 @@ class TestAsset(TransactionProcessorTestCase):
             _asset_addr.candidates(dimension),
             EMPTY_CANDIDATES)
 
+    def _set_empty_candidates(self, dimension):
+        self._expect_set(
+            _asset_addr.candidates(dimension),
+            EMPTY_CANDIDATES)
+
     def _propose(self, asset, dimension):
         self.validator.send(self.factory.create_proposal_transaction(
             asset, dimension, "somenonce"))
@@ -105,9 +111,12 @@ class TestAsset(TransactionProcessorTestCase):
     def _public_key(self):
         return self.factory.public_key
 
-    def _build_first_candidate(self, asset, dimension):
-        proposal_id = _asset_addr.asset_item(
+    def _proposal_id(self, asset, dimension):
+        return _asset_addr.asset_item(
             dimension, asset.system, asset.key)
+
+    def _build_first_candidate(self, pkey, asset, dimension):
+        proposal_id = self._proposal_id(asset, dimension)
         proposal = AssetProposal(
             asset=asset.SerializeToString(),
             type=AssetProposal.UNIT
@@ -115,7 +124,7 @@ class TestAsset(TransactionProcessorTestCase):
             else AssetProposal.RESOURCE,
             nonce="somenonce")
         record = AssetCandidate.VoteRecord(
-            public_key=self._public_key,
+            public_key=pkey,
             vote=AssetVote.ACCEPT)
         return AssetCandidates(candidates=[
             AssetCandidate(
@@ -126,8 +135,7 @@ class TestAsset(TransactionProcessorTestCase):
     def test_bad_authlist(self):
         """Bad auth_list, good threshold
         """
-        unit = Unit(system="imperial", key='unity', value='1')
-        self._propose(unit, Address.DIMENSION_UNIT)
+        self._propose(self.unit, Address.DIMENSION_UNIT)
         self._expect_get(
             _setting_addr.settings(Address.DIMENSION_UNIT),
             Settings(
@@ -138,8 +146,7 @@ class TestAsset(TransactionProcessorTestCase):
     def test_bad_threshold(self):
         """Good auth_list, bad threshold
         """
-        unit = Unit(system="imperial", key='unity', value='1')
-        self._propose(unit, Address.DIMENSION_UNIT)
+        self._propose(self.unit, Address.DIMENSION_UNIT)
         self._expect_get(
             _setting_addr.settings(Address.DIMENSION_UNIT),
             Settings(
@@ -150,8 +157,7 @@ class TestAsset(TransactionProcessorTestCase):
     def test_not_authorized(self):
         """Bad auth_list, good threshold
         """
-        unit = Unit(system="imperial", key='unity', value='1')
-        self._propose(unit, Address.DIMENSION_UNIT)
+        self._propose(self.unit, Address.DIMENSION_UNIT)
         self._expect_get(
             _setting_addr.settings(Address.DIMENSION_UNIT),
             Settings(
@@ -168,6 +174,7 @@ class TestAsset(TransactionProcessorTestCase):
         self._expect_set(
             _asset_addr.candidates(dimension),
             self._build_first_candidate(
+                self._public_key,
                 asset,
                 dimension))
         self._expect_ok()
@@ -176,25 +183,121 @@ class TestAsset(TransactionProcessorTestCase):
         """Test a valid proposition for unit-of-measure asset
         This assumes basic setting and empty candidates in state
         """
-        unit = Unit(system="imperial", key='unity', value='1')
-        self._test_valid_propose(unit, Address.DIMENSION_UNIT)
+        self._test_valid_propose(self.unit, Address.DIMENSION_UNIT)
 
     def test_propose_asset_resource(self):
         """Test a valid proposition for resource asset
         This assumes basic setting and empty candidates in state
         """
-        resource = Resource(system="imperial", key='peanuts', value='food')
-        self._test_valid_propose(resource, Address.DIMENSION_RESOURCE)
+        self._test_valid_propose(self.resource, Address.DIMENSION_RESOURCE)
 
-    # def test_vote_asset_unit(self):
-    #     """Test a valid vote for unit-of-measure asset
-    #     This assumes setting and candidates in state
-    #     """
-    #     pass
+    def _setup_vote(self, asset, dimension, vote, voter):
+        proposal_id = self._proposal_id(asset, dimension)
+        self._vote(
+            proposal_id,
+            asset,
+            dimension,
+            vote)
+        self._get_setting(dimension)
+        self._expect_get(
+            _asset_addr.candidates(dimension),
+            self._build_first_candidate(
+                voter,
+                asset,
+                dimension))
+        return proposal_id
 
+    def _test_valid_accept_vote(self, asset, dimension):
+        x = asset.SerializeToString()
+        proposal_id = self._setup_vote(
+            asset,
+            dimension,
+            AssetVote.ACCEPT,
+            VOTER2)
+        self._expect_set(proposal_id, x)
+        self._expect_add_event(proposal_id)
+        self._set_empty_candidates(dimension)
+        self._expect_ok()
 
-    # def test_vote_asset_resource(self):
-    #     """Test a valid vote for resource asset
-    #     This assumes setting and candidates in state
-    #     """
-    #     pass
+    def _test_valid_reject_vote(self, asset, dimension):
+        self._setup_vote(
+            asset,
+            dimension,
+            AssetVote.REJECT,
+            VOTER2)
+        self._set_empty_candidates(dimension)
+        self._expect_ok()
+
+    # Proposing and voting for two authorized, threshold 2
+    # Assume 2 authorized voters with threshold 2
+    def test_vote_accept_unit(self):
+        """Test a valid vote for unit-of-measure asset
+        This assumes setting and candidates in state
+        """
+        self._test_valid_accept_vote(self.unit, Address.DIMENSION_UNIT)
+
+    def test_vote_accept_resource(self):
+        """Test a valid vote for resource asset
+        This assumes setting and candidates in state
+        """
+        self._test_valid_accept_vote(self.resource, Address.DIMENSION_RESOURCE)
+
+    def test_vote_reject_unit(self):
+        """Test a valid reject vote for unit-of-measure asset
+        """
+        self._test_valid_reject_vote(self.unit, Address.DIMENSION_UNIT)
+
+    def test_vote_reject_resource(self):
+        """Test a valid reject vote for resource asset
+        """
+        self._test_valid_reject_vote(self.resource, Address.DIMENSION_RESOURCE)
+
+    def _build_disjoint_candidate(self, proposal_id, voter, asset, dimension):
+        proposal = AssetProposal(
+            asset=asset.SerializeToString(),
+            type=AssetProposal.UNIT
+            if dimension is Address.DIMENSION_UNIT
+            else AssetProposal.RESOURCE,
+            nonce="somenonce")
+        record = AssetCandidate.VoteRecord(
+            public_key=voter,
+            vote=AssetVote.ACCEPT)
+        return AssetCandidates(candidates=[
+            AssetCandidate(
+                proposal_id=proposal_id,
+                proposal=proposal,
+                votes=[record])]).SerializeToString()
+
+    def test_vote_proposal_id_not_found(self):
+        """Test disjoint proposal id between vote and candidates
+        """
+        uproposal_id = self._proposal_id(
+            self.unit,
+            Address.DIMENSION_UNIT)
+        rproposal_id = self._proposal_id(
+            self.resource,
+            Address.DIMENSION_RESOURCE)
+        self._vote(
+            uproposal_id,
+            self.unit,
+            Address.DIMENSION_UNIT,
+            AssetVote.ACCEPT)
+        self._get_setting(Address.DIMENSION_UNIT)
+        self._expect_get(
+            _asset_addr.candidates(Address.DIMENSION_UNIT),
+            self._build_disjoint_candidate(
+                rproposal_id,
+                self._public_key,
+                self.unit,
+                Address.DIMENSION_UNIT))
+        self._expect_invalid_transaction()
+
+    def test_vote_dupe_voter(self):
+        """Test trying to vote twice
+        """
+        self._setup_vote(
+            self.unit,
+            Address.DIMENSION_UNIT,
+            AssetVote.ACCEPT,
+            self._public_key)
+        self._expect_invalid_transaction()

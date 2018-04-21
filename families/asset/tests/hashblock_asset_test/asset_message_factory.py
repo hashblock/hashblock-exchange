@@ -80,10 +80,13 @@ class AssetMessageFactory(object):
         return self._create_tp_process_request(asset, dimension, payload)
 
     def create_vote_transaction(self, proposal_id, asset, dimension, vote):
-        vote = AssetVote(proposal_id=proposal_id, vote=vote)
+        avote = AssetVote(
+            proposal_id=proposal_id,
+            vote=vote)
         payload = AssetPayload(
             action=AssetPayload.VOTE,
-            data=vote.SerializeToString())
+            dimension=dimension,
+            data=avote.SerializeToString())
 
         return self._create_tp_process_request(asset, dimension, payload)
 
@@ -101,10 +104,10 @@ class AssetMessageFactory(object):
         addresses = [address]
         return self._factory.create_set_response(addresses)
 
-    def create_add_event_request(self, key):
+    def create_add_event_request(self, address):
         return self._factory.create_add_event_request(
-            "asset/update",
-            [("updated", key)])
+            "hashbloc.asset/update",
+            [("updated", address)])
 
     def create_add_event_response(self):
         return self._factory.create_add_event_response()
