@@ -18,35 +18,38 @@ version: "2.1"
 
 services:
 
-  events-processor:
-    image: hashblock-dev-events-tp:latest
-    container_name: hashblock-events-dev-tp
+  match-processor:
+    image: hashblock-dev-match-tp:latest
+    container_name: hashblock-match-dev-tp
     volumes:
-      - ../../..:/project/sawtooth-eventchain
+      - ../../..:/project/hashblock-exchange
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
     expose:
       - 4004
-    command: events-tp -vv -C tcp://test-tp-events:4004        
+    command: match-tp -vv -C tcp://test-tp-match:4004
     stop_signal: SIGKILL
 
 
-  test-tp-events:
+  test-tp-match:
     image: sawtooth-dev-python:latest
     volumes:
-      - ../../..:/devprj/sawtooth-eventchain
+      - ../../..:/project/hashblock-exchange
       - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
     command: nose2-3
-        -c /devprj/sawtooth-eventchain/families/events/nose2.cfg
+        -c /project/hashblock-exchange/families/match/nose2.cfg
         -v
-        -s /devprj/sawtooth-eventchain/families/events/tests
-        test_tp_events
+        -s /project/hashblock-exchange/families/match/tests
+        test_tp_match
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/devprj/sawtooth-eventchain/families/events/hashblock_events:\
-            /devprj/sawtooth-eventchain/families/events/tests:\
-            /devprj/sawtooth-eventchain/sdk/python:\
+        PYTHONPATH: "/project/hashblock-exchange/families/match/hashblock_match:\
+            /project/hashblock-exchange:\
+            /project/hashblock-exchange/families/match/tests:\
+            /project/hashblock-exchange/sdk/python:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"

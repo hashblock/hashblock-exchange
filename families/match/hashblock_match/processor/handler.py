@@ -153,7 +153,8 @@ RECIPROCATE_VSET = {'plus', 'minus', 'quantity', 'ratio'}
 
 
 def __check_existence(exchange, exchangeset):
-    return exchangeset == set([f[0].name for f in exchange.ListFields()])
+    zset = set([f[0].name for f in exchange.ListFields()])
+    return exchangeset == zset
 
 
 def apply_initiate(payload, context):
