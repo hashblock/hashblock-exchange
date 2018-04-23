@@ -165,3 +165,62 @@ class TestEvent(TransactionProcessorTestCase):
                 ("unbalanced_address", ukey),
                 ("balanced_address", mkey)])
         self._expect_ok()
+
+    def test_ill_formed_initiate(self):
+        """Test not well formed initiate payload
+        """
+        init = UTXQ(
+            plus=b'public key',
+            minus=b'minus')
+        ukey = self._match_addr.txq_item(
+            Address.DIMENSION_UTXQ,
+            'ask',
+            str(uuid.uuid4()))
+        self._initiate(
+            init,
+            ukey,
+            MatchEvent.UTXQ_ASK)
+        self._expect_invalid_transaction()
+
+    def test_ill_formed_reciprocate(self):
+        """Test not well formed reciprocate payload
+        """
+        init, ukey, sinit = self._ask_five_bags_peanuts()
+        recip = MTXQ(
+            plus=b'public key',
+            minus=b'minus',
+            quantity=self._build_quantity(10, 5, 7))
+        mkey = self._match_addr.txq_item(
+            Address.DIMENSION_MTXQ,
+            'tell',
+            str(uuid.uuid4()))
+        self._reciprocate(recip, ukey, mkey, MatchEvent.MTXQ_TELL)
+        self._expect_get(ukey, sinit)
+        self._expect_invalid_transaction()
+
+    def test_matched_already(self):
+        """Test attempt to match on already matched initiate
+        """
+        init, ukey, sinit = self._ask_five_bags_peanuts()
+        recip, mkey = self._tell_tenusd_for_five_bags_peanuts()
+        self._reciprocate(recip, ukey, mkey, MatchEvent.MTXQ_TELL)
+        init.matched = True
+        self._expect_get(ukey, init.SerializeToString())
+        self._expect_invalid_transaction()
+
+    def test_invalid_match(self):
+        """Test unmatchable event
+        """
+        init, ukey, sinit = self._ask_five_bags_peanuts()
+        recip = self._build_reciprocate_event(
+            self._build_ratio(
+                self._build_quantity(2, 5, 7),
+                self._build_quantity(1, 2, 3)),
+            self._build_quantity(11, 5, 7))
+        mkey = self._match_addr.txq_item(
+            Address.DIMENSION_MTXQ,
+            'tell',
+            str(uuid.uuid4()))
+        self._reciprocate(recip, ukey, mkey, MatchEvent.MTXQ_TELL)
+        self._expect_get(ukey, sinit)
+        self._expect_invalid_transaction()
