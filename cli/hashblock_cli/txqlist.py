@@ -16,13 +16,22 @@
 
 import csv
 import sys
+
 from base64 import b64decode
 from hashblock_cli.protobuf.match_pb2 import UTXQ
 from hashblock_cli.protobuf.match_pb2 import MTXQ
-
-from hashblock_cli.txqcommon import hash_lookup
-
 from sdk.python.address import Address
+
+hash_lookup = {
+    "bag": 2,
+    "bags": 2,
+    "{peanuts}": 3,
+    "$": 5,
+    "{usd}": 7,
+    "bale": 11,
+    "bales": 11,
+    "{hay}": 13
+}
 
 _addresser = Address(Address.FAMILY_MATCH)
 

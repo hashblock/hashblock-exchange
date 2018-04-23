@@ -54,7 +54,7 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_signing import ParseError
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
-from hashblock_cli.txqcommon import hash_lookup
+from hashblock_cli.txqlist import hash_lookup
 from hashblock_cli.matchcliparser import create_match_parser
 from hashblock_cli.txqlist import listing_of
 from hashblock_cli.txqlist import exchange_list_for
@@ -82,10 +82,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _do_match_initiate(args):
-    """Executes the 'event initiate' subcommand.  Given a signing private key file, an
-    assignment public key file, and a quantity, it generates batches of hashblock_events
-    transactions in a BatchList instance.  The BatchList is either stored to a
-    file or submitted to a validator, depending on the supplied CLI arguments.
+    """Executes the 'event initiate' subcommand.  Given a signing private
+    key file, an assignment public key file, and a quantity, it generates
+    batches of hashblock_events transactions in a BatchList instance.
+    The BatchList is either stored to a file or submitted to a validator,
+    depending on the supplied CLI arguments.
     """
     raw_quantity = []
     ast = parser.parse(args.expr)
@@ -110,7 +111,8 @@ def _do_match_initiate(args):
                     else:
                         factor = component_unary[1]
                         if factor[0].lower() != 'factor':
-                            raise AssertionError('Invalid quantity specification.')
+                            raise AssertionError(
+                                'Invalid quantity specification.')
                         else:
                             raw_quantity.append(factor[1])
 
@@ -125,7 +127,8 @@ def _do_match_initiate(args):
                     else:
                         simple_unit = annotatable[1]
                         if simple_unit[0].lower() != 'simple_unit':
-                            raise AssertionError('Invalid quantity specification.')
+                            raise AssertionError(
+                                'Invalid quantity specification.')
                         else:
                             value_unit = simple_unit[1]
                             raw_quantity.append(hash_lookup[value_unit])
@@ -139,17 +142,11 @@ def _do_match_initiate(args):
     rest_client.send_batches(batch_list)
 
 
-def _hash_reverse_lookup(lookup_value):
-    """Reverse hash lookup
-    """
-    return [key for key, value in hash_lookup.items() if value == lookup_value]
-
-
 def _do_match_reciprocate(args):
     """Executes a reciprocate type subcommand.  Given a key file, an event
-    id, a quantity, and a ratop, it generates a batch of hashblock-match transactions
-    in a BatchList instance.  The BatchList is file or submitted to a
-    validator.
+    id, a quantity, and a ratop, it generates a batch of hashblock-match
+    transactions in a BatchList instance.  The BatchList is file
+    or submitted to avalidator.
     """
     signer = _read_signer(args.skey)
     rest_client = RestClient(args.url)
@@ -164,7 +161,9 @@ def _do_match_reciprocate(args):
             break
 
     if initiate_event_id is None:
-        raise CliException('No unmatched initiating event exists with the given id:{}'.format(args.utxq))
+        raise CliException(
+            'No unmatched initiating event exists with the given id:{}'.
+            format(args.utxq))
 
     quantities = args.expr
 
@@ -193,9 +192,9 @@ def _do_match_reciprocate(args):
                     if factor_annotation[0].lower() != 'factor_annotation':
                         raise AssertionError('Invalid quantity specification.')
                     else:
-                        r_quantity.value=(int(factor_annotation[1])).to_bytes(2, byteorder='little')
-                        r_quantity.valueUnit=(int(hash_lookup[value_unit])).to_bytes(2, byteorder='little')
-                        r_quantity.resourceUnit=(int(hash_lookup[factor_annotation[2]])).to_bytes(2, byteorder='little')
+                        r_quantity.value = (int(factor_annotation[1])).to_bytes(2, byteorder='little')
+                        r_quantity.valueUnit = (int(hash_lookup[value_unit])).to_bytes(2, byteorder='little')
+                        r_quantity.resourceUnit = (int(hash_lookup[factor_annotation[2]])).to_bytes(2, byteorder='little')
 
     numerator = Quantity()
     event_quantity = parser.parse(quantities[2])
