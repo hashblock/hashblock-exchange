@@ -107,6 +107,10 @@ class TestAsset(TransactionProcessorTestCase):
         self.validator.send(self.factory.create_vote_transaction(
             proposal_id, asset, dimension, vote))
 
+    def _unset_vote(self, proposal_id, asset, dimension, vote):
+        self.validator.send(self.factory.create_unset_vote_transaction(
+            proposal_id, asset, dimension, vote))
+
     @property
     def _public_key(self):
         return self.factory.public_key
@@ -191,9 +195,30 @@ class TestAsset(TransactionProcessorTestCase):
         """
         self._test_valid_propose(self.resource, Address.DIMENSION_RESOURCE)
 
-    def _setup_vote(self, asset, dimension, vote, voter):
+    def _setup_vote_get_setting(self, asset, dimension, vote):
         proposal_id = self._proposal_id(asset, dimension)
         self._vote(
+            proposal_id,
+            asset,
+            dimension,
+            vote)
+        self._get_setting(dimension)
+        return proposal_id
+
+    def _setup_vote(self, asset, dimension, vote, voter):
+        proposal_id = self._setup_vote_get_setting(
+            asset, dimension, vote)
+        self._expect_get(
+            _asset_addr.candidates(dimension),
+            self._build_first_candidate(
+                voter,
+                asset,
+                dimension))
+        return proposal_id
+
+    def _setup_unset_vote_get_setting(self, asset, dimension, vote, voter):
+        proposal_id = self._proposal_id(asset, dimension)
+        self._unset_vote(
             proposal_id,
             asset,
             dimension,
@@ -228,8 +253,21 @@ class TestAsset(TransactionProcessorTestCase):
         self._set_empty_candidates(dimension)
         self._expect_ok()
 
+    def _test_valid_unset_vote(self, asset, dimension):
+        self._setup_unset_vote_get_setting(
+            asset,
+            dimension,
+            AssetVote.VOTE_UNSET,
+            self._public_key)
+        # Expect set of candidates with at least one valid vote to be
+        # preserved, otherwise we should have empty candidates
+        self._set_empty_candidates(dimension)
+        self._expect_ok()
+
     # Proposing and voting for two authorized, threshold 2
     # Assume 2 authorized voters with threshold 2
+    # Also checks UNSET
+    # All Sunny Day
     def test_vote_accept_unit(self):
         """Test a valid vote for unit-of-measure asset
         This assumes setting and candidates in state
@@ -252,6 +290,16 @@ class TestAsset(TransactionProcessorTestCase):
         """
         self._test_valid_reject_vote(self.resource, Address.DIMENSION_RESOURCE)
 
+    def test_vote_unset_unit(self):
+        """Test a valid unset vote for unit asset proposal
+        """
+        self._test_valid_unset_vote(self.unit, Address.DIMENSION_UNIT)
+
+    def test_vote_unset_resource(self):
+        """Test a valid unset vote for resource asset proposal
+        """
+        self._test_valid_unset_vote(self.resource, Address.DIMENSION_RESOURCE)
+
     def _build_disjoint_candidate(self, proposal_id, voter, asset, dimension):
         proposal = AssetProposal(
             asset=asset.SerializeToString(),
@@ -267,6 +315,17 @@ class TestAsset(TransactionProcessorTestCase):
                 proposal_id=proposal_id,
                 proposal=proposal,
                 votes=[record])]).SerializeToString()
+
+    # All the negative tests follow
+    def test_vote_unset_vote_not_exist(self):
+        """Tests unset vote where previous vote does not exist
+        """
+        self._setup_unset_vote_get_setting(
+            self.unit,
+            Address.DIMENSION_UNIT,
+            AssetVote.VOTE_UNSET,
+            VOTER2)
+        self._expect_invalid_transaction()
 
     def test_vote_proposal_id_not_found(self):
         """Test disjoint proposal id between vote and candidates

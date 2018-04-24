@@ -101,9 +101,15 @@ class AssetTransactionHandler(TransactionHandler):
                 auth_keys,
                 asset_payload.data,
                 context)
+        elif asset_payload.action == AssetPayload.ACTION_UNSET:
+            return self._apply_unset_vote(
+                public_key,
+                auth_keys,
+                asset_payload.data,
+                context)
         else:
             raise InvalidTransaction(
-                "'action' must be one of {PROPOSE, VOTE}")
+                "'action' must be one of {ACTION_UNSET, PROPOSE, VOTE}")
 
     def _apply_proposal(self, public_key, proposal_data, context):
         asset_proposal = AssetProposal()
@@ -142,7 +148,52 @@ class AssetTransactionHandler(TransactionHandler):
             _set_asset(context, self.asset_type)
             LOGGER.debug('Set asset {}'.format(self.asset_type.asset))
 
+    def _apply_unset_vote(
+            self, public_key, authorized_keys, vote_data, context):
+        """Apply an UNSET vote on a proposal
+        """
+        LOGGER.debug("Request to rescind vote")
+        asset_vote = AssetVote()
+        asset_vote.ParseFromString(vote_data)
+        proposal_id = asset_vote.proposal_id
+
+        # Find the candidate based on proposal_id
+        asset_candidates = self._get_candidates(context)
+        candidate = _first(
+            asset_candidates.candidates,
+            lambda candidate: candidate.proposal_id == proposal_id)
+
+        if candidate is None:
+            raise InvalidTransaction(
+                "Proposal {} does not exist.".format(proposal_id))
+
+        vote_record = _first(candidate.votes,
+                             lambda record: record.public_key == public_key)
+
+        if vote_record is None:
+            raise InvalidTransaction(
+                '{} has not voted'.format(public_key))
+
+        vote_index = _index_of(candidate.votes, vote_record)
+        candidate_index = _index_of(asset_candidates.candidates, candidate)
+
+        # Delete the vote from the votes collection
+        del candidate.votes[vote_index]
+
+        # Test if there are still votes and save if so,
+        # else delete the candidate as well
+
+        if len(candidate.votes) == 0:
+            LOGGER.debug("No votes remain for proposal... removing")
+            del asset_candidates.candidates[candidate_index]
+        else:
+            LOGGER.debug("Votes remain for proposal... preserving")
+
+        self._set_candidates(context, asset_candidates)
+
     def _apply_vote(self, public_key, authorized_keys, vote_data, context):
+        """Apply an ACCEPT or REJECT vote to a proposal
+        """
         asset_vote = AssetVote()
         asset_vote.ParseFromString(vote_data)
         proposal_id = asset_vote.proposal_id
@@ -156,8 +207,6 @@ class AssetTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 "Proposal {} does not exist.".format(proposal_id))
 
-        candidate_index = _index_of(asset_candidates.candidates, candidate)
-
         approval_threshold = self._get_approval_threshold(
             context,
             self.asset_type)
@@ -168,6 +217,8 @@ class AssetTransactionHandler(TransactionHandler):
         if vote_record is not None:
             raise InvalidTransaction(
                 '{} has already voted'.format(public_key))
+
+        candidate_index = _index_of(asset_candidates.candidates, candidate)
 
         candidate.votes.add(
             public_key=public_key,
@@ -202,6 +253,8 @@ class AssetTransactionHandler(TransactionHandler):
             self._set_candidates(context, asset_candidates)
 
     def _get_candidates(self, context):
+        """Get the candidate container from state.
+        """
         candidates = _get_candidates(
             context,
             self.asset_type.candidates_address)

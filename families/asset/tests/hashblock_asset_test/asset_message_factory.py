@@ -90,6 +90,18 @@ class AssetMessageFactory(object):
 
         return self._create_tp_process_request(asset, dimension, payload)
 
+    def create_unset_vote_transaction(
+            self, proposal_id, asset, dimension, vote):
+        avote = AssetVote(
+            proposal_id=proposal_id,
+            vote=vote)
+        payload = AssetPayload(
+            action=AssetPayload.ACTION_UNSET,
+            dimension=dimension,
+            data=avote.SerializeToString())
+
+        return self._create_tp_process_request(asset, dimension, payload)
+
     def create_get_request(self, address):
         addresses = [address]
         return self._factory.create_get_request(addresses)

@@ -195,12 +195,18 @@ def _do_config_proposal_list(args):
             else:
                 proposal_asset = Resource()
                 proposal_asset.ParseFromString(candidate.proposal.asset)
-                print("RESOURCE {}: system '{}' key '{}' => value '{}' sku '{}'".format(
-                    candidate.proposal_id,
-                    proposal_asset.system,
-                    proposal_asset.key,
-                    proposal_asset.value,
-                    proposal_asset.sku))
+                print(
+                    "RESOURCE {}: system '{}' key '{}' => value '{}' sku '{}'".
+                    format(
+                        candidate.proposal_id,
+                        proposal_asset.system,
+                        proposal_asset.key,
+                        proposal_asset.value,
+                        proposal_asset.sku))
+            for vote in candidate.votes:
+                print("     voter {} => {}".format(
+                    vote.public_key,
+                    "accept" if vote.vote is AssetVote.ACCEPT else "reject"))
     elif args.format == 'csv':
         writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
         writer.writerow(['PROPOSAL_ID', 'SYSTEM', 'KEY', 'VALUE', 'SKU'])
@@ -268,7 +274,60 @@ def _do_config_proposal_vote(args):
     batch_list = BatchList(batches=[batch])
 
     x = rest_client.send_batches(batch_list)
-    print("Rest returns {}".format(x))
+
+
+def _do_config_unset_vote(args):
+    """Executes the 'unset vote' subcommand.  Given a key file, a proposal
+    id and a vote value, generate a batch of hashblock_asset transactions
+    in a BatchList instance.  The BatchList is saved to a file or
+    submitted to a validator.
+    """
+    signer = _read_signer(args.key)
+    rest_client = RestClient(args.url)
+
+    if args.unit:
+        dimension = Address.DIMENSION_UNIT
+    elif args.resource:
+        dimension = Address.DIMENSION_RESOURCE
+    else:
+        raise AssertionError('Dimension must be one of {-u[nit], -r[esource]}')
+
+    proposals = _get_proposals(rest_client, dimension)
+
+    proposal = None
+    for candidate in proposals.candidates:
+        if candidate.proposal_id == args.proposal_id:
+            proposal = candidate
+            break
+
+    spubkey = signer.get_public_key().as_hex()
+    if proposal is None:
+        raise CliException('No proposal exists with the given id')
+
+    voter = None
+    for vote_record in proposal.votes:
+        if vote_record.public_key == spubkey:
+            voter = vote_record
+            break
+
+    if not voter:
+        raise CliException(
+            'There is no vote made by user key {}'.format(
+                signer.get_public_key().as_hex()))
+
+    print("Proposing to rescind vote")
+
+    txn = _create_vote_txn(
+        signer,
+        args.proposal_id,
+        dimension,
+        'rescind')
+    batch = _create_batch(signer, [txn])
+
+    batch_list = BatchList(batches=[batch])
+
+    x = rest_client.send_batches(batch_list)
+    print("Transaction submitted")
 
 
 def _get_all_proposals(rest_client):
@@ -379,10 +438,15 @@ def _create_vote_txn(signer, proposal_id, dimension, vote_value):
     """Creates an individual hashblock_resource transaction for voting on a
     proposal for a particular asset. The proposal_id is the asset address
     """
+    vote_action = AssetPayload.VOTE
+
     if vote_value == 'accept':
         vote_id = AssetVote.ACCEPT
-    else:
+    elif vote_value == 'reject':
         vote_id = AssetVote.REJECT
+    elif vote_value == 'rescind':
+        vote_id = AssetVote.VOTE_UNSET
+        vote_action = AssetPayload.ACTION_UNSET
 
     vote = AssetVote(
         proposal_id=proposal_id,
@@ -390,7 +454,7 @@ def _create_vote_txn(signer, proposal_id, dimension, vote_value):
     payload = AssetPayload(
         data=vote.SerializeToString(),
         dimension=dimension,
-        action=AssetPayload.VOTE)
+        action=vote_action)
 
     return _make_txn(signer, dimension, proposal_id, payload)
 
@@ -645,7 +709,7 @@ def create_parser(prog_name):
     vote_parser.add_argument(
         'vote_value',
         type=str,
-        choices=['accept', 'reject'],
+        choices=['accept', 'reject', 'rescind'],
         help='specify the value of the vote')
 
     return parser
@@ -670,7 +734,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
         _do_config_proposal_list(args)
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
-        _do_config_proposal_vote(args)
+        if args.vote_value == 'rescind':
+            _do_config_unset_vote(args)
+        else:
+            _do_config_proposal_vote(args)
     else:
         raise CliException(
             '"{}" is not a valid subcommand of "config"'.format(
