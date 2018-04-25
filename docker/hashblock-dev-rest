@@ -1,0 +1,15 @@
+FROM python:3.5-slim
+LABEL maintainers="Frank V. Castellucci, Arthur Greef"
+
+RUN python3 -m ensurepip && \
+    pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
+    rm -r /root/.cache
+
+WORKDIR /project
+
+COPY utils/shared shared
+COPY utils/hashblock-rest hashblock-rest
+
+RUN pip3 install --trusted-host pypi.python.org -r hashblock-rest/requirements.txt
+
+CMD gunicorn -b 0.0.0.0:8000 --access-logfile - "hashblock-rest.app:application"
