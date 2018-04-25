@@ -29,7 +29,6 @@ GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/ma
 
 sudo apt-get -y update
 sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
-sudo apt-get -y update
 
 sudo apt-get -y install apt-transport-https ca-certificates curl software-properties-common
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
@@ -92,6 +91,10 @@ done
 if [ ! -e ".env" ]; then
   sudo bash -c 'echo "COMPOSE_HTTP_TIMEOUT=400" > .env'
 fi
+
+sudo apt-get -y update
+sudo apt-get -y dist-upgrade 
+sudo apt-get -y autoremove
 
 FAILED_EXITCODE=0;
 docker-compose -f hashblock-node.yaml up -d;
