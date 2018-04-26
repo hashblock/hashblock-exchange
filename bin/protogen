@@ -40,7 +40,7 @@ def main(args=None):
     proto_dir = JOIN(TOP_DIR, "protos")
     protoc_python(
         proto_dir,
-        "utils",
+        "apps",
         "protobuf")
     protoc_python(
         proto_dir,
