@@ -20,7 +20,8 @@ from flask import Flask
 from flask_restplus import Resource, Api
 
 from hashblock_rest.config.hb_rest_config import load_config
-from shared.decode import decode_address
+from shared.address import Address
+from shared.decode import decode_from_leaf
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +41,12 @@ class Decode(Resource):
     """
     @ns.doc(id='Get the decoded result of an block address')
     def get(self, address):
-        return decode_address(address), 200
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "invalid leaf address provided",
+                "data": ""}, 400
 
 
 @ns.route('/asset/proposal/')

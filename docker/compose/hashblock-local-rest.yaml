@@ -14,7 +14,7 @@ services:
     environment:
       - PYTHONPATH=/project
     volumes:
-      - ../../../hashblock-exchange/utils:/project
+      - ../../../hashblock-exchange/apps:/project
     ports:
       - '8000:8000'
 

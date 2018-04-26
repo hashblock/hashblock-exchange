@@ -7,9 +7,9 @@ RUN python3 -m ensurepip && \
 
 WORKDIR /project
 
-COPY utils/shared shared
-COPY utils/protobuf protobuf
-COPY utils/hashblock_rest hashblock_rest
+COPY apps/shared shared
+COPY apps/protobuf protobuf
+COPY apps/hashblock_rest hashblock_rest
 
 RUN pip3 install --trusted-host pypi.python.org -r hashblock_rest/requirements.txt
 
