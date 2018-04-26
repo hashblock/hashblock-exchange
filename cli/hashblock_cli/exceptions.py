@@ -1,4 +1,5 @@
-# Copyright 2017 Intel Corporation
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +16,10 @@
 
 
 class CliException(Exception):
+    pass
+
+
+class RestException(Exception):
     pass
 
 

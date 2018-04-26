@@ -1,0 +1,5 @@
+flask
+flask-restplus
+gunicorn
+requests
+sawtooth-sdk

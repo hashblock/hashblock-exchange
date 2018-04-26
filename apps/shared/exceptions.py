@@ -1,4 +1,5 @@
-# Copyright 2017 Intel Corporation
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-[unittest]
-start-dir = tests
-code-directories = ..
-test-file-pattern = test*.py
-plugins = nose2.plugins.coverage
 
-[coverage]
-always-on = True
+
+class CliException(Exception):
+    pass
+
+
+class RestException(Exception):
+    pass
+
+
+class RestClientException(Exception):
+    pass

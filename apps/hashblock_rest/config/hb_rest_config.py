@@ -1,4 +1,5 @@
-# Copyright 2016 Intel Corporation
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,3 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+__default_config = {
+    'rest': {
+        'hosts': {
+            'local': 'http://rest-api:8008'
+        },
+        'keys': {}
+    }
+}
+
+REST_CONFIG = __default_config
+
+
+def load_config(configfile):
+    """Load the configuration file by checking
+    system environment and, if not, local directory
+    and, if not, use default which won't allow
+    transactions
+    """
+    return REST_CONFIG
