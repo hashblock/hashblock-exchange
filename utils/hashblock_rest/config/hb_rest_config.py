@@ -14,14 +14,22 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+__default_config = {
+    'rest': {
+        'hosts': {
+            'local': 'http://rest-api:8008'
+        },
+        'keys': {}
+    }
+}
 
-class CliException(Exception):
-    pass
+REST_CONFIG = __default_config
 
 
-class RestException(Exception):
-    pass
-
-
-class RestClientException(Exception):
-    pass
+def load_config(configfile):
+    """Load the configuration file by checking
+    system environment and, if not, local directory
+    and, if not, use default which won't allow
+    transactions
+    """
+    return REST_CONFIG

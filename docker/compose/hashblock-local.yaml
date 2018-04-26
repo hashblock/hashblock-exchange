@@ -28,6 +28,7 @@ services:
     image: hashblock-dev-python
     container_name: hashblock-shell
     volumes:
+      - ../../../hbtemp/:/project/keys
       - ../../../hashblock-exchange/:/project/hashblock-exchange
       - ../../../sawtooth-core/:/project/sawtooth-core
     environment:
@@ -49,6 +50,22 @@ services:
         tail -f /dev/null \
         \""
     stop_signal: SIGKILL
+
+  hashblock_rest:
+    image: hashblock-dev-rest:latest
+    container_name: hashblock-rest
+    command: >
+      gunicorn -b 0.0.0.0:8000
+      --access-logfile -
+      --reload
+      "hashblock-rest.app:application"
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - PYTHONPATH=/project
+    volumes:
+      - ../../../hashblock-exchange/utils:/project
+    ports:
+      - '8000:8000'
 
   setting-processor:
     build:

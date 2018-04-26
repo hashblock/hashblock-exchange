@@ -55,7 +55,7 @@ docker_build() {
 
 main() {
 
-    # Set sawtooth-core project directory relative to this file
+    # Set hashblock-exchange project directory relative to this file
     top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
     info "Building hashblock distribution images from: $top_dir"

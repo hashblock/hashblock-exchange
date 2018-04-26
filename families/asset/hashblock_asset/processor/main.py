@@ -123,7 +123,7 @@ def create_parser(prog_name):
 def load_settings_config(first_config):
     default_settings_config = \
         load_default_asset_config()
-    conf_file = os.path.join(get_config_dir(), 'units.toml')
+    conf_file = os.path.join(get_config_dir(), 'asset.toml')
 
     toml_config = load_toml_asset_config(conf_file)
 

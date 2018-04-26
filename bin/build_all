@@ -83,13 +83,18 @@ else
     fi
 fi
 
+protos() {
+    echo -e "\033[0;32m--- Running protogen ---\n\033[0m"
+    $top_dir/bin/build_python
+}
+
 main() {
 
     info "Build mode: $BUILD_MODE"
 
     # Set sawtooth-core project directory relative to this file
     top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-
+    protos
     # Start in project directory
     cd $top_dir
 
@@ -176,7 +181,7 @@ docker_build() {
         tag=$tag:$ISOLATION_ID
     fi
 
-    info "Building $tag from $image"
+    info "Building $tag from $image in context $context"
 
     # Build the image and pass in any proxy information if set
     docker build -f $image -t $tag $context \
@@ -201,6 +206,7 @@ build_debs() {
 if [[ $BUILD_MODE == $MOUNTED ]]
 then
     build_python() {
+        docker_build $top_dir/docker/hashblock-dev-rest $top_dir hashblock-dev-rest
         docker_build $top_dir/docker/hashblock-dev-python docker/ hashblock-dev-python
         docker_build $top_dir/docker/hashblock-dev-asset-tp docker/ hashblock-dev-asset-tp
         docker_build $top_dir/docker/hashblock-dev-match-tp docker/ hashblock-dev-match-tp

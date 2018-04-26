@@ -40,6 +40,10 @@ def main(args=None):
     proto_dir = JOIN(TOP_DIR, "protos")
     protoc_python(
         proto_dir,
+        "utils",
+        "protobuf")
+    protoc_python(
+        proto_dir,
         "cli",
         "hashblock_cli/protobuf")
     protoc_python(

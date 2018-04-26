@@ -8,7 +8,7 @@ services:
       gunicorn -b 0.0.0.0:8000
       --access-logfile -
       --reload
-      "hashblock-rest.app:application"
+      "hashblock_rest.app:application"
     environment:
       PYTHONUNBUFFERED: 'true'
     environment:

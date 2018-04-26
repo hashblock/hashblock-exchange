@@ -14,14 +14,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+version: '2.1'
 
-class CliException(Exception):
-    pass
-
-
-class RestException(Exception):
-    pass
-
-
-class RestClientException(Exception):
-    pass
+rest:
+  hosts:
+    local: http://rest-api:8008
+  keys:

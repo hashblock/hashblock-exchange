@@ -14,14 +14,17 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+"""Decode - Support hashblock module
 
-class CliException(Exception):
-    pass
-
-
-class RestException(Exception):
-    pass
+This module is referenced when there is a need to decode a state
+address. It also includes other sundry utilities
+"""
 
 
-class RestClientException(Exception):
-    pass
+def decode_address(address):
+    return {
+        'family': 'match',
+        'address': address,
+        'dimension': 'UTXQ',
+        'exchange': 'ask',
+        'data': '5 bags of peanuts'}

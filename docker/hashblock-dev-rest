@@ -8,8 +8,9 @@ RUN python3 -m ensurepip && \
 WORKDIR /project
 
 COPY utils/shared shared
-COPY utils/hashblock-rest hashblock-rest
+COPY utils/protobuf protobuf
+COPY utils/hashblock_rest hashblock_rest
 
-RUN pip3 install --trusted-host pypi.python.org -r hashblock-rest/requirements.txt
+RUN pip3 install --trusted-host pypi.python.org -r hashblock_rest/requirements.txt
 
-CMD gunicorn -b 0.0.0.0:8000 --access-logfile - "hashblock-rest.app:application"
+CMD gunicorn -b 0.0.0.0:8000 --access-logfile - "hashblock_rest.app:application"
