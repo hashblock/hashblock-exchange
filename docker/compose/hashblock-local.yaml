@@ -73,12 +73,12 @@ services:
   setting-processor:
     build:
       context: ../..
-      dockerfile: docker/hashblock-dev-setting-tp
+      dockerfile: docker/hashblock-dev-generic-tp
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: hashblock-dev-setting-tp
+    image: hashblock-dev-generic-tp
     container_name: hashblock-dev-setting-tp
     volumes:
       - ../../../hashblock-exchange/:/project/hashblock-exchange
@@ -96,12 +96,12 @@ services:
   asset-processor:
     build:
       context: ../..
-      dockerfile: docker/hashblock-dev-asset-tp
+      dockerfile: docker/hashblock-dev-generic-tp
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: hashblock-dev-asset-tp
+    image: hashblock-dev-generic-tp
     container_name: hashblock-dev-asset-tp
     volumes:
       - ../../../hashblock-exchange/:/project/hashblock-exchange
@@ -120,12 +120,12 @@ services:
   match-processor:
     build:
       context: ../..
-      dockerfile: docker/hashblock-dev-match-tp
+      dockerfile: docker/hashblock-dev-generic-tp
       args:
         - http_proxy
         - https_proxy
         - no_proxy
-    image: hashblock-dev-match-tp
+    image: hashblock-dev-generic-tp
     container_name: hashblock-dev-match-tp
     volumes:
       - ../../../hashblock-exchange/:/project/hashblock-exchange

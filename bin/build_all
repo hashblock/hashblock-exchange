@@ -206,12 +206,9 @@ build_debs() {
 if [[ $BUILD_MODE == $MOUNTED ]]
 then
     build_python() {
+        docker_build $top_dir/docker/hashblock-dev-generic-tp $top_dir hashblock-dev-generic-tp
         docker_build $top_dir/docker/hashblock-dev-rest $top_dir hashblock-dev-rest
         docker_build $top_dir/docker/hashblock-dev-python docker/ hashblock-dev-python
-        docker_build $top_dir/docker/hashblock-dev-asset-tp docker/ hashblock-dev-asset-tp
-        docker_build $top_dir/docker/hashblock-dev-match-tp docker/ hashblock-dev-match-tp
-        docker_build $top_dir/docker/hashblock-dev-setting-tp docker/ hashblock-dev-setting-tp
-        docker_run hashblock-dev-python
     }
 fi
 
