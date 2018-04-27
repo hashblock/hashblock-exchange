@@ -101,8 +101,11 @@
       "dnsNameForPublicIP": {
         "value": "hb"
       },
+      "vmSize": {
+        "value": "Standard_A1"
+      },
       "instanceCount": {
-        "value": 4
+        "value": 3
       }
     }
   }
