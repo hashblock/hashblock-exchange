@@ -28,7 +28,7 @@
 #   $ docker build . -f docker/hashblock-setting-tp -t hashblock/hashblock-setting-tp:latest
 #
 
-FROM python:3.4-slim as base
+FROM python:3.5-slim as base
 
 RUN mkdir -p /builder && \
  	pip3 install \
@@ -49,7 +49,7 @@ COPY bin bin
 
 # The final image
 
-FROM python:3.4-slim
+FROM python:3.5-slim
 
 RUN	pip3 install sawtooth-sdk --upgrade && \
 	mkdir -p /project/hashblock-exchange && \

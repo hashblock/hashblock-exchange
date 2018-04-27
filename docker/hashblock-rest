@@ -1,0 +1,35 @@
+FROM python:3.5-slim as base
+
+RUN mkdir -p /builder && \
+ 	pip3 install \
+ 		grpcio-tools \
+ 		grpcio && \
+ 	rm -rf /var/lib/apt/lists/
+
+WORKDIR /builder
+
+COPY apps apps
+COPY bin bin
+COPY cli cli
+COPY protos protos
+COPY families families
+
+ RUN bin/protogen && \
+ 	pip3 uninstall -y grpcio grpcio-tools
+
+FROM python:3.5-slim
+LABEL maintainers="Frank V. Castellucci, Arthur Greef"
+
+RUN python3 -m ensurepip && \
+    pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
+    rm -r /root/.cache
+
+WORKDIR /project
+
+COPY --from=base /builder/apps/shared shared
+COPY --from=base /builder/apps/protobuf protobuf
+COPY --from=base /builder/apps/hashblock_rest hashblock_rest
+
+RUN pip3 install --trusted-host pypi.python.org -r hashblock_rest/requirements.txt
+
+CMD gunicorn -b 0.0.0.0:8000 --access-logfile - "hashblock_rest.app:application"

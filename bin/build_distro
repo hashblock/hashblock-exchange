@@ -30,6 +30,9 @@ protos() {
 	bin/build_python
 }
 
+RESTTP="hashblock-rest"
+RESTTAG="hashblock/hashblock-rest:latest"
+
 ASSETTP="hashblock-asset-tp"
 ASSETTAG="hashblock/hashblock-asset-tp:latest"
 
@@ -50,7 +53,7 @@ docker_build() {
     cd $top_dir
 
     # Build the image
-    docker build -f $image -t $tag $context
+    docker build --force-rm -f $image -t $tag $context
 }
 
 main() {
@@ -63,6 +66,7 @@ main() {
     docker_build $top_dir/docker/$ASSETTP . $ASSETTAG
     docker_build $top_dir/docker/$MATCHTP . $MATCHTAG
     docker_build $top_dir/docker/$SETTINGSTP . $SETTINGTAG
+    docker_build $top_dir/docker/$RESTTP . $RESTTAG
 
     info "Production image builds complete. Listing..."
     docker images --filter=reference='hashblock/*'

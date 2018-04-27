@@ -55,6 +55,25 @@ services:
       \""
     stop_signal: SIGKILL
 
+  hashblock_rest:
+    image: hashblock/hashblock-rest:latest
+    container_name: hashblock-rest
+    depends_on:
+      - validator
+      - rest-api
+    command: >
+      gunicorn -b 0.0.0.0:8000
+      --access-logfile -
+      --reload
+      "hashblock_rest.app:application"
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - PYTHONPATH=/project
+    ports:
+      - '8000:8000'
+    stop_signal: SIGKILL
+
+
   setting-processor:
     image: hashblock/hashblock-setting-tp:latest
     container_name: hbsetting-tp
