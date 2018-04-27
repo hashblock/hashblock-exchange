@@ -95,24 +95,24 @@ services:
         \""
     stop_signal: SIGKILL
 
-    hashblock_rest:
-      image: hashblock/hashblock-rest:latest
-      container_name: hashblock-rest
-      depends_on:
-        - validator
-        - rest-api
-      command: >
-        gunicorn -b 0.0.0.0:8000
-        --access-logfile -
-        --reload
-        "hashblock_rest.app:application"
-      expose:
-        - 8000
-      environment:
-        - PYTHONUNBUFFERED='true'
-        - PYTHONPATH=/project
-      ports:
-        - '8000:8000'
+  hashblock_rest:
+    image: hashblock/hashblock-rest:latest
+    container_name: hashblock-rest
+    depends_on:
+      - validator
+      - rest-api
+    command: >
+      gunicorn -b 0.0.0.0:8000
+      --access-logfile -
+      --reload
+      "hashblock_rest.app:application"
+    expose:
+      - 8000
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - PYTHONPATH=/project
+    ports:
+      - '8000:8000'
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:latest
