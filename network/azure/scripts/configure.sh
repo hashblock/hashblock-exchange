@@ -77,7 +77,7 @@ sudo -u $USER /bin/bash -c "wget -N ${ARTIFACTS_URL_PREFIX}/hashblock-node.yaml"
 sudo sed -i "s/__DNS/$DNS/g" hashblock-node.yaml;
 
 index=0
-for node in `seq 0 3`;
+for node in `seq 0 2`;
 do
     if [ $node -eq $NODEINDEX ]
     then
