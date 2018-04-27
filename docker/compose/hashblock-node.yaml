@@ -96,7 +96,7 @@ services:
     stop_signal: SIGKILL
 
     hashblock_rest:
-      image: hashblock-dev-rest:latest
+      image: hashblock/hashblock-rest:latest
       container_name: hashblock-rest
       depends_on:
         - validator
