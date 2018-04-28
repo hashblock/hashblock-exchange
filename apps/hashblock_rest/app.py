@@ -34,9 +34,9 @@ api = Api(application,
 ns = api.namespace('hashblock', description='#B operations')
 
 
-@ns.route('/decode/<string:address>')
+@ns.route('/resource-settings/<string:address>')
 @ns.param('address', 'The address to decode')
-class Decode(Resource):
+class RASDecode(Resource):
     """Responsible for fetching data and decoding it
     """
     @ns.doc(id='Get the decoded result of an block address')
@@ -45,21 +45,113 @@ class Decode(Resource):
             return decode_from_leaf(address), 200
         else:
             return {
-                "address": "invalid leaf address provided",
+                "address": "not a valid address",
                 "data": ""}, 400
 
 
-@ns.route('/asset/proposal/')
-class Asset(Resource):
+@ns.route('/resource-proposals/<string:address>')
+@ns.param('address', 'The address to decode')
+class RAPDecode(Resource):
     """Responsible for fetching data and decoding it
     """
-    def get(self):
-        # Call decode for an address, get back a map
-        # structure with family, address, dimension, data
-        return {
-            'family': 'asset',
-            'dimension': 'all',
-            'data': '5 bags of peanuts'}, 200
+    @ns.doc(id='Get the decoded result of an block address')
+    def get(self, address):
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
+
+
+@ns.route('/resources/<string:address>')
+@ns.param('address', 'The address to decode')
+class RADecode(Resource):
+    """Responsible for fetching data and decoding it
+    """
+    @ns.doc(id='Get the decoded result of an block address')
+    def get(self, address):
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
+
+
+@ns.route('/unit-settings/<string:address>')
+@ns.param('address', 'The address to decode')
+class UASDecode(Resource):
+    """Responsible for fetching data and decoding it
+    """
+    @ns.doc(id='Get the decoded result of an block address')
+    def get(self, address):
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
+
+
+@ns.route('/unit-proposals/<string:address>')
+@ns.param('address', 'The address to decode')
+class UAPDecode(Resource):
+    """Responsible for fetching data and decoding it
+    """
+    @ns.doc(id='Get the decoded result of an block address')
+    def get(self, address):
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
+
+
+@ns.route('/units/<string:address>')
+@ns.param('address', 'The address to decode')
+class UADecode(Resource):
+    """Responsible for fetching data and decoding it
+    """
+    @ns.doc(id='Get the decoded result of an block address')
+    def get(self, address):
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
+
+
+@ns.route('/utxqs/<string:address>')
+@ns.param('address', 'The address to decode')
+class UTXQDecode(Resource):
+    """Responsible for fetching data and decoding it
+    """
+    @ns.doc(id='Get the decoded result of an block address')
+    def get(self, address):
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
+
+
+@ns.route('/mtxqs/<string:address>')
+@ns.param('address', 'The address to decode')
+class MTXQDecode(Resource):
+    """Responsible for fetching data and decoding it
+    """
+    @ns.doc(id='Get the decoded result of an block address')
+    def get(self, address):
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
 
 
 if __name__ == '__main__':
