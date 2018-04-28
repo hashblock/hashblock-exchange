@@ -54,19 +54,15 @@ services:
   hashblock_rest:
     image: hashblock-dev-rest:latest
     container_name: hashblock-rest
-    depends_on:
-      - validator
-      - rest-api
     command: >
       gunicorn -b 0.0.0.0:8000
       --access-logfile -
       --reload
       "hashblock_rest.app:application"
     environment:
-      - PYTHONUNBUFFERED='true'
-      - PYTHONPATH=/project
+      PYTHONUNBUFFERED: 'true'
     volumes:
-      - ../../../hashblock-exchange/apps:/project
+      - ../../../hashblock-exchange:/project/hashblock-exchange
     ports:
       - '8000:8000'
 

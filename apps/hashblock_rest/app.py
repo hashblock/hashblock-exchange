@@ -19,9 +19,9 @@ import logging
 from flask import Flask
 from flask_restplus import Resource, Api
 
-from hashblock_rest.config.hb_rest_config import load_config
-from shared.address import Address
-from shared.decode import decode_from_leaf
+from apps.hashblock_rest.config.hb_rest_config import load_config
+from modules.address import Address
+from modules.decode import decode_from_leaf
 
 LOGGER = logging.getLogger(__name__)
 
@@ -63,6 +63,6 @@ class Asset(Resource):
 
 
 if __name__ == '__main__':
-    LOGGER.debug("Loading hasblock REST application")
+    print("Loading hasblock REST application")
     load_config('hb_rest.yaml')
     application.run(debug=True)

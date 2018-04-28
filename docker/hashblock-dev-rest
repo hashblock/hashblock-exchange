@@ -23,12 +23,15 @@ RUN python3 -m ensurepip && \
     pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
     rm -r /root/.cache
 
-WORKDIR /project
+WORKDIR /project/hashblock-exchange
+RUN touch __init__.py
+COPY modules modules
+COPY apps/shared apps/shared
+COPY apps/protobuf apps/protobuf
+COPY apps/hashblock_rest apps/hashblock_rest
 
-COPY apps/shared shared
-COPY apps/protobuf protobuf
-COPY apps/hashblock_rest hashblock_rest
+RUN pip3 install --trusted-host pypi.python.org -r apps/hashblock_rest/requirements.txt
 
-RUN pip3 install --trusted-host pypi.python.org -r hashblock_rest/requirements.txt
+ENV PYTHONPATH /project/hashblock-exchange/apps/hashblock_rest:/project/hashblock-exchange/apps:/project/hashblock-exchange
 
 CMD gunicorn -b 0.0.0.0:8000 --access-logfile - "hashblock_rest.app:application"

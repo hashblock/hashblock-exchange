@@ -104,13 +104,11 @@ services:
     command: >
       gunicorn -b 0.0.0.0:8000
       --access-logfile -
-      --reload
       "hashblock_rest.app:application"
     expose:
       - 8000
     environment:
       - PYTHONUNBUFFERED='true'
-      - PYTHONPATH=/project
     ports:
       - '8000:8000'
 

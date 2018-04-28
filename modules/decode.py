@@ -22,9 +22,9 @@ decode into it's type data structure
 import hashlib
 from base64 import b64decode
 
-from hashblock_rest.config.hb_rest_config import REST_CONFIG
+from config.hb_rest_config import REST_CONFIG
 from shared.rest_client import RestClient
-from shared.address import Address
+from modules.address import Address
 from google.protobuf.json_format import MessageToDict
 from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ

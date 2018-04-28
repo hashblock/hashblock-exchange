@@ -11,10 +11,8 @@ services:
       "hashblock_rest.app:application"
     environment:
       PYTHONUNBUFFERED: 'true'
-    environment:
-      - PYTHONPATH=/project
     volumes:
-      - ../../../hashblock-exchange/apps:/project
+      - ../../../hashblock-exchange:/project/hashblock-exchange
     ports:
       - '8000:8000'
 
