@@ -24,7 +24,7 @@ import requests
 
 from google.protobuf.message import Message as BaseMessage
 
-from shared.exceptions import RestException
+from modules.exceptions import RestException
 
 
 class RestClient(object):

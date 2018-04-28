@@ -22,16 +22,16 @@ decode into it's type data structure
 import hashlib
 from base64 import b64decode
 
-from hashblock_rest.config.hb_rest_config import REST_CONFIG
+from config.hb_rest_config import REST_CONFIG
 from shared.rest_client import RestClient
-from shared.address import Address
+from modules.address import Address
 from google.protobuf.json_format import MessageToDict
 from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ
 from protobuf.setting_pb2 import Settings
 from protobuf.asset_pb2 import Unit
 from protobuf.asset_pb2 import Resource
-from protobuf.asset_pb2 import AssetCandidate
+from protobuf.asset_pb2 import AssetCandidates
 
 
 # Well known hashes
@@ -54,26 +54,52 @@ MTXQ_HASH = hashlib.sha512(
 
 
 def _decode_settings(data, address):
+    """Decode a settings address
+    """
     settings = Settings()
     settings.ParseFromString(data)
+    if address[12:18] == UNIT_HASH:
+        subfam = 'unit'
+    else:
+        subfam = 'resource'
     return {
-        'family': 'setting',
+        'family': 'asset',
+        'type': 'setting',
+        'dimension': subfam,
         'address': address,
         'data': MessageToDict(settings)
     }
 
 
 def _decode_proposals(data, address):
-    candidates = AssetCandidate()
-    candidates.ParseFromString(data)
+    """Decode a proposals address
+    """
+    proposals = AssetCandidates()
+    proposals.ParseFromString(data)
+    if address[18:24] == UNIT_HASH:
+        asset = Unit()
+        subfam = 'unit'
+    else:
+        asset = Resource()
+        subfam = 'resource'
+    data = []
+    for candidate in proposals.candidates:
+        msg = MessageToDict(candidate)
+        asset.ParseFromString(candidate.proposal.asset)
+        msg['proposal']['asset'] = MessageToDict(asset)
+        data.append(msg)
     return {
         'family': 'asset',
+        'type': 'proposal',
+        'dimension': subfam,
         'address': address,
-        'data': MessageToDict(candidates)
+        'data': data
     }
 
 
 def _decode_asset(data, address):
+    """Decode a unit or resource asset address
+    """
     asset = Unit() if address[18:24] == UNIT_HASH else Resource()
     asset.ParseFromString(data)
     return {
@@ -84,6 +110,8 @@ def _decode_asset(data, address):
 
 
 def _decode_match(data, address):
+    """Decode a unmatched or matched address
+    """
     match = UTXQ() if address[12:18] == UTXQ_HASH else MTXQ()
     match.ParseFromString(data)
     return {
