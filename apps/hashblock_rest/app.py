@@ -19,7 +19,7 @@ import logging
 from flask import Flask
 from flask_restplus import Resource, Api
 
-from apps.hashblock_rest.config.hb_rest_config import load_config
+from hashblock_rest.config.hb_rest_config import load_config
 from modules.address import Address
 from modules.decode import decode_from_leaf
 
