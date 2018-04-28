@@ -161,7 +161,7 @@
         },
         "copy": {
           "name": "publicIpAddress",
-          "count": 4
+          "count": "[parameters('instanceCount')]"
         }
       },
       {
@@ -212,7 +212,7 @@
         },
         "copy": {
           "name": "networkinterfaces",
-          "count": 4
+          "count": "[parameters('instanceCount')]"
         }
       },
       {
@@ -226,7 +226,7 @@
         ],
         "copy": {
           "name": "virtualmachines",
-          "count": 4
+          "count": "[parameters('instanceCount')]"
         },
         "properties": {
           "hardwareProfile": {
@@ -286,7 +286,7 @@
         },
         "copy": {
           "name": "extensions",
-          "count": 4
+          "count": "[parameters('instanceCount')]"
         }
       }
     ]
