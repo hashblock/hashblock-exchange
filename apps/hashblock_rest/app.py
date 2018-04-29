@@ -102,19 +102,18 @@ def matchlinks(data, desc_term, url_path):
         op, link = element
         new_data.append({
             desc_term: op,
-            'link': api.base_url +
+            'link': api.base_url[:-1] +
             url_for(url_path + op, address=link)})
     return new_data
 
 
-def matchtermlinks(data, desc_term, url_path):
+def matchtermlinks(data, url_path):
     new_data = []
     for element in data:
-        op, link = element
-        new_data.append({
-            desc_term: op,
-            'link': api.base_url +
-            url_for(url_path, address=link)})
+        cargo, address = element
+        link = api.base_url[:-1] + url_for(url_path, address=address)
+        cargo['link'] = link
+        new_data.append(cargo)
     return new_data
 
 
@@ -135,7 +134,7 @@ class UTXQ_asks_Decode(Resource):
         """Returns all asks"""
         result = decode_match_initiate_list(
             _match_address.txq_list(Address.DIMENSION_UTXQ, 'ask'))
-        new_data = matchtermlinks(result['data'], 'text', 'utxq_ask')
+        new_data = matchtermlinks(result['data'], 'utxq_ask')
         result['data'] = new_data
         return result, 200
 
@@ -170,7 +169,7 @@ class MTXQ_tells_Decode(Resource):
         """Returns all tells"""
         result = decode_match_reciprocate_list(
             _match_address.txq_list(Address.DIMENSION_MTXQ, 'tell'))
-        new_data = matchtermlinks(result['data'], 'text', 'mtxq_tell')
+        new_data = matchtermlinks(result['data'], 'mtxq_tell')
         result['data'] = new_data
         return result, 200
 

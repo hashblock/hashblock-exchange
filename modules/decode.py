@@ -226,7 +226,11 @@ def decode_match_initiate_list(address):
         utxq = UTXQ()
         utxq.ParseFromString(b64decode(__get_leaf_data(ladd)['data']))
         data.append((
-            __format_quantity(utxq.quantity),
+            {
+                "plus": utxq.plus.decode("utf-8"),
+                "minus": utxq.minus.decode("utf-8"),
+                "text": __format_quantity(utxq.quantity)
+            },
             ladd))
     return {
         'family': 'match',
@@ -245,11 +249,13 @@ def decode_match_reciprocate_list(address):
         ladd = element['address']
         mtxq = MTXQ()
         mtxq.ParseFromString(b64decode(__get_leaf_data(ladd)['data']))
-        data.append((
-            '{} for {}'.format(
+        data.append(({
+            "plus": mtxq.plus.decode("utf-8"),
+            "minus": mtxq.minus.decode("utf-8"),
+            "text": '{} for {}'.format(
                 __format_quantity(mtxq.quantity),
-                __format_quantity(mtxq.unmatched.quantity)),
-            ladd))
+                __format_quantity(mtxq.unmatched.quantity))
+        }, ladd))
     return {
         'family': 'match',
         'dimension': 'mtxq',
