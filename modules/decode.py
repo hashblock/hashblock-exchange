@@ -19,7 +19,6 @@
 This module is referenced when fetching an address to
 decode into it's type data structure
 """
-import hashlib
 from base64 import b64decode
 
 from config.hb_rest_config import REST_CONFIG
@@ -34,49 +33,50 @@ from protobuf.asset_pb2 import Resource
 from protobuf.asset_pb2 import AssetCandidates
 
 
-# Well known hashes
-
-ASSET_HASH = hashlib.sha512(
-    Address.FAMILY_ASSET.encode("utf-8")).hexdigest()[0:6]
-MATCH_HASH = hashlib.sha512(
-    Address.FAMILY_MATCH.encode("utf-8")).hexdigest()[0:6]
-SETTING_HASH = hashlib.sha512(
-    Address.FAMILY_SETTING.encode("utf-8")).hexdigest()[0:6]
-CANDIDATES_HASH = Address._candidates_hash
-UNIT_HASH = hashlib.sha512(
-    Address.DIMENSION_UNIT.encode("utf-8")).hexdigest()[0:6]
-RESOURCE_HASH = hashlib.sha512(
-    Address.DIMENSION_RESOURCE.encode("utf-8")).hexdigest()[0:6]
-UTXQ_HASH = hashlib.sha512(
-    Address.DIMENSION_UTXQ.encode("utf-8")).hexdigest()[0:6]
-MTXQ_HASH = hashlib.sha512(
-    Address.DIMENSION_MTXQ.encode("utf-8")).hexdigest()[0:6]
+def __get_leaf_data(address):
+    node = REST_CONFIG['rest']['hosts']['local']
+    return RestClient(node).get_leaf(address)
 
 
-def _decode_settings(data, address):
+def __get_list_data(address):
+    node = REST_CONFIG['rest']['hosts']['local']
+    return RestClient(node).list_state(address)
+
+
+def __decode_settings(address, data):
     """Decode a settings address
     """
     settings = Settings()
     settings.ParseFromString(data)
-    if address[12:18] == UNIT_HASH:
+    if address[12:18] == Address._unit_hash:
         subfam = 'unit'
     else:
         subfam = 'resource'
+    data = MessageToDict(settings)
+    data['authList'] = data['authList'].split(",")
     return {
         'family': 'asset',
         'type': 'setting',
         'dimension': subfam,
-        'address': address,
-        'data': MessageToDict(settings)
+        'data': data
     }
 
 
-def _decode_proposals(data, address):
+def decode_settings(address, data=None):
+    if not data:
+        data = __get_leaf_data(address)
+    return __decode_settings(
+        address,
+        b64decode(__get_leaf_data(address)['data']))
+
+
+def __decode_proposals(address, data):
     """Decode a proposals address
     """
+    print("__DP {} = {}".format(address, data))
     proposals = AssetCandidates()
     proposals.ParseFromString(data)
-    if address[18:24] == UNIT_HASH:
+    if address[18:24] == Address._unit_hash:
         asset = Unit()
         subfam = 'unit'
     else:
@@ -92,56 +92,192 @@ def _decode_proposals(data, address):
         'family': 'asset',
         'type': 'proposal',
         'dimension': subfam,
-        'address': address,
         'data': data
     }
 
 
-def _decode_asset(data, address):
+def decode_proposals(address, data=None):
+    if not data:
+        data = __get_leaf_data(address)
+    return __decode_proposals(
+        address,
+        b64decode(__get_leaf_data(address)['data']))
+
+
+def __decode_asset(address, data):
     """Decode a unit or resource asset address
     """
-    asset = Unit() if address[18:24] == UNIT_HASH else Resource()
+    asset = Unit() if address[18:24] == Address._unit_hash else Resource()
     asset.ParseFromString(data)
     return {
         'family': 'asset',
-        'address': address,
         'data': MessageToDict(asset)
     }
 
 
-def _decode_match(data, address):
+__revmachadd = {
+    Address._ask_hash: 'ask',
+    Address._tell_hash: 'tell',
+    Address._offer_hash: 'offer',
+    Address._accept_hash: 'accept',
+    Address._commitment_hash: 'commitment',
+    Address._obligation_hash: 'obligation',
+    Address._give_hash: 'give',
+    Address._take_hash: 'take'
+}
+
+match_prime_lookup = {
+    "bag": 2,
+    "bags": 2,
+    "{peanuts}": 3,
+    "$": 5,
+    "{usd}": 7,
+    "bale": 11,
+    "bales": 11,
+    "{hay}": 13
+}
+
+
+def __match_reverse_lookup(lookup_value):
+    """Reverse hash lookup
+    """
+    return [key for key,
+            value in match_prime_lookup.items() if value == lookup_value]
+
+
+def __format_quantity(quantity):
+    value_magnitude = int.from_bytes(quantity.value, byteorder='little')
+    value_units = __match_reverse_lookup(
+        int.from_bytes(quantity.valueUnit, byteorder='little'))
+    value_unit = value_units[0]
+    if value_magnitude > 1 and value_unit.endswith('s') is True:
+        value_unit = value_units[1]
+    resource_unit = __match_reverse_lookup(
+        int.from_bytes(quantity.resourceUnit, byteorder='little'))[0]
+    return '{} {} of {}'.format(
+        value_magnitude,
+        value_unit,
+        resource_unit)
+
+
+def __decode_match(address, data):
     """Decode a unmatched or matched address
     """
-    match = UTXQ() if address[12:18] == UTXQ_HASH else MTXQ()
-    match.ParseFromString(data)
+    def quantity_to_prime(quantity, rquant):
+        quantity['value'] = \
+            int.from_bytes(rquant.value, byteorder='little')
+        quantity['valueUnit'] = int.from_bytes(
+            rquant.valueUnit, byteorder='little')
+        quantity['resourceUnit'] = int.from_bytes(
+            rquant.resourceUnit, byteorder='little')
+    operation = __revmachadd[address[18:24]]
+    if address[12:18] == Address._utxq_hash:
+        item = UTXQ()
+        dim = 'utxq'
+        deep = False
+    else:
+        item = MTXQ()
+        dim = 'mtxq'
+        deep = True
+    item.ParseFromString(data)
+    match = MessageToDict(item)
+    quantity_to_prime(match['quantity'], item.quantity)
+    if deep:
+        quantity_to_prime(
+            match['ratio']['numerator'],
+            item.ratio.numerator)
+        quantity_to_prime(
+            match['ratio']['denominator'],
+            item.ratio.denominator)
+        quantity_to_prime(
+            match['unmatched']['quantity'],
+            item.unmatched.quantity)
     return {
         'family': 'match',
-        'address': address,
-        'data': MessageToDict(match)
+        'dimension': dim,
+        'operation': operation,
+        'data': match
+    }
+
+
+def decode_match_dimension(address):
+    results = __get_list_data(address)['data']
+    dim = 'utxq' if address[12:18] == Address._utxq_hash else 'mtxq'
+    data = []
+    for element in results:
+        data.append(
+            (
+                __revmachadd[element['address'][18:24]],
+                element['address']))
+    return {
+        'family': 'match',
+        'dimension': dim,
+        'data': data
+    }
+
+
+def decode_match_initiate_list(address):
+    results = __get_list_data(address)['data']
+    ops = __revmachadd[address[18:24]]
+
+    data = []
+    for element in results:
+        ladd = element['address']
+        utxq = UTXQ()
+        utxq.ParseFromString(b64decode(__get_leaf_data(ladd)['data']))
+        data.append((
+            __format_quantity(utxq.quantity),
+            ladd))
+    return {
+        'family': 'match',
+        'dimension': 'utxq',
+        'operation': ops,
+        'data': data
+    }
+
+
+def decode_match_reciprocate_list(address):
+    results = __get_list_data(address)['data']
+    ops = __revmachadd[address[18:24]]
+
+    data = []
+    for element in results:
+        ladd = element['address']
+        mtxq = MTXQ()
+        mtxq.ParseFromString(b64decode(__get_leaf_data(ladd)['data']))
+        data.append((
+            '{} for {}'.format(
+                __format_quantity(mtxq.quantity),
+                __format_quantity(mtxq.unmatched.quantity)),
+            ladd))
+    return {
+        'family': 'match',
+        'dimension': 'mtxq',
+        'operation': ops,
+        'data': data
     }
 
 
 _hash_map = {
     Address._namespace_hash: {
-        ASSET_HASH: {
-            Address._candidates_hash: _decode_proposals,
-            UNIT_HASH: _decode_asset,
-            RESOURCE_HASH: _decode_asset
+        Address._asset_hash: {
+            Address._candidates_hash: decode_proposals,
+            Address._unit_hash: __decode_asset,
+            Address._resource_hash: __decode_asset
         },
-        MATCH_HASH: {
-            UTXQ_HASH: _decode_match,
-            MTXQ_HASH: _decode_match
+        Address._match_hash: {
+            Address._utxq_hash: __decode_match,
+            Address._mtxq_hash: __decode_match
         },
-        SETTING_HASH: {
-            UNIT_HASH: _decode_settings,
-            RESOURCE_HASH: _decode_settings
+        Address._setting_hash: {
+            Address._unit_hash: decode_settings,
+            Address._resource_hash: decode_settings
         }
     }
 }
 
 
 def decode_from_leaf(address):
-    node = REST_CONFIG['rest']['hosts']['local']
-    leaf = RestClient(node).get_leaf(address)
+    leaf = __get_leaf_data(address)
     y = _hash_map[address[:6]][address[6:12]][address[12:18]]
-    return y(b64decode(leaf['data']), address)
+    return y(address, b64decode(leaf['data']))

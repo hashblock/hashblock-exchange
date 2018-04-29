@@ -48,17 +48,54 @@ class Address():
 
     _namespace_hash = hashlib.sha512(
         NAMESPACE.encode("utf-8")).hexdigest()[0:6]
-    _filler_hash26 = hashlib.sha512('filler'.encode("utf-8")).hexdigest()[0:52]
-    _filler_hash23 = _filler_hash26[0:46]
+
+    _setting_hash = hashlib.sha512(
+        FAMILY_SETTING.encode("utf-8")).hexdigest()[0:6]
+    _match_hash = hashlib.sha512(
+        FAMILY_MATCH.encode("utf-8")).hexdigest()[0:6]
+    _asset_hash = hashlib.sha512(
+        FAMILY_ASSET.encode("utf-8")).hexdigest()[0:6]
+
     _candidates_hash = hashlib.sha512(
         ASSET_CANDIDATES.encode("utf-8")).hexdigest()[0:6]
+    _unit_hash = hashlib.sha512(
+        DIMENSION_UNIT.encode("utf-8")).hexdigest()[0:6]
+    _resource_hash = hashlib.sha512(
+        DIMENSION_RESOURCE.encode("utf-8")).hexdigest()[0:6]
+    _utxq_hash = hashlib.sha512(
+        DIMENSION_UTXQ.encode("utf-8")).hexdigest()[0:6]
+    _mtxq_hash = hashlib.sha512(
+        DIMENSION_MTXQ.encode("utf-8")).hexdigest()[0:6]
+
+    _filler_hash26 = hashlib.sha512('filler'.encode("utf-8")).hexdigest()[0:52]
+    _filler_hash23 = _filler_hash26[0:46]
+
+    _unit_setting_hash = _namespace_hash + _setting_hash + \
+        _unit_hash
+    _resource_setting_hash = _namespace_hash + _setting_hash + \
+        _resource_hash
+    _unit_proposal_hash = _namespace_hash + _asset_hash + \
+        _candidates_hash + _unit_hash
+    _resource_proposal_hash = _namespace_hash + _asset_hash + \
+        _candidates_hash + _resource_hash
+
+    _ask_hash = hashlib.sha512('ask'.encode("utf-8")).hexdigest()[0:6]
+    _tell_hash = hashlib.sha512('tell'.encode("utf-8")).hexdigest()[0:6]
+    _offer_hash = hashlib.sha512('offer'.encode("utf-8")).hexdigest()[0:6]
+    _accept_hash = hashlib.sha512('accept'.encode("utf-8")).hexdigest()[0:6]
+    _commitment_hash = hashlib.sha512(
+        'commitment'.encode("utf-8")).hexdigest()[0:6]
+    _obligation_hash = hashlib.sha512(
+        'obligation'.encode("utf-8")).hexdigest()[0:6]
+    _give_hash = hashlib.sha512('give'.encode("utf-8")).hexdigest()[0:6]
+    _take_hash = hashlib.sha512('take'.encode("utf-8")).hexdigest()[0:6]
 
     def __init__(self, family):
         self._family = family
         self._family_hash = self.hashup(family)[0:6]
 
     @classmethod
-    def valid_address(cls, address):
+    def __valid_address(cls, address):
         if len(address) \
                 and re.fullmatch(r"^[0-9a-fA-F]+$", address) \
                 and len(address) % 2 == 0:
@@ -68,8 +105,13 @@ class Address():
 
     @classmethod
     def valid_leaf_address(cls, address):
-        return True if cls.valid_address(address) \
+        return True if cls.__valid_address(address) \
             and len(address) == 70 else False
+
+    @classmethod
+    def leaf_address_type(cls, target, address):
+        return True if cls.valid_leaf_address(address) \
+            and target == address[0:len(target)] else False
 
     @property
     def ns_family(self):
