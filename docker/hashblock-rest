@@ -16,6 +16,26 @@
 
 # This docker file creates the development hashblock-dev-rest image
 
+FROM python:3.5-slim as base
+
+RUN mkdir -p /builder && \
+ 	pip3 install \
+ 		grpcio-tools \
+ 		grpcio && \
+ 	rm -rf /var/lib/apt/lists/
+
+WORKDIR /builder
+
+COPY bin bin
+ COPY cli cli
+ COPY protos protos
+ COPY families families
+ COPY sdk sdk
+ COPY apps apps
+
+ RUN bin/protogen && \
+ 	pip3 uninstall -y grpcio grpcio-tools
+
 FROM python:3.5-slim
 LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 
@@ -27,7 +47,7 @@ WORKDIR /project/hashblock-exchange
 RUN touch __init__.py
 COPY modules modules
 COPY apps/shared apps/shared
-COPY apps/protobuf apps/protobuf
+COPY --from=base /builder/apps/protobuf apps/protobuf
 COPY apps/hashblock_rest apps/hashblock_rest
 
 RUN pip3 install --trusted-host pypi.python.org -r apps/hashblock_rest/requirements.txt
