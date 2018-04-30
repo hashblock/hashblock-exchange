@@ -107,10 +107,16 @@ def decode_proposals(address, data=None):
 def __decode_asset(address, data):
     """Decode a unit or resource asset address
     """
-    asset = Unit() if address[18:24] == Address._unit_hash else Resource()
+    if address[12:18] == Address._unit_hash:
+        asset = Unit()
+        dim = Address.DIMENSION_UNIT
+    else:
+        asset = Resource()
+        dim = Address.DIMENSION_RESOURCE
     asset.ParseFromString(data)
     return {
         'family': 'asset',
+        'dimension': dim,
         'data': MessageToDict(asset)
     }
 
@@ -260,6 +266,62 @@ def decode_match_reciprocate_list(address):
         'family': 'match',
         'dimension': 'mtxq',
         'operation': ops,
+        'data': data
+    }
+
+
+def __decode_asset_listing(address):
+    return [
+        x for x in __get_list_data(address)['data']
+        if x['address'][12:18] != Address._candidates_hash]
+
+
+def decode_asset_list(address):
+    """List of assets not including proposals"""
+    results = __decode_asset_listing(address)
+    data = []
+    for element in results:
+        if element['address'][12:18] == Address._unit_hash:
+            asset = Unit()
+            atype = 'unit'
+        else:
+            asset = Resource()
+            atype = 'resource'
+        asset.ParseFromString(b64decode(element['data']))
+        data.append({
+            'link': element['address'],
+            'type': atype,
+            'system': asset.system,
+            'name': asset.key,
+            'value': asset.value
+        })
+    return {
+        'family': 'asset',
+        'data': data
+    }
+
+
+def decode_asset_unit_list(address):
+    """List of assets not including proposals"""
+    results = __decode_asset_listing(address)
+    if address[12:18] == Address._unit_hash:
+        asset = Unit()
+        atype = 'unit'
+    else:
+        asset = Resource()
+        atype = 'resource'
+    data = []
+    for element in results:
+        asset.ParseFromString(b64decode(element['data']))
+        data.append({
+            'link': element['address'],
+            'system': asset.system,
+            'name': asset.key,
+            'value': asset.value
+        })
+    return {
+        'family': 'asset',
+        'dimension': atype,
         'data': data
     }
 

@@ -158,6 +158,14 @@ class Address():
             + self.hashup(dimension)[0:6] \
             + self._filler_hash26
 
+    # E.g. hashblock.asset.unit or hashblock.asset.resource
+    # 0-2  namespace
+    # 3-5  family
+    # 6-8  dimension
+    def asset_prefix(self, dimension):
+        return self.ns_family \
+            + self.hashup(dimension)[0:6]
+
     # E.g. hashblock.asset.unit.imperial.foot
     # 0-2  namespace
     # 3-5  family

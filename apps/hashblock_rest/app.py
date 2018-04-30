@@ -22,6 +22,8 @@ from flask_restplus import Resource, Api
 from hashblock_rest.config.hb_rest_config import load_config
 from modules.address import Address
 from modules.decode import decode_from_leaf
+from modules.decode import decode_asset_list
+from modules.decode import decode_asset_unit_list
 from modules.decode import decode_proposals
 from modules.decode import decode_settings
 from modules.decode import decode_match_dimension
@@ -43,11 +45,59 @@ _asset_address = Address(Address.FAMILY_ASSET)
 _match_address = Address(Address.FAMILY_MATCH)
 
 
+def assetlinks(data):
+    for element in data:
+        addr = element['link']
+        baseref = 'asset_' + element['type']
+        element['link'] = api.base_url[:-1] + url_for(
+            baseref, address=addr)
+    return data
+
+
+def assetunitlinks(data, asset_type):
+    for element in data:
+        addr = element['link']
+        baseref = 'asset_' + asset_type
+        element['link'] = api.base_url[:-1] + url_for(
+            baseref, address=addr)
+    return data
+
+
+def matchlinks(data, desc_term, url_path):
+    new_data = []
+    for element in data:
+        op, link = element
+        new_data.append({
+            desc_term: op,
+            'link': api.base_url[:-1] +
+            url_for(url_path + op, address=link)})
+    return new_data
+
+
+def matchtermlinks(data, url_path):
+    new_data = []
+    for element in data:
+        cargo, address = element
+        link = api.base_url[:-1] + url_for(url_path, address=address)
+        cargo['link'] = link
+        new_data.append(cargo)
+    return new_data
+
+
 @ns.route('/')
 class StateDecode(Resource):
     def get(self):
         """Return a list of hashblock entities"""
         return {"data": "TBD"}, 200
+
+
+@ns.route('/assets')
+class ASDecode(Resource):
+    def get(self):
+        """Returns list of all asset units"""
+        result = decode_asset_list(_asset_address.ns_family)
+        result['data'] = assetlinks(result['data'])
+        return result, 200
 
 
 @ns.route('/resource-settings')
@@ -70,7 +120,24 @@ class RAPDecode(Resource):
 class RADecode(Resource):
     def get(self):
         """Returns all resource asset units"""
-        return {"data": "TBD"}, 200
+        result = decode_asset_unit_list(
+            _asset_address.asset_prefix(Address.DIMENSION_RESOURCE))
+        result['data'] = assetunitlinks(
+            result['data'], Address.DIMENSION_RESOURCE)
+        return result, 200
+
+
+@ns.route('/resource/<string:address>', endpoint='asset_resource')
+@ns.param('address', 'The address to decode')
+class AU_resource_Decode(Resource):
+    def get(self, address):
+        """Return resource asset unit details"""
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
 
 
 @ns.route('/unit-settings')
@@ -93,28 +160,24 @@ class UAPDecode(Resource):
 class UADecode(Resource):
     def get(self):
         """Returns all unit-of-measure asset units"""
-        return {"data": "TBD"}, 200
+        result = decode_asset_unit_list(
+            _asset_address.asset_prefix(Address.DIMENSION_UNIT))
+        result['data'] = assetunitlinks(
+            result['data'], Address.DIMENSION_UNIT)
+        return result, 200
 
 
-def matchlinks(data, desc_term, url_path):
-    new_data = []
-    for element in data:
-        op, link = element
-        new_data.append({
-            desc_term: op,
-            'link': api.base_url[:-1] +
-            url_for(url_path + op, address=link)})
-    return new_data
-
-
-def matchtermlinks(data, url_path):
-    new_data = []
-    for element in data:
-        cargo, address = element
-        link = api.base_url[:-1] + url_for(url_path, address=address)
-        cargo['link'] = link
-        new_data.append(cargo)
-    return new_data
+@ns.route('/unit/<string:address>', endpoint='asset_unit')
+@ns.param('address', 'The address to decode')
+class AU_unit_Decode(Resource):
+    def get(self, address):
+        """Return unit-of-measure asset unit details"""
+        if Address.valid_leaf_address(address):
+            return decode_from_leaf(address), 200
+        else:
+            return {
+                "address": "not a valid address",
+                "data": ""}, 400
 
 
 @ns.route('/utxqs')
@@ -185,6 +248,7 @@ class MTXQ_tell_Decode(Resource):
             return {
                 "address": "not a valid address",
                 "data": ""}, 400
+
 
 if __name__ == '__main__':
     print("Loading hasblock REST application")
