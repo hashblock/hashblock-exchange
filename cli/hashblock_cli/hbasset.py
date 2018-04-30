@@ -206,7 +206,7 @@ def _do_config_proposal_list(args):
             for vote in candidate.votes:
                 print("     voter {} => {}".format(
                     vote.public_key,
-                    "accept" if vote.vote is AssetVote.ACCEPT else "reject"))
+                    "accept" if vote.vote is AssetVote.VOTE_ACCEPT else "reject"))
     elif args.format == 'csv':
         writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
         writer.writerow(['PROPOSAL_ID', 'SYSTEM', 'KEY', 'VALUE', 'SKU'])
@@ -429,7 +429,7 @@ def _create_propose_txn(signer, asset, dimension, asset_addr, proposal_type):
     payload = AssetPayload(
         data=proposal.SerializeToString(),
         dimension=dimension,
-        action=AssetPayload.PROPOSE)
+        action=AssetPayload.ACTION_PROPOSE)
 
     return _make_txn(signer, dimension, asset_addr, payload)
 
@@ -438,12 +438,12 @@ def _create_vote_txn(signer, proposal_id, dimension, vote_value):
     """Creates an individual hashblock_resource transaction for voting on a
     proposal for a particular asset. The proposal_id is the asset address
     """
-    vote_action = AssetPayload.VOTE
+    vote_action = AssetPayload.ACTION_VOTE
 
     if vote_value == 'accept':
-        vote_id = AssetVote.ACCEPT
+        vote_id = AssetVote.VOTE_ACCEPT
     elif vote_value == 'reject':
-        vote_id = AssetVote.REJECT
+        vote_id = AssetVote.VOTE_REJECT
     elif vote_value == 'rescind':
         vote_id = AssetVote.VOTE_UNSET
         vote_action = AssetPayload.ACTION_UNSET

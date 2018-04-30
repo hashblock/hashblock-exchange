@@ -19,7 +19,7 @@ version: "2.1"
 services:
 
   asset-processor:
-    image: hashblock-dev-asset-tp:latest
+    image: hashblock-dev-generic-tp:latest
     container_name: hashblock-asset-dev-tp
     volumes:
       - ../../..:/project/hashblock-exchange

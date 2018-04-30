@@ -90,12 +90,12 @@ class AssetTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 '{} is not authorized to change asset'.format(public_key))
 
-        if asset_payload.action == AssetPayload.PROPOSE:
+        if asset_payload.action == AssetPayload.ACTION_PROPOSE:
             return self._apply_proposal(
                 public_key,
                 asset_payload.data,
                 context)
-        elif asset_payload.action == AssetPayload.VOTE:
+        elif asset_payload.action == AssetPayload.ACTION_VOTE:
             return self._apply_vote(
                 public_key,
                 auth_keys,
@@ -114,7 +114,8 @@ class AssetTransactionHandler(TransactionHandler):
     def _apply_proposal(self, public_key, proposal_data, context):
         asset_proposal = AssetProposal()
         asset_proposal.ParseFromString(proposal_data)
-
+        LOGGER.debug(
+            "Processing proposal for type {}".format(asset_proposal.type))
         self.asset_type.asset_from_proposal(asset_proposal)
         proposal_id = (self.asset_type.asset_address)
 
@@ -134,7 +135,7 @@ class AssetTransactionHandler(TransactionHandler):
 
             record = AssetCandidate.VoteRecord(
                 public_key=public_key,
-                vote=AssetVote.ACCEPT)
+                vote=AssetCandidate.VoteRecord.VOTE_ACCEPT)
             asset_candidates.candidates.add(
                 proposal_id=proposal_id,
                 proposal=asset_proposal,
@@ -227,9 +228,9 @@ class AssetTransactionHandler(TransactionHandler):
         accepted_count = 0
         rejected_count = 0
         for vote_record in candidate.votes:
-            if vote_record.vote == AssetVote.ACCEPT:
+            if vote_record.vote == AssetVote.VOTE_ACCEPT:
                 accepted_count += 1
-            elif vote_record.vote == AssetVote.REJECT:
+            elif vote_record.vote == AssetVote.VOTE_REJECT:
                 rejected_count += 1
 
         LOGGER.debug(
