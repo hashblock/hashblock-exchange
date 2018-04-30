@@ -16,7 +16,7 @@
 
 import logging
 
-from flask import Flask, url_for
+from flask import Flask, request, url_for
 from flask_restplus import Resource, Api
 
 from hashblock_rest.config.hb_rest_config import load_config
@@ -49,8 +49,7 @@ def assetlinks(data):
     for element in data:
         addr = element['link']
         baseref = 'asset_' + element['type']
-        element['link'] = api.base_url[:-1] + url_for(
-            baseref, address=addr)
+        element['link'] = url_for(baseref, address=addr, _external=True)
     return data
 
 
@@ -58,8 +57,7 @@ def assetunitlinks(data, asset_type):
     for element in data:
         addr = element['link']
         baseref = 'asset_' + asset_type
-        element['link'] = api.base_url[:-1] + url_for(
-            baseref, address=addr)
+        element['link'] = url_for(baseref, address=addr, _external=True)
     return data
 
 
@@ -69,8 +67,7 @@ def matchlinks(data, desc_term, url_path):
         op, link = element
         new_data.append({
             desc_term: op,
-            'link': api.base_url[:-1] +
-            url_for(url_path + op, address=link)})
+            'link': url_for(url_path + op, address=link, _external=True)})
     return new_data
 
 
@@ -78,7 +75,7 @@ def matchtermlinks(data, url_path):
     new_data = []
     for element in data:
         cargo, address = element
-        link = api.base_url[:-1] + url_for(url_path, address=address)
+        link = url_for(url_path, address=address, _external=True)
         cargo['link'] = link
         new_data.append(cargo)
     return new_data
@@ -127,19 +124,6 @@ class RADecode(Resource):
         return result, 200
 
 
-@ns.route('/resource/<string:address>', endpoint='asset_resource')
-@ns.param('address', 'The address to decode')
-class AU_resource_Decode(Resource):
-    def get(self, address):
-        """Return resource asset unit details"""
-        if Address.valid_leaf_address(address):
-            return decode_from_leaf(address), 200
-        else:
-            return {
-                "address": "not a valid address",
-                "data": ""}, 400
-
-
 @ns.route('/unit-settings')
 class UASDecode(Resource):
     def get(self):
@@ -168,10 +152,11 @@ class UADecode(Resource):
 
 
 @ns.route('/unit/<string:address>', endpoint='asset_unit')
+@ns.route('/resource/<string:address>', endpoint='asset_resource')
 @ns.param('address', 'The address to decode')
-class AU_unit_Decode(Resource):
+class AU_Decode(Resource):
     def get(self, address):
-        """Return unit-of-measure asset unit details"""
+        """Return asset details"""
         if Address.valid_leaf_address(address):
             return decode_from_leaf(address), 200
         else:
@@ -183,7 +168,7 @@ class AU_unit_Decode(Resource):
 @ns.route('/utxqs')
 class UTXQDecode(Resource):
     def get(self):
-        """Returns all utxqs"""
+        """Returns all match request transactions"""
         result = decode_match_dimension(
             _match_address.txq_dimension(Address.DIMENSION_UTXQ))
         new_data = matchlinks(result['data'], 'operation', 'utxq_')
@@ -192,21 +177,30 @@ class UTXQDecode(Resource):
 
 
 @ns.route('/asks', endpoint='utxq_asks')
-class UTXQ_asks_Decode(Resource):
+@ns.route('/offers', endpoint='utxq_offers')
+@ns.route('/commitments', endpoint='utxq_commitments')
+@ns.route('/gives', endpoint='utxq_gives')
+class UTXQS_Decode(Resource):
     def get(self):
-        """Returns all asks"""
+        """Returns all match requests by type"""
+        tail = request.path.split('/')[-1]
+        ref = tail[:-1]
+        indr = 'utxq_' + ref
         result = decode_match_initiate_list(
-            _match_address.txq_list(Address.DIMENSION_UTXQ, 'ask'))
-        new_data = matchtermlinks(result['data'], 'utxq_ask')
+            _match_address.txq_list(Address.DIMENSION_UTXQ, ref))
+        new_data = matchtermlinks(result['data'], indr)
         result['data'] = new_data
         return result, 200
 
 
 @ns.route('/ask/<string:address>', endpoint='utxq_ask')
+@ns.route('/offer/<string:address>', endpoint='utxq_offer')
+@ns.route('/commitment/<string:address>', endpoint='utxq_commitment')
+@ns.route('/give/<string:address>', endpoint='utxq_give')
 @ns.param('address', 'The address to decode')
-class UTXQ_ask_Decode(Resource):
+class UTXQ_Decode(Resource):
     def get(self, address):
-        """Return match exchange detail"""
+        """Return match request detail"""
         if Address.valid_leaf_address(address):
             return decode_from_leaf(address), 200
         else:
@@ -218,7 +212,7 @@ class UTXQ_ask_Decode(Resource):
 @ns.route('/mtxqs')
 class MTXQDecode(Resource):
     def get(self):
-        """Returns all mtxqs"""
+        """Returns all match response transactions"""
         result = decode_match_dimension(
             _match_address.txq_dimension(Address.DIMENSION_MTXQ))
         new_data = matchlinks(result['data'], 'operation', 'mtxq_')
@@ -226,22 +220,31 @@ class MTXQDecode(Resource):
         return result, 200
 
 
-@ns.route('/tells')
-class MTXQ_tells_Decode(Resource):
+@ns.route('/tells', endpoint='mtxq_tells')
+@ns.route('/accepts', endpoint='mtxq_accepts')
+@ns.route('/obligations', endpoint='mtxq_obligations')
+@ns.route('/takes', endpoint='mtxq_takes')
+class MTXQS_Decode(Resource):
     def get(self):
-        """Returns all tells"""
+        """Returns all match response by type"""
+        tail = request.path.split('/')[-1]
+        ref = tail[:-1]
+        indr = 'utxq_' + ref
         result = decode_match_reciprocate_list(
-            _match_address.txq_list(Address.DIMENSION_MTXQ, 'tell'))
-        new_data = matchtermlinks(result['data'], 'mtxq_tell')
+            _match_address.txq_list(Address.DIMENSION_MTXQ, ref))
+        new_data = matchtermlinks(result['data'], indr)
         result['data'] = new_data
         return result, 200
 
 
 @ns.route('/tell/<string:address>', endpoint='mtxq_tell')
+@ns.route('/accept/<string:address>', endpoint='mtxq_accept')
+@ns.route('/obligation/<string:address>', endpoint='mtxq_obligation')
+@ns.route('/take/<string:address>', endpoint='mtxq_take')
 @ns.param('address', 'The address to decode')
-class MTXQ_tell_Decode(Resource):
+class MTXQ_Decode(Resource):
     def get(self, address):
-        """Return match exchange detail"""
+        """Return match response detail"""
         if Address.valid_leaf_address(address):
             return decode_from_leaf(address), 200
         else:
