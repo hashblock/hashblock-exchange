@@ -19,7 +19,7 @@ version: "2.1"
 services:
 
   match-processor:
-    image: hashblock-dev-match-tp:latest
+    image: hashblock-dev-generic-tp:latest
     container_name: hashblock-match-dev-tp
     volumes:
       - ../../..:/project/hashblock-exchange

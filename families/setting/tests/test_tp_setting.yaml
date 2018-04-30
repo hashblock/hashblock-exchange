@@ -19,7 +19,7 @@ version: "2.1"
 services:
 
   settings-processor:
-    image: hashblock-dev-setting-tp:latest
+    image: hashblock-dev-generic-tp:latest
     container_name: hashblock-setting-dev-tp
     volumes:
       - ../../..:/project/hashblock-exchange
