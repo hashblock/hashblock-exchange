@@ -285,8 +285,8 @@ def _create_reciprocate_txn(icmd, signer, event_address, quantity, ratio):
     a reciprocate event that matches with an initate event.
     """
     reciprocate_event = MTXQ(
-        plus=b'public key',
-        minus=b'minus',
+        plus=b'church',
+        minus=b'turing',
         ratio=ratio,
         quantity=quantity)
 
@@ -425,8 +425,8 @@ def _create_initiate_txn(icmd, signer, quantity_value_unit_resource):
         resourceUnit=(int(resource)).to_bytes(2, byteorder='little'))
     initiateEvent = UTXQ(
         matched=False,
-        plus=b'public key',
-        minus=b'minus_public_key',
+        plus=b'turing',
+        minus=b'church',
         quantity=quantity)
 
     event_key = _addresser.txq_item(
