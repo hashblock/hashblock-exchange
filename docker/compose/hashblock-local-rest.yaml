@@ -10,9 +10,11 @@ services:
       --reload
       "hashblock_rest.app:application"
     environment:
-      PYTHONUNBUFFERED: 'true'
+      - PYTHONUNBUFFERED='true'
     volumes:
       - ../../../hashblock-exchange:/project/hashblock-exchange
+      - ../../../hbtemp:/project/keys
+      - ../../../hbconfig:/project/configs
     ports:
       - '8000:8000'
 

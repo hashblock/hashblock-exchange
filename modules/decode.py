@@ -21,10 +21,12 @@ decode into it's type data structure
 """
 from base64 import b64decode
 
-from config.hb_rest_config import REST_CONFIG
+from google.protobuf.json_format import MessageToDict
+
+from modules.config import sawtooth_rest_host
+from modules.config import key_owner
 from shared.rest_client import RestClient
 from modules.address import Address
-from google.protobuf.json_format import MessageToDict
 from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ
 from protobuf.setting_pb2 import Settings
@@ -34,13 +36,11 @@ from protobuf.asset_pb2 import AssetCandidates
 
 
 def __get_leaf_data(address):
-    node = REST_CONFIG['rest']['hosts']['local']
-    return RestClient(node).get_leaf(address)
+    return RestClient(sawtooth_rest_host()).get_leaf(address)
 
 
 def __get_list_data(address):
-    node = REST_CONFIG['rest']['hosts']['local']
-    return RestClient(node).list_state(address)
+    return RestClient(sawtooth_rest_host()).list_state(address)
 
 
 def __decode_settings(address, data):
@@ -53,7 +53,7 @@ def __decode_settings(address, data):
     else:
         subfam = 'resource'
     data = MessageToDict(settings)
-    data['authList'] = data['authList'].split(",")
+    data['authList'] = [key_owner(x) for x in data['authList'].split(",")]
     return {
         'family': 'asset',
         'type': 'setting',
@@ -73,7 +73,7 @@ def decode_settings(address, data=None):
 def __decode_proposals(address, data):
     """Decode a proposals address
     """
-    print("__DP {} = {}".format(address, data))
+
     proposals = AssetCandidates()
     proposals.ParseFromString(data)
     if address[18:24] == Address._unit_hash:
@@ -87,6 +87,8 @@ def __decode_proposals(address, data):
         msg = MessageToDict(candidate)
         asset.ParseFromString(candidate.proposal.asset)
         msg['proposal']['asset'] = MessageToDict(asset)
+        for voter in msg['votes']:
+            voter['publicKey'] = key_owner(voter['publicKey'])
         data.append(msg)
     return {
         'family': 'asset',
@@ -98,10 +100,8 @@ def __decode_proposals(address, data):
 
 def decode_proposals(address, data=None):
     if not data:
-        data = __get_leaf_data(address)
-    return __decode_proposals(
-        address,
-        b64decode(__get_leaf_data(address)['data']))
+        data = b64decode(__get_leaf_data(address)['data'])
+    return __decode_proposals(address, data)
 
 
 def __decode_asset(address, data):

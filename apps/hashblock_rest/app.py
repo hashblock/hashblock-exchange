@@ -17,9 +17,10 @@
 import logging
 
 from flask import Flask, request, url_for
-from flask_restplus import Resource, Api
+from flask_restplus import Resource, Api, fields
 
-from hashblock_rest.config.hb_rest_config import load_config
+from modules.exceptions import DataException, AuthException, NotPrimeException
+from modules.config import load_hashblock_config
 from modules.address import Address
 from modules.decode import decode_from_leaf
 from modules.decode import decode_asset_list
@@ -30,19 +31,32 @@ from modules.decode import decode_match_dimension
 from modules.decode import decode_match_initiate_list
 from modules.decode import decode_match_reciprocate_list
 
+import shared.asset as asset
+
 LOGGER = logging.getLogger(__name__)
 
 application = Flask(__name__)
-api = Api(application,
-          version='0.1.0',
-          title='#B REST',
-          description='REST-API for hashblock-exchange')
 
-ns = api.namespace('hashblock', description='#B operations')
+# Load up our configuration for URLs and keys
+
+load_hashblock_config()
+print("Succesfully loaded hasblock-rest configuration")
+
+api = Api(
+    application,
+    validate=True,
+    version='0.1.0',
+    title='hashblock-rest',
+    description='REST for hashblock-exchange')
+
+ns = api.namespace('hashblock', description='hashblock state operations')
 
 _setting_address = Address(Address.FAMILY_SETTING)
 _asset_address = Address(Address.FAMILY_ASSET)
 _match_address = Address(Address.FAMILY_MATCH)
+
+
+# Utility functions
 
 
 def assetlinks(data):
@@ -81,6 +95,8 @@ def matchtermlinks(data, url_path):
     return new_data
 
 
+# Entry points
+
 @ns.route('/')
 class StateDecode(Resource):
     def get(self):
@@ -103,6 +119,84 @@ class RASDecode(Resource):
         """Returns the resource asset unit settings"""
         return decode_settings(
             _setting_address.settings(Address.DIMENSION_RESOURCE)), 200
+
+
+asset_fields = ns.model('asset', {
+    'system': fields.String(
+        required=True, description='The asset classification'),
+    'key': fields.String(
+        required=True, description='The asset key',),
+    'value': fields.String(required=True, description='The asset value'),
+    'signer': fields.String(
+        required=True, description='The authorized proposer')})
+
+asset_vote_fields = ns.model('asset-vote', {
+    'proposal_id': fields.String(
+        required=True, description='The asset proposal to vote on'),
+    'vote': fields.String(
+        required=True, description='The vote for proposal_id',),
+    'signer': fields.String(
+        required=True, description='The authorized voter')})
+
+
+@ns.route('/propose-resource')
+class RAPIngest(Resource):
+    @ns.expect(asset_fields)
+    def post(self):
+        try:
+            proposal_id = asset.create_proposal(
+                Address.DIMENSION_RESOURCE, request.json)
+            return {"proposal_id": proposal_id, "status": "OK"}, 200
+        except (DataException, ValueError, NotPrimeException):
+            return {"DataException": "invalid payload"}, 400
+        except AuthException:
+            return {
+                "AuthException": "not authorized to make proposals"}, 405
+
+
+@ns.route('/vote-resource')
+class RAVIngest(Resource):
+    @ns.expect(asset_vote_fields)
+    def post(self):
+        try:
+            asset.create_vote(
+                Address.DIMENSION_RESOURCE, request.json)
+            return {"status": "OK"}, 200
+        except (DataException, ValueError, NotPrimeException):
+            return {"DataException": "invalid payload"}, 400
+        except AuthException:
+            return {
+                "AuthException": "not authorized to vote"}, 405
+
+
+@ns.route('/propose-unit')
+class UAPIngest(Resource):
+    @ns.expect(asset_fields)
+    def post(self):
+        try:
+            proposal_id = asset.create_proposal(
+                Address.DIMENSION_UNIT, request.json)
+            return {"proposal_id": proposal_id, "status": "OK"}, 200
+        except (DataException, ValueError, NotPrimeException):
+            return {"DataException": "invalid payload"}, 400
+        except AuthException:
+            return {
+                "AuthException": "not authorized to make proposals"}, 405
+
+
+@ns.route('/vote-unit')
+class UAVIngest(Resource):
+    @ns.expect(asset_vote_fields)
+    def post(self):
+        try:
+            asset.create_vote(
+                Address.DIMENSION_UNIT, request.json)
+            return {"status": "OK"}, 200
+        except (DataException, ValueError, NotPrimeException):
+            return {"DataException": "invalid payload"}, 400
+        except AuthException:
+            return {
+                "AuthException": "not authorized to vote"}, 405
 
 
 @ns.route('/resource-proposals')
@@ -254,6 +348,4 @@ class MTXQ_Decode(Resource):
 
 
 if __name__ == '__main__':
-    print("Loading hasblock REST application")
-    load_config('hb_rest.yaml')
     application.run(debug=True)

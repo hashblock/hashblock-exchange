@@ -28,7 +28,8 @@ services:
     image: hashblock-dev-python
     container_name: hashblock-shell
     volumes:
-      - ../../../hbtemp/:/project/keys
+      - ../../../hbruntime/:/project/keys
+      - ../../../hbruntime/:/project/configs
       - ../../../hashblock-exchange/:/project/hashblock-exchange
       - ../../../sawtooth-core/:/project/sawtooth-core
     environment:
@@ -45,8 +46,6 @@ services:
         python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
         pip3 install ptvsd==3.0.0.0 && \
         pip3 install ply && \
-        sawtooth keygen my_key && \
-        sawtooth keygen your_key && \
         tail -f /dev/null \
         \""
     stop_signal: SIGKILL
@@ -62,6 +61,8 @@ services:
     environment:
       PYTHONUNBUFFERED: 'true'
     volumes:
+      - ../../../hbruntime/:/project/keys
+      - ../../../hbruntime/:/project/configs
       - ../../../hashblock-exchange:/project/hashblock-exchange
     ports:
       - '8000:8000'
@@ -142,7 +143,7 @@ services:
     stop_signal: SIGKILL
 
   settings-tp:
-    image: sawtooth-settings-tp:latest
+    image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-local
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core
@@ -152,11 +153,12 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-validator:latest
+    image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
     volumes:
+      - ../../../hbruntime/:/project/keys
       - ../../../sawtooth-core/:/project/sawtooth-core
-      - ../../:/project/hashblock-exchange
+      - ../../../hashblock-exchange/:/project/hashblock-exchange
     environment:
       - PYTHONPATH=/project/hashblock-exchange
     # Expose 5700 for remote debugging
@@ -169,10 +171,8 @@ services:
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \
-        sawtooth keygen my_key && \
-        sawtooth keygen your_key && \
-        sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
-        /project/hashblock-exchange/bin/hbsetting genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-hbsettings.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
+        sawset genesis -k /project/keys/turing.priv -o /etc/config-settings.batch && \
+        /project/hashblock-exchange/bin/hbsetting genesis -k /project/keys/turing.priv -o /etc/config-hbsettings.batch -T 2 -A $$(cat /project/keys/church.pub) && \
         sawadm genesis /etc/config-settings.batch /etc/config-hbsettings.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
@@ -181,7 +181,7 @@ services:
         \""
 
   rest-api:
-    image: sawtooth-rest-api:latest
+    image: hyperledger/sawtooth-rest_api:latest
     container_name: sawtooth-rest-api-local
     volumes:
       - ../../../sawtooth-core/:/project/sawtooth-core

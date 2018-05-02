@@ -19,6 +19,18 @@ class CliException(Exception):
     pass
 
 
+class NotPrimeException(Exception):
+    pass
+
+
+class DataException(Exception):
+    pass
+
+
+class AuthException(Exception):
+    pass
+
+
 class RestException(Exception):
     pass
 

@@ -90,8 +90,10 @@ class Address():
     _give_hash = hashlib.sha512('give'.encode("utf-8")).hexdigest()[0:6]
     _take_hash = hashlib.sha512('take'.encode("utf-8")).hexdigest()[0:6]
 
-    def __init__(self, family):
+    def __init__(self, family, version=None, dimension=None):
         self._family = family
+        self._version = version
+        self._dimension = dimension
         self._family_hash = self.hashup(family)[0:6]
 
     @classmethod
@@ -112,6 +114,18 @@ class Address():
     def leaf_address_type(cls, target, address):
         return True if cls.valid_leaf_address(address) \
             and target == address[0:len(target)] else False
+
+    @property
+    def namespace(self):
+        return 'hashblock_' + self._family
+
+    @property
+    def version(self):
+        return self._version
+
+    @property
+    def dimension(self):
+        return self._dimension
 
     @property
     def ns_family(self):
