@@ -28,7 +28,8 @@ WORKDIR /project
 RUN pip3 install \
     sawtooth-sdk \
     nose2==0.7.2 \
-    ptvsd && \
+    ptvsd \
+    pyopenssl && \
     mkdir -p /var/log/sawtooth
 
 ENV PATH $PATH:/project/hashblock-exchange/bin
