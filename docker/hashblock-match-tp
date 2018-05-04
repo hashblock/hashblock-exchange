@@ -35,7 +35,7 @@ RUN mkdir -p /builder && \
  	pip3 install \
  		grpcio-tools \
  		grpcio \
-		pyopenssl && \
+		cryptography && \
  	rm -rf /var/lib/apt/lists/
 
 WORKDIR /builder

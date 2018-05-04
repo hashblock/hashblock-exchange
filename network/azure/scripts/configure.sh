@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 9 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+if [ $# -lt 10 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
 NODEINDEX=$2
@@ -11,6 +11,7 @@ NETWORKPRIVKEY=$6
 NETWORKPUBKEY=$7
 ENIGMAPRIVKEY=$8
 ENIGMAPUBKEY=$9
+FERNETKEY=$9
 
 TMP_HOME="/sawtooth"
 
@@ -69,6 +70,11 @@ fi
 if [ ! -e "/sawtooth/keys/enigma.pub" ]; then
   sudo echo "Adding /sawtooth/keys/enigma.pub key" >> $CONFIG_LOG_FILE_PATH;
   sudo echo $ENIGMAPUBKEY >> /sawtooth/keys/enigma.pub;
+fi
+
+if [ ! -e "/sawtooth/keys/fernet.key" ]; then
+  sudo echo "Adding /sawtooth/keys/fernet.key key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $FERNETKEY >> /sawtooth/keys/fernet.key;
 fi
 
 if [ ! -e "/sawtooth/etc/validator.toml" ]; then
