@@ -208,6 +208,7 @@ then
     build_python() {
         docker_build $top_dir/docker/hashblock-dev-generic-tp $top_dir hashblock-dev-generic-tp
         docker_build $top_dir/docker/hashblock-dev-rest $top_dir hashblock-dev-rest
+        docker_build $top_dir/docker/hashblock-dev-cli $top_dir hashblock-dev-cli
         docker_build $top_dir/docker/hashblock-dev-python docker/ hashblock-dev-python
     }
 fi

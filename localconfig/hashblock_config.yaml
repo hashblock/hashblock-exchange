@@ -22,6 +22,3 @@ rest:
   signers:
     church: signer1.priv
     turing: signer2.priv
-  voters:
-    church: voter1.pub
-    turing: voter2.pub

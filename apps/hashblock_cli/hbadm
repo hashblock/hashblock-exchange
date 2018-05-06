@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2017 Intel Corporation
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 import os
 import sys
 import sysconfig
-import ptvsd
 
 build_str = "lib.{}-{}.{}".format(
     sysconfig.get_platform(),
@@ -26,16 +25,9 @@ build_str = "lib.{}-{}.{}".format(
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'cli'))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'signing'))
+    'scripts'))
 
-from hashblock_cli.unitsset import main_wrapper
+from scripts.hbadm_main import adm_main_wrapper
 
 if __name__ == '__main__':
-    ptvsd.enable_attach('alphabeta',('0.0.0.0',5700))
-    print('waiting for remote debugger attach on 0.0.0.0:5700')
-    ptvsd.wait_for_attach()
-    print('debugging .....')
-    main_wrapper()
+    adm_main_wrapper()

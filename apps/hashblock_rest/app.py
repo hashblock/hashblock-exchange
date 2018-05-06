@@ -32,6 +32,7 @@ from modules.decode import decode_match_initiate_list
 from modules.decode import decode_match_reciprocate_list
 
 import shared.asset as asset
+import shared.match as match
 
 LOGGER = logging.getLogger(__name__)
 
@@ -169,36 +170,6 @@ class RAVIngest(Resource):
                 "AuthException": "not authorized to vote"}, 405
 
 
-@ns.route('/propose-unit')
-class UAPIngest(Resource):
-    @ns.expect(asset_fields)
-    def post(self):
-        try:
-            proposal_id = asset.create_proposal(
-                Address.DIMENSION_UNIT, request.json)
-            return {"proposal_id": proposal_id, "status": "OK"}, 200
-        except (DataException, ValueError, NotPrimeException):
-            return {"DataException": "invalid payload"}, 400
-        except AuthException:
-            return {
-                "AuthException": "not authorized to make proposals"}, 405
-
-
-@ns.route('/vote-unit')
-class UAVIngest(Resource):
-    @ns.expect(asset_vote_fields)
-    def post(self):
-        try:
-            asset.create_vote(
-                Address.DIMENSION_UNIT, request.json)
-            return {"status": "OK"}, 200
-        except (DataException, ValueError, NotPrimeException):
-            return {"DataException": "invalid payload"}, 400
-        except AuthException:
-            return {
-                "AuthException": "not authorized to vote"}, 405
-
-
 @ns.route('/resource-proposals')
 class RAPDecode(Resource):
     def get(self):
@@ -232,6 +203,36 @@ class UAPDecode(Resource):
         """Returns the unit-of-measure asset unit proposals"""
         return decode_proposals(
             _asset_address.candidates(Address.DIMENSION_UNIT)), 200
+
+
+@ns.route('/propose-unit')
+class UAPIngest(Resource):
+    @ns.expect(asset_fields)
+    def post(self):
+        try:
+            proposal_id = asset.create_proposal(
+                Address.DIMENSION_UNIT, request.json)
+            return {"proposal_id": proposal_id, "status": "OK"}, 200
+        except (DataException, ValueError, NotPrimeException):
+            return {"DataException": "invalid payload"}, 400
+        except AuthException:
+            return {
+                "AuthException": "not authorized to make proposals"}, 405
+
+
+@ns.route('/vote-unit')
+class UAVIngest(Resource):
+    @ns.expect(asset_vote_fields)
+    def post(self):
+        try:
+            asset.create_vote(
+                Address.DIMENSION_UNIT, request.json)
+            return {"status": "OK"}, 200
+        except (DataException, ValueError, NotPrimeException):
+            return {"DataException": "invalid payload"}, 400
+        except AuthException:
+            return {
+                "AuthException": "not authorized to vote"}, 405
 
 
 @ns.route('/units')
@@ -303,6 +304,47 @@ class UTXQ_Decode(Resource):
                 "data": ""}, 400
 
 
+match_asset_fields = ns.model('asset detail', {
+    'system': fields.String(required=True),
+    'key': fields.String(required=True),
+})
+
+quantity_fields = ns.model('quantity_list', {
+    'value': fields.String(required=True),
+    'unit': fields.Nested(match_asset_fields, required=True),
+    'resource': fields.Nested(match_asset_fields, required=True)
+})
+
+ratio_fields = ns.model('ratio', {
+    'numerator': fields.Nested(quantity_fields, required=True),
+    'denominator': fields.Nested(quantity_fields, required=True)
+})
+
+utxq_fields = ns.model('utxq_fields', {
+    'plus': fields.String(required=True),
+    'minus': fields.String(required=True),
+    'quantity': fields.Nested(quantity_fields, required=True)
+})
+
+mtxq_fields = ns.inherit("mtxq_fields", utxq_fields, {
+    'ratio': fields.Nested(ratio_fields, required=True),
+    'utxq_address': fields.String(required=True)
+})
+
+
+@ns.route('/ask')
+@ns.route('/offer')
+@ns.route('/commitment')
+@ns.route('/give')
+class UTXQ_Ingest(Resource):
+    @ns.expect(utxq_fields)
+    def post(self):
+        operation = request.path.split('/')[-1]
+        print("Creating {} transaction".format(operation))
+        match.create_utxq(operation, request.json)
+        return {"status": "OK"}, 200
+
+
 @ns.route('/mtxqs')
 class MTXQDecode(Resource):
     def get(self):
@@ -323,7 +365,7 @@ class MTXQS_Decode(Resource):
         """Returns all match response by type"""
         tail = request.path.split('/')[-1]
         ref = tail[:-1]
-        indr = 'utxq_' + ref
+        indr = 'mtxq_' + ref
         result = decode_match_reciprocate_list(
             _match_address.txq_list(Address.DIMENSION_MTXQ, ref))
         new_data = matchtermlinks(result['data'], indr)
@@ -345,6 +387,19 @@ class MTXQ_Decode(Resource):
             return {
                 "address": "not a valid address",
                 "data": ""}, 400
+
+
+@ns.route('/tell')
+@ns.route('/accept')
+@ns.route('/obligation')
+@ns.route('/take')
+class MTXQ_Ingest(Resource):
+    @ns.expect(mtxq_fields)
+    def post(self):
+        operation = request.path.split('/')[-1]
+        print("Creating {} transaction".format(operation))
+        match.create_mtxq(operation, request.json)
+        return {"status": "OK"}, 200
 
 
 if __name__ == '__main__':

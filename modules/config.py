@@ -26,8 +26,10 @@ from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 
 REST_CONFIG = None
-KEYS_PATH = '/project/keys'
-CFGR_PATH = '/project/configs'
+ENVIRONMENT_KEYS_PATH = 'HASHBLOCK_KEYS'
+ENVIRONMENT_CFGR_PATH = 'HASHBLOCK_CONFIG'
+DEFAULT_KEYS_PATH = '/project/keys'
+DEFAULT_CFGR_PATH = '/project/configs'
 CFGR_FILE = 'hashblock_config.yaml'
 UNKNOWN_OWNER = '__unknown_key_owner_value__'
 UNKNOWN_SIGNER = '__unknown_key_signer_value__'
@@ -70,11 +72,6 @@ def key_owner(key_value):
         if value == key_value:
             result = key
             break
-    if result == UNKNOWN_OWNER:
-        for key, value in REST_CONFIG['rest']['voter_keys'].items():
-            if value == key_value:
-                result = key
-                break
     return result
 
 
@@ -108,21 +105,11 @@ def __read_signer(key_filename):
     return crypto_factory.new_signer(private_key)
 
 
-def __read_voter(key_filename):
-    try:
-        with open(key_filename, 'r') as key_file:
-            signing_key = key_file.read().strip()
-    except IOError as e:
-        raise CliException('Unable to read key file: {}'.format(str(e)))
-
-    return signing_key
-
-
 def __load_cfg_and_keys(configfile):
     """Reads the configuration file and converts any priv keys to public"""
-    print("Reading {} from {}".format(configfile, CFGR_PATH))
+    print("Reading {} from {}".format(configfile, DEFAULT_CFGR_PATH))
     try:
-        with open(os.path.join(CFGR_PATH, configfile), 'r') as f:
+        with open(os.path.join(DEFAULT_CFGR_PATH, configfile), 'r') as f:
             doc = load(f)
     except IOError:
         print("Could not read {}".format(configfile))
@@ -132,17 +119,11 @@ def __load_cfg_and_keys(configfile):
     submitter_keys = {}
     # iterate through keys to load public keys
     for key, value in doc['rest']['signers'].items():
-        signer = __read_signer(os.path.join(CFGR_PATH, value))
+        signer = __read_signer(os.path.join(DEFAULT_KEYS_PATH, value))
         submitter_keys[key] = signer
         signer_keys[key] = signer.get_public_key().as_hex()
     doc['rest']['signer_keys'] = signer_keys
     doc['rest']['submitters'] = submitter_keys
-    voter_keys = {}
-    # iterate through keys to load public keys
-    for key, value in doc['rest']['voters'].items():
-        voter = __read_signer(os.path.join(CFGR_PATH, value))
-        voter_keys[key] = voter.get_public_key().as_hex()
-    doc['rest']['voter_keys'] = voter_keys
     return doc
 
 
@@ -152,11 +133,19 @@ def load_hashblock_config():
     Will also check environment var for key resolution
     """
     global REST_CONFIG
-    if not os.path.exists(KEYS_PATH):
+    global DEFAULT_KEYS_PATH
+    global DEFAULT_CFGR_PATH
+
+    if os.environ.get(ENVIRONMENT_KEYS_PATH):
+        DEFAULT_KEYS_PATH = os.environ.get(ENVIRONMENT_KEYS_PATH)
+    if os.environ.get(ENVIRONMENT_CFGR_PATH):
+        DEFAULT_CFGR_PATH = os.environ.get(ENVIRONMENT_CFGR_PATH)
+
+    if not os.path.exists(DEFAULT_KEYS_PATH):
         raise ValueError("/project/keys directory not found")
-    if not os.path.exists(CFGR_PATH):
+    if not os.path.exists(DEFAULT_CFGR_PATH):
         raise ValueError("/project/config directory not found")
 
-    sys.path.append(CFGR_PATH)
+    sys.path.append(DEFAULT_CFGR_PATH)
     REST_CONFIG = __load_cfg_and_keys(CFGR_FILE)
     return REST_CONFIG

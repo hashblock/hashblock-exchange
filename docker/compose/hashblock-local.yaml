@@ -21,31 +21,19 @@
 version: '2.1'
 
 services:
-  shell:
-    build:
-      context: ../..
-      dockerfile: docker/hashblock-dev-python
-    image: hashblock-dev-python
-    container_name: hashblock-shell
+  hashblock-admin:
+    image: hashblock-dev-cli:latest
+    container_name: hashblock-admin
     volumes:
-      - ../../../hbruntime/:/project/keys
-      - ../../../hbruntime/:/project/configs
-      - ../../../hashblock-exchange/:/project/hashblock-exchange
-      - ../../../sawtooth-core/:/project/sawtooth-core
+      - ../../:/project/hashblock-exchange
     environment:
-      - PYTHONPATH=/project/hashblock-exchange
-     # Expose 5678 for remote debugging
-    expose:
-      - 5678
-    ports:
-      - "5678:5678"
+      PYTHONPATH: /project/hashblock-exchange:/project/hashblock-exchange/apps
+      HASHBLOCK_KEYS: /project/hashblock-exchange/localkeys
+      HASHBLOCK_CONFIG: /project/hashblock-exchange/localconfig
     depends_on:
       - validator
       - rest-api
     command: "bash -c \"\
-        python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
-        pip3 install ptvsd==3.0.0.0 && \
-        pip3 install ply && \
         tail -f /dev/null \
         \""
     stop_signal: SIGKILL
@@ -58,12 +46,12 @@ services:
       --access-logfile -
       --reload
       "hashblock_rest.app:application"
-    environment:
-      PYTHONUNBUFFERED: 'true'
     volumes:
-      - ../../../hbruntime/:/project/keys
-      - ../../../hbruntime/:/project/configs
-      - ../../../hashblock-exchange:/project/hashblock-exchange
+      - ../..:/project/hashblock-exchange
+    environment:
+      HASHBLOCK_KEYS: /project/hashblock-exchange/localkeys
+      HASHBLOCK_CONFIG: /project/hashblock-exchange/localconfig
+      PYTHONUNBUFFERED: 'true'
     ports:
       - '8000:8000'
 
@@ -78,7 +66,7 @@ services:
     image: hashblock-dev-generic-tp
     container_name: hashblock-dev-setting-tp
     volumes:
-      - ../../../hashblock-exchange/:/project/hashblock-exchange
+      - ../..:/project/hashblock-exchange
     environment:
       - PYTHONPATH=/project/hashblock-exchange
     depends_on:
@@ -101,7 +89,7 @@ services:
     image: hashblock-dev-generic-tp
     container_name: hashblock-dev-asset-tp
     volumes:
-      - ../../../hashblock-exchange/:/project/hashblock-exchange
+      - ../..:/project/hashblock-exchange
     environment:
       - PYTHONPATH=/project/hashblock-exchange
     # Expose 5679 for remote debugging
@@ -125,7 +113,7 @@ services:
     image: hashblock-dev-generic-tp
     container_name: hashblock-dev-match-tp
     volumes:
-      - ../../../hashblock-exchange/:/project/hashblock-exchange
+      - ../..:/project/hashblock-exchange
     # Expose 5679 for remote debugging
     environment:
       - PYTHONPATH=/project/hashblock-exchange
@@ -156,9 +144,9 @@ services:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
     volumes:
-      - ../../../hbruntime/:/project/keys
+      - ../..:/project/hashblock-exchange
+      - ../../localkeys/:/project/keys
       - ../../../sawtooth-core/:/project/sawtooth-core
-      - ../../../hashblock-exchange/:/project/hashblock-exchange
     environment:
       - PYTHONPATH=/project/hashblock-exchange
     # Expose 5700 for remote debugging
@@ -171,8 +159,8 @@ services:
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \
-        sawset genesis -k /project/keys/turing.priv -o /etc/config-settings.batch && \
-        /project/hashblock-exchange/bin/hbsetting genesis -k /project/keys/turing.priv -o /etc/config-hbsettings.batch -T 2 -A $$(cat /project/keys/church.pub) && \
+        sawset genesis -k /project/keys/signer1.priv -o /etc/config-settings.batch && \
+        /project/hashblock-exchange/bin/hbsetting genesis -k /project/keys/signer1.priv -o /etc/config-hbsettings.batch -T 2 -A $$(cat /project/keys/signer2.pub) && \
         sawadm genesis /etc/config-settings.batch /etc/config-hbsettings.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \

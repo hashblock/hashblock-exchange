@@ -172,6 +172,7 @@ def _do_match_reciprocate(args):
 
     r_quantity = Quantity()
     event_quantity = parser.parse(quantities[0])
+    print("mtxq quantities {}".format(quantities[0]))
     if event_quantity[0].lower() != 'event_quantity':
         raise AssertionError('Invalid quantity specification.')
     else:
@@ -198,6 +199,8 @@ def _do_match_reciprocate(args):
 
     numerator = Quantity()
     event_quantity = parser.parse(quantities[2])
+    print("mtxq numerator {}".format(quantities[2]))
+
     if event_quantity[0].lower() != 'event_quantity':
         raise AssertionError('Invalid quantity specification.')
     else:
@@ -224,6 +227,7 @@ def _do_match_reciprocate(args):
 
     denominator = Quantity()
     event_quantity = parser.parse(quantities[4])
+    print("mtxq denominator {}".format(quantities[4]))
     if event_quantity[0].lower() != 'event_quantity':
         raise AssertionError('Invalid quantity specification.')
     else:
@@ -267,17 +271,18 @@ def _do_match_reciprocate(args):
                             denominator.resourceUnit=(int(hash_lookup[resource_unit])).to_bytes(2, byteorder='little')
 
     ratio = Ratio(numerator=numerator, denominator=denominator)
-    txn = _create_reciprocate_txn(
-        args.cmd,
-        signer,
-        args.utxq,
-        r_quantity,
-        ratio)
-    batch = _create_batch(signer, [txn])
+    print("mtxq quantities {} and ration {}".format(r_quantity, ratio))
+    # txn = _create_reciprocate_txn(
+    #     args.cmd,
+    #     signer,
+    #     args.utxq,
+    #     r_quantity,
+    #     ratio)
+    # batch = _create_batch(signer, [txn])
 
-    batch_list = BatchList(batches=[batch])
+    # batch_list = BatchList(batches=[batch])
 
-    rest_client.send_batches(batch_list)
+    # rest_client.send_batches(batch_list)
 
 
 def _create_reciprocate_txn(icmd, signer, event_address, quantity, ratio):

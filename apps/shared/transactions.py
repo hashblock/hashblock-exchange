@@ -56,7 +56,6 @@ def create_single_transaction(ingest):
         batcher_public_key=signer
     ).SerializeToString()
 
-    print("Header = {}".format(header))
     return (signatore, Transaction(
         header=header,
         header_signature=submitter.sign(header),

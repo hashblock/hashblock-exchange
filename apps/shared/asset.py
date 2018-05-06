@@ -19,6 +19,9 @@
 This module is referenced when posting asset proposals and votes
 """
 import datetime
+import json
+import time
+from pprint import pprint
 from math import sqrt
 from itertools import count, islice
 from shared.transactions import submit_single_batch, create_single_batch
@@ -39,6 +42,17 @@ ASSET_KEY_SET = {'signer', 'key', 'value', 'system'}
 VOTE_KEY_SET = {'signer', 'proposal_id', 'vote'}
 VOTE_SET = {'accept', 'reject', 'rescind'}
 VOTE_ITEMS = ['rescind', 'accept', 'reject']
+
+# {
+#     'action': 'ask',
+#     'plus': 'turing',
+#     'minus': 'church',
+#     'quantity': {
+#         'value': '5',
+#         'resource': 'food.peanuts',
+#         'unit': 'imperial.bags'
+#     }
+# }
 
 _addresser = Address(Address.FAMILY_ASSET, "0.1.0")
 
@@ -64,7 +78,7 @@ def __validate_asset(address, alist, data):
 
 def __validate_proposal(dimension, data):
     """Validate the proposal being submitted"""
-    print("Validating proposal {}".format(data))
+    print("Validating {} proposal {}".format(dimension, data))
     if set(data.keys()) != ASSET_KEY_SET:
         raise DataException
     if not data['signer']:
@@ -84,12 +98,12 @@ def __validate_proposal(dimension, data):
 
 def __validate_vote(dimension, data):
     """Validate the vote content"""
-    print("Validating vote {}".format(data))
+    print("Validating {} vote {}".format(dimension, data))
     if set(data.keys()) != VOTE_KEY_SET:
         print("Keys mismatch {} {}".format(data.keys, VOTE_KEY_SET))
         raise DataException
     if not data['signer']:
-        "No signer value"
+        print("No signer value")
         raise DataException
     valid_signer(data['signer'])
     if not data['vote'] or data['vote'] not in VOTE_SET:
@@ -99,6 +113,7 @@ def __validate_vote(dimension, data):
     proposal_id = data['proposal_id']
     result = decode_proposals(
         _addresser.candidates(dimension))['data']
+    pprint(result)
     if result:
         proposal_match = []
         for x in result:
@@ -241,3 +256,26 @@ def create_vote(dimension, data):
         data['signer'],
         Address(Address.FAMILY_ASSET, "0.1.0", dimension),
         data))
+
+
+def create_asset_batch(json_file):
+    """Consume a batch of json entities and convert to assets"""
+    id_track = {}
+    with open(json_file) as data_file:
+        data = json.loads(data_file.read())
+    for asset in data['proposals']:
+        asset_id = asset['id']
+        dimension = asset['dimension']
+        if id_track.get(asset_id, None):
+            raise DataException
+        id_track[asset['id']] = (dimension, _addresser.asset_item(
+            asset['dimension'], asset['system'], asset['key']))
+        del asset['id']
+        del asset['dimension']
+        create_proposal(dimension, asset)
+
+    time.sleep(5)
+    for vote in data['votes']:
+        dimension, prop_id = id_track[vote['proposal_id']]
+        vote['proposal_id'] = prop_id
+        create_vote(dimension, vote)

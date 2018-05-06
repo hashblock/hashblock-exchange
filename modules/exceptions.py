@@ -27,6 +27,10 @@ class DataException(Exception):
     pass
 
 
+class AssetNotExistException(Exception):
+    pass
+
+
 class AuthException(Exception):
     pass
 
