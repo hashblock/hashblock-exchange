@@ -65,7 +65,7 @@ def add_genesis_parser(subparsers, parent_parser):
         action='store_true')
 
 
-def do_genesis(args):
+def do_genesis(args, config):
     # signer = _read_signer(args.key)
     # public_key = signer.get_public_key().as_hex()
 

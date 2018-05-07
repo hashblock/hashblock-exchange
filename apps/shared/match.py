@@ -18,6 +18,8 @@
 
 This module is referenced when posting utxq and mtxq exchanges
 """
+import uuid
+from pprint import pprint
 from shared.transactions import submit_single_batch, create_single_batch
 from shared.transactions import create_single_transaction, compose_builder
 from modules.address import Address
@@ -33,11 +35,18 @@ from protobuf.match_pb2 import Ratio
 
 
 _asset_addrs = Address(Address.FAMILY_ASSET, "0.1.0")
+_utxq_addrs = Address(Address.FAMILY_MATCH, "0.1.0", Address.DIMENSION_UTXQ)
+_mtxq_addrs = Address(Address.FAMILY_MATCH, "0.1.0", Address.DIMENSION_MTXQ)
 
-__operation_sets = {
-    'utxq': {'ask', 'offer', 'commitment', 'give'},
-    'mtxq': {'tell', 'accept', 'obligation', 'take'}
-}
+_ACTION_MAP = {
+    'ask': MatchEvent.UTXQ_ASK,
+    'tell': MatchEvent.MTXQ_TELL,
+    'offer': MatchEvent.UTXQ_OFFER,
+    'accept': MatchEvent.MTXQ_ACCEPT,
+    'commitment': MatchEvent.UTXQ_COMMITMENT,
+    'obligation': MatchEvent.MTXQ_OBLIGATION,
+    'give': MatchEvent.UTXQ_GIVE,
+    'take': MatchEvent.MTXQ_TAKE}
 
 
 def __validate_partners(plus, minus):
@@ -61,7 +70,6 @@ def __validate_assets(value, unit, resource):
     resource_res = decode_from_leaf(resource_add)
     if not unit_res['data'] or not resource_res['data']:
         raise AssetNotExistException
-    print("Validated {} and {}".format(unit, resource))
     return (unit_res['data'], resource_res['data'])
 
 
@@ -87,11 +95,14 @@ def __validate_mtxq(request):
     __validate_utxq_exists(request["utxq_address"])
     quantity_assets = __validate_assets(
         request['quantity']['value'],
-        request['quantity']['unit'], request['quantity']['resource'])
+        request['quantity']['unit'],
+        request['quantity']['resource'])
+
     numerator_assets = __validate_assets(
         request['ratio']['numerator']['value'],
         request['ratio']['numerator']['unit'],
         request['ratio']['numerator']['resource'])
+
     demoninator_assets = __validate_assets(
         request['ratio']['denominator']['value'],
         request['ratio']['denominator']['unit'],
@@ -100,40 +111,88 @@ def __validate_mtxq(request):
 
 
 def __create_quantity(value, quantity):
-    unit_addr, resource_addr = quantity
-    pass
-    # return Quantity(
-    #     value=value,
-    #     valueUnit=unit,
-    #     valueResource=resource)
+    unit_data, resource_data = quantity
+    return Quantity(
+        value=int(value).to_bytes(2, byteorder='little'),
+        valueUnit=int(unit_data['value']).to_bytes(
+            2, byteorder='little'),
+        resourceUnit=int(resource_data['value']).to_bytes(
+            2, byteorder='little'))
 
 
 def __create_utxq(ingest):
     """Create a utxq object"""
-    operation, dimension, addresser, quantity, data = ingest
-    # utxq = UTXQ(
-    #     plus=valid_signer(data['plus']),
-    #     minus=valid_signer(data['minus']),
-    #     quantity=__create_quantity(data['value'], quantity)
-    #     )
-    pass
+    operation, addresser, quantity, data = ingest
+    return (operation, addresser, data['plus'], UTXQ(
+        matched=False,
+        plus=valid_signer(data['plus']).encode(),
+        minus=valid_signer(data['minus']).encode(),
+        quantity=__create_quantity(data['quantity']['value'], quantity)))
+
+
+def __create_initiate_payload(ingest):
+    operation, addresser, signer, data = ingest
+    return (operation, addresser, signer, MatchEvent(
+        data=data.SerializeToString(),
+        ukey=addresser.txq_item(
+            addresser.dimension, operation, str(uuid.uuid4)),
+        action=_ACTION_MAP[operation]))
+
+
+def __create_initiate_inputs_outputs(ingest):
+    operation, addresser, signer, payload = ingest
+    inputs = []
+    outputs = [payload.ukey]
+    return (
+        signer, addresser, {"inputs": inputs, "outputs": outputs}, payload)
 
 
 def __create_mtxq(ingest):
+    operation, addresser, qassets, data = ingest
+    quantity, numerator, denominator = qassets
     # mtxq = MTXQ()
-    pass
+    return (operation, addresser, data, MTXQ(
+        plus=valid_signer(data['plus']).encode(),
+        minus=valid_signer(data['minus']).encode(),
+        quantity=__create_quantity(data['quantity']['value'], quantity),
+        ratio=Ratio(
+            numerator=__create_quantity(
+                data['ratio']['numerator']['value'], numerator),
+            denominator=__create_quantity(
+                data['ratio']['denominator']['value'], denominator))))
+
+
+def __create_reciprocate_payload(ingest):
+    operation, addresser, request, payload = ingest
+    return (operation, addresser, request['plus'], MatchEvent(
+        data=payload.SerializeToString(),
+        ukey=request['utxq_address'],
+        mkey=addresser.txq_item(
+            addresser.dimension, operation, str(uuid.uuid4)),
+        action=_ACTION_MAP[operation]))
+
+
+def __create_reciprocate_inputs_outputs(ingest):
+    operation, addresser, signer, payload = ingest
+    inputs = [payload.ukey]
+    outputs = [payload.ukey, payload.mkey]
+    return (
+        signer, addresser, {"inputs": inputs, "outputs": outputs}, payload)
 
 
 def create_utxq(operation, request):
     """Create utxq transaction"""
-    q = __validate_utxq(request)
+    quant = __validate_utxq(request)
     # Creaate utxq
     # Create payload
     # Create inputs/outputs
     # Create transaction
     # Create batch
-
-    pass
+    utxq_build = compose_builder(
+        submit_single_batch, create_single_batch, create_single_transaction,
+        __create_initiate_inputs_outputs, __create_initiate_payload,
+        __create_utxq)
+    utxq_build((operation, _utxq_addrs, quant, request))
 
 
 def create_mtxq(operation, request):
@@ -144,4 +203,8 @@ def create_mtxq(operation, request):
     # Create inputs/outputs
     # Create transaction
     # Create batch
-    pass
+    mtxq_build = compose_builder(
+        submit_single_batch, create_single_batch, create_single_transaction,
+        __create_reciprocate_inputs_outputs, __create_reciprocate_payload,
+        __create_mtxq)
+    mtxq_build((operation, _mtxq_addrs, qnd, request))

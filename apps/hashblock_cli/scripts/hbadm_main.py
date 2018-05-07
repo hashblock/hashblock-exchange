@@ -131,7 +131,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     if args.command == 'keygen':
         do_keygen(args)
     elif args.command == 'genesis':
-        do_genesis(args)
+        do_genesis(args, r_config)
     elif args.command == 'batch':
         do_batch(args, r_config)
     else:
