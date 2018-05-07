@@ -22,7 +22,7 @@ version: '2.1'
 
 services:
   hashblock-admin:
-    image: hashblock-dev-cli:latest
+    image: hashblock-dev-admin:latest
     container_name: hashblock-admin
     volumes:
       - ../../:/project/hashblock-exchange
