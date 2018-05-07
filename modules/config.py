@@ -136,7 +136,7 @@ def __load_cfg_and_keys(configfile):
         signer_keys[key] = signer.get_public_key().as_hex()
 
     for key, value in doc['rest']['encryption'].items():
-        encryptor = __read_signer(os.path.join(DEFAULT_KEYS_PATH), value)
+        encryptor = __read_signer(os.path.join(DEFAULT_KEYS_PATH, value))
         encryptor_keys[key] = encryptor
 
     doc['rest']['signer_keys'] = signer_keys
