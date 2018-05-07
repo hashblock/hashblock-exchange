@@ -34,7 +34,8 @@ FROM python:3.5-slim as base
 RUN mkdir -p /builder && \
  	pip3 install \
  		grpcio-tools \
- 		grpcio && \
+ 		grpcio \
+		cryptography && \
  	rm -rf /var/lib/apt/lists/
 
 WORKDIR /builder
