@@ -25,7 +25,3 @@ rest:
   signers:
     church: signer1.priv
     turing: signer2.priv
-
-  # Encryption key to support future changes
-  encryption:
-    crippy: signer3.priv

@@ -65,17 +65,6 @@ def valid_submitter(submitter_name):
     return result
 
 
-def valid_encryptor(encryptor_name):
-    result = None
-    for key, value in REST_CONFIG['rest']['encryptors'].items():
-        if key == encryptor_name:
-            result = value
-            break
-    if not result:
-        raise AuthException
-    return result
-
-
 def key_owner(key_value):
     """Reverse lookup by key_value"""
     result = UNKNOWN_OWNER
@@ -128,20 +117,14 @@ def __load_cfg_and_keys(configfile):
 
     signer_keys = {}
     submitter_keys = {}
-    encryptor_keys = {}
     # iterate through keys to load public keys
     for key, value in doc['rest']['signers'].items():
         signer = __read_signer(os.path.join(DEFAULT_KEYS_PATH, value))
         submitter_keys[key] = signer
         signer_keys[key] = signer.get_public_key().as_hex()
 
-    for key, value in doc['rest']['encryption'].items():
-        encryptor = __read_signer(os.path.join(DEFAULT_KEYS_PATH, value))
-        encryptor_keys[key] = encryptor
-
     doc['rest']['signer_keys'] = signer_keys
     doc['rest']['submitters'] = submitter_keys
-    doc['rest']['encryptors'] = encryptor_keys
     return doc
 
 
