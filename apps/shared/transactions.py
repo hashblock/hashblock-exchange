@@ -37,7 +37,7 @@ def compose_builder(*functions):
         lambda f, g: lambda x: f(g(x)), functions, lambda x: x)
 
 
-def create_single_transaction(ingest):
+def create_transaction(ingest):
     """Creates and signs a hashblock_asset transaction with with a payload.
     """
     signatore, address, permissions, payload = ingest
@@ -62,7 +62,7 @@ def create_single_transaction(ingest):
         payload=serialized_payload))
 
 
-def create_single_batch(payload):
+def create_batch(payload):
     """Creates a batch from a list of transactions and a public key, and signs
     the resulting batch with the given signing key.
 
@@ -75,10 +75,9 @@ def create_single_batch(payload):
     Returns:
         `Batch`: The constructed and signed batch.
     """
-    signatore, transaction = payload
+    signatore, transactions = payload
     signer = valid_signer(signatore)
     submitter = valid_submitter(signatore)
-    transactions = [transaction]
     txn_ids = [txn.header_signature for txn in transactions]
     batch_header = BatchHeader(
         signer_public_key=signer,
@@ -90,8 +89,14 @@ def create_single_batch(payload):
         transactions=transactions)
 
 
-def submit_single_batch(batch):
-    """Submit single batch using default client URL"""
-    batch_list = BatchList(batches=[batch])
+def submit_batch(batches):
+    """Submit transaction batches using default client URL"""
+    batch_list = BatchList(batches=batches)
     client = RestClient(sawtooth_rest_host())
     return client.send_batches(batch_list)
+
+
+def submit_single_txn(ingest):
+    """Wraps transaction for batch creation. Submits"""
+    signatore, transaction = ingest
+    return submit_batch([create_batch((signatore, [transaction]))])

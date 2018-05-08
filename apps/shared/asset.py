@@ -24,18 +24,15 @@ import time
 from pprint import pprint
 from math import sqrt
 from itertools import count, islice
-from shared.transactions import submit_single_batch, create_single_batch
-from shared.transactions import create_single_transaction, compose_builder
+from shared.transactions import (
+    submit_single_txn, create_transaction, compose_builder)
 from modules.address import Address
 from modules.config import valid_signer
 from modules.decode import decode_asset_unit_list, decode_proposals
 from modules.exceptions import DataException, NotPrimeException
 
-from protobuf.asset_pb2 import AssetPayload
-from protobuf.asset_pb2 import AssetProposal
-from protobuf.asset_pb2 import AssetVote
-from protobuf.asset_pb2 import Unit
-from protobuf.asset_pb2 import Resource
+from protobuf.asset_pb2 import (
+    AssetPayload, AssetProposal, AssetVote, Unit, Resource)
 
 
 ASSET_KEY_SET = {'signer', 'key', 'value', 'system'}
@@ -229,7 +226,7 @@ def create_proposal(dimension, data):
     # Create transaction
     # Create batch
     propose = compose_builder(
-        submit_single_batch, create_single_batch, create_single_transaction,
+        submit_single_txn, create_transaction,
         __create_proposal_inputs_outputs, __create_propose_txn,
         __create_resource_asset
         if dimension == Address.DIMENSION_RESOURCE else __create_unit_asset)
@@ -249,7 +246,7 @@ def create_vote(dimension, data):
     # Create transaction
     # Create batch
     vote = compose_builder(
-        submit_single_batch, create_single_batch, create_single_transaction,
+        submit_single_txn, create_transaction,
         __create_vote_inputs_outputs, __create_vote_txn,
         __create_asset_vote)
     vote((

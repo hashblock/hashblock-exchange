@@ -19,19 +19,17 @@
 This module is referenced when posting utxq and mtxq exchanges
 """
 import uuid
-from pprint import pprint
-from shared.transactions import submit_single_batch, create_single_batch
-from shared.transactions import create_single_transaction, compose_builder
+
+from shared.transactions import (
+    submit_single_txn, create_transaction, compose_builder)
+
 from modules.address import Address
 from modules.config import valid_signer
 from modules.decode import decode_from_leaf
 from modules.exceptions import RestException, DataException
 from modules.exceptions import AssetNotExistException
-from protobuf.match_pb2 import MatchEvent
-from protobuf.match_pb2 import UTXQ
-from protobuf.match_pb2 import MTXQ
-from protobuf.match_pb2 import Quantity
-from protobuf.match_pb2 import Ratio
+from protobuf.match_pb2 import (
+    MatchEvent, UTXQ, MTXQ, Quantity, Ratio)
 
 
 _asset_addrs = Address(Address.FAMILY_ASSET, "0.1.0")
@@ -189,7 +187,7 @@ def create_utxq(operation, request):
     # Create transaction
     # Create batch
     utxq_build = compose_builder(
-        submit_single_batch, create_single_batch, create_single_transaction,
+        submit_single_txn, create_transaction,
         __create_initiate_inputs_outputs, __create_initiate_payload,
         __create_utxq)
     utxq_build((operation, _utxq_addrs, quant, request))
@@ -204,7 +202,7 @@ def create_mtxq(operation, request):
     # Create transaction
     # Create batch
     mtxq_build = compose_builder(
-        submit_single_batch, create_single_batch, create_single_transaction,
+        submit_single_txn, create_transaction,
         __create_reciprocate_inputs_outputs, __create_reciprocate_payload,
         __create_mtxq)
     mtxq_build((operation, _mtxq_addrs, qnd, request))
