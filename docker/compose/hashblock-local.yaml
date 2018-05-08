@@ -27,9 +27,9 @@ services:
     volumes:
       - ../../:/project/hashblock-exchange
     environment:
-      PYTHONPATH: /project/hashblock-exchange:/project/hashblock-exchange/apps
-      HASHBLOCK_KEYS: /project/hashblock-exchange/localkeys
-      HASHBLOCK_CONFIG: /project/hashblock-exchange/localconfig
+      - PYTHONPATH=/project/hashblock-exchange:/project/hashblock-exchange/apps
+      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
     depends_on:
       - validator
       - rest-api
@@ -46,9 +46,9 @@ services:
     ports:
       - '8000:8000'
     environment:
-      HASHBLOCK_KEYS: /project/hashblock-exchange/localkeys
-      HASHBLOCK_CONFIG: /project/hashblock-exchange/localconfig
-      PYTHONUNBUFFERED: 'true'
+      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
+      - PYTHONUNBUFFERED='true'
     command: >
       gunicorn -b 0.0.0.0:8000
       --access-logfile -

@@ -98,19 +98,22 @@ services:
   hashblock_rest:
     image: hashblock/hashblock-rest:latest
     container_name: hashblock-rest
+    volumes:
+        - /sawtooth:/sawtooth
+    ports:
+      - '8000:8000'
     depends_on:
       - validator
       - rest-api
+    environment:
+      - HASHBLOCK_KEYS=/sawtooth/keys
+      - HASHBLOCK_CONFIG=/sawtooth/config
+      - PYTHONUNBUFFERED='true'
     command: >
       gunicorn -b 0.0.0.0:8000
       --access-logfile -
       "hashblock_rest.app:application"
-    expose:
-      - 8000
-    environment:
-      - PYTHONUNBUFFERED='true'
-    ports:
-      - '8000:8000'
+    stop_signal: SIGKILL
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:latest
