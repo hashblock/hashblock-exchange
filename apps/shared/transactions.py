@@ -89,9 +89,13 @@ def create_batch(payload):
         transactions=transactions)
 
 
+def create_batch_list(batches):
+    return BatchList(batches=batches)
+
+
 def submit_batch(batches):
     """Submit transaction batches using default client URL"""
-    batch_list = BatchList(batches=batches)
+    batch_list = create_batch_list(batches)
     client = RestClient(sawtooth_rest_host())
     return client.send_batches(batch_list)
 

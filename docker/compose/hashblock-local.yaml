@@ -144,8 +144,8 @@ services:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
     volumes:
-      - ../..:/project/hashblock-exchange
       - ../../localkeys/:/project/keys
+      - ../../sampledata/:/project/genbatch
       - ../../../sawtooth-core/:/project/sawtooth-core
     environment:
       - PYTHONPATH=/project/hashblock-exchange
@@ -160,8 +160,7 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawset genesis -k /project/keys/signer1.priv -o /etc/config-settings.batch && \
-        /project/hashblock-exchange/bin/hbsetting genesis -k /project/keys/signer1.priv -o /etc/config-hbsettings.batch -T 2 -A $$(cat /project/keys/signer2.pub) && \
-        sawadm genesis /etc/config-settings.batch /etc/config-hbsettings.batch && \
+        sawadm genesis /etc/config-settings.batch /project/genbatch/hbgenesis.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \

@@ -17,6 +17,7 @@
 from __future__ import print_function
 
 from modules.exceptions import CliException
+from shared.setting import create_settings_batch, create_settings_submit
 
 
 def add_genesis_parser(subparsers, parent_parser):
@@ -32,25 +33,36 @@ def add_genesis_parser(subparsers, parent_parser):
         parents=[parent_parser])
 
     parser.add_argument(
+        '-k',
+        help='Signing key for genesis transactions',
+        dest='signer',
+        required=True)
+
+    parser.add_argument(
         '-rk',
         help='specify the keys for proposing/voting on resources',
-        nargs='?')
+        dest='resource_keys',
+        nargs='+')
 
     parser.add_argument(
         '-rt',
+        dest='resource_threshold',
         help='specify the resource voting threshold')
 
     parser.add_argument(
         '-uk',
         help='specify the keys for proposing/voting on units-of-measure',
-        nargs='?')
+        dest='unit_keys',
+        nargs='+')
 
     parser.add_argument(
         '-ut',
+        dest='unit_threshold',
         help='specify the units-of-measure voting threshold')
 
     parser.add_argument(
         '-o',
+        dest='output',
         help="specify the directory for the genesis.batch file")
 
     parser.add_argument(
@@ -66,47 +78,21 @@ def add_genesis_parser(subparsers, parent_parser):
 
 
 def do_genesis(args, config):
-    # signer = _read_signer(args.key)
-    # public_key = signer.get_public_key().as_hex()
+    """Generate the genesis batch file"""
+    if not args.output:
+        raise CliException('genesis creation requires output file')
 
-    # authorized_keys = args.authorized_key if args.authorized_key else \
-    #     [public_key]
-    # if public_key not in authorized_keys:
-    #     authorized_keys.append(public_key)
+    results = create_settings_batch(
+        args.signer, args.resource_keys, args.resource_threshold,
+        args.unit_keys, args.unit_threshold)
 
-    # txns = []
-
-    # keys = ','.join(authorized_keys)
-    # threshold = str(args.approval_threshold)
-
-    # if args.approval_threshold is not None:
-    #     if args.approval_threshold < 1:
-    #         raise CliException('approval threshold must not be less than 1')
-
-    #     if args.approval_threshold > len(authorized_keys):
-    #         raise CliException(
-    #             'approval threshold must not be greater than the number of '
-    #             'authorized keys')
-
-    # txns.append(_create_setting(
-    #     signer,
-    #     Address.DIMENSION_UNIT,
-    #     SettingPayload.CREATE,
-    #     keys, threshold))
-    # txns.append(_create_setting(
-    #     signer,
-    #     Address.DIMENSION_RESOURCE,
-    #     SettingPayload.CREATE,
-    #     keys, threshold))
-
-    # batch = _create_batch(signer, txns)
-    # batch_list = BatchList(batches=[batch])
-
-    # try:
-    #     with open(args.output, 'wb') as batch_file:
-    #         batch_file.write(batch_list.SerializeToString())
-    #     print('Generated {}'.format(args.output))
-    # except IOError as e:
-    #     raise CliException(
-    #         'Unable to write to batch file: {}'.format(str(e)))
-    pass
+    if args.output:
+        try:
+            with open(args.output, 'wb') as batch_file:
+                batch_file.write(results.SerializeToString())
+            print('Generated {}'.format(args.output))
+        except IOError as e:
+            raise CliException(
+                'Unable to write to batch file: {}'.format(str(e)))
+    else:
+        print('Submitted {}'.format(results))
