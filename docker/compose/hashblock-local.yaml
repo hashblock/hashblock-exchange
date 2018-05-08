@@ -41,28 +41,22 @@ services:
   hashblock_rest:
     image: hashblock-dev-rest:latest
     container_name: hashblock-rest
+    volumes:
+      - ../..:/project/hashblock-exchange
+    ports:
+      - '8000:8000'
+    environment:
+      HASHBLOCK_KEYS: /project/hashblock-exchange/localkeys
+      HASHBLOCK_CONFIG: /project/hashblock-exchange/localconfig
+      PYTHONUNBUFFERED: 'true'
     command: >
       gunicorn -b 0.0.0.0:8000
       --access-logfile -
       --reload
       "hashblock_rest.app:application"
-    volumes:
-      - ../..:/project/hashblock-exchange
-    environment:
-      HASHBLOCK_KEYS: /project/hashblock-exchange/localkeys
-      HASHBLOCK_CONFIG: /project/hashblock-exchange/localconfig
-      PYTHONUNBUFFERED: 'true'
-    ports:
-      - '8000:8000'
+    stop_signal: SIGKILL
 
   setting-processor:
-    build:
-      context: ../..
-      dockerfile: docker/hashblock-dev-generic-tp
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
     image: hashblock-dev-generic-tp
     container_name: hashblock-dev-setting-tp
     volumes:
@@ -79,13 +73,6 @@ services:
     stop_signal: SIGKILL
 
   asset-processor:
-    build:
-      context: ../..
-      dockerfile: docker/hashblock-dev-generic-tp
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
     image: hashblock-dev-generic-tp
     container_name: hashblock-dev-asset-tp
     volumes:
@@ -103,24 +90,12 @@ services:
     stop_signal: SIGKILL
 
   match-processor:
-    build:
-      context: ../..
-      dockerfile: docker/hashblock-dev-generic-tp
-      args:
-        - http_proxy
-        - https_proxy
-        - no_proxy
     image: hashblock-dev-generic-tp
     container_name: hashblock-dev-match-tp
     volumes:
       - ../..:/project/hashblock-exchange
-    # Expose 5679 for remote debugging
     environment:
       - PYTHONPATH=/project/hashblock-exchange
-    expose:
-      - 5670
-    ports:
-      - "5670:5670"
     depends_on:
       - validator
     command: "bash -c \"\
@@ -133,8 +108,6 @@ services:
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
@@ -146,17 +119,10 @@ services:
     volumes:
       - ../../localkeys/:/project/keys
       - ../../sampledata/:/project/genbatch
-      - ../../../sawtooth-core/:/project/sawtooth-core
-    environment:
-      - PYTHONPATH=/project/hashblock-exchange
-    # Expose 5700 for remote debugging
     expose:
       - 4004
-      - 5700
     ports:
       - "4004:4004"
-      - "5700:5700"
-    # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawset genesis -k /project/keys/signer1.priv -o /etc/config-settings.batch && \
@@ -170,8 +136,6 @@ services:
   rest-api:
     image: hyperledger/sawtooth-rest_api:latest
     container_name: sawtooth-rest-api-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core
     ports:
       - "8008:8008"
     depends_on:
