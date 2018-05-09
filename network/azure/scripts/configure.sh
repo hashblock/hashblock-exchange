@@ -24,7 +24,6 @@ HASHBLOCKCONFIG=$9
 
 TMP_HOME="/sawtooth"
 HOMEDIR="/home/$USER";
-SAWTOOTH_DATA="$SAWTOOTH_HOME/data"
 CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
@@ -40,6 +39,7 @@ if [[ -z "${SAWTOOTH_HOME}" ]]; then
 fi
 
 export SAWTOOTH_HOME=$TMP_HOME
+SAWTOOTH_DATA="$SAWTOOTH_HOME/data"
 
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
 GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/genesis.batch"
@@ -93,7 +93,7 @@ if [ ! -e "/sawtooth/keys/fernet.key" ]; then
 fi
 
 if [ ! -e "/sawtooth/etc/validator.toml" ]; then
-  sudo echo "Adding networ public and private keys to /sawtooth/etc/validator.toml" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo "Adding networt public and private keys to /sawtooth/etc/validator.toml" >> $CONFIG_LOG_FILE_PATH;
   sudo echo "network_private_key = '$NETWORKPRIVKEY'" >> /sawtooth/etc/validator.toml;
   sudo echo "network_public_key = '$NETWORKPUBKEY'" >> /sawtooth/etc/validator.toml;
 fi
@@ -110,7 +110,7 @@ fi
 
 if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
   sudo echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
-  sudo echo $GENESISBATCH >> /sawtooth/data/genesis.batch;
+  sudo echo $GENESISBATCH >> $SAWTOOTH_DATA/genesis.batch;
 fi
 
 if [ ! -e "/sawtooth/config/hashblock_config.yaml" ]; then
