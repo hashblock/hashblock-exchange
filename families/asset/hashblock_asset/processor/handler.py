@@ -29,11 +29,9 @@ from protobuf.asset_pb2 import AssetCandidate
 from protobuf.asset_pb2 import AssetCandidates
 from processor.asset_type import AssetType
 
-from sdk.python.address import Address
+from modules.address import Address
 
 LOGGER = logging.getLogger(__name__)
-ADDRESS = ''
-
 
 # Number of seconds to wait for state operations to succeed
 STATE_TIMEOUT_SEC = 10
@@ -52,7 +50,7 @@ class AssetTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
-        return Address.NAMESPACE_ASSET
+        return self.addresser.namespace
 
     @property
     def family_versions(self):

@@ -44,10 +44,6 @@ def main(args=None):
         "protobuf")
     protoc_python(
         proto_dir,
-        "cli",
-        "hashblock_cli/protobuf")
-    protoc_python(
-        proto_dir,
         "families/asset",
         "hashblock_asset/protobuf")
     protoc_python(

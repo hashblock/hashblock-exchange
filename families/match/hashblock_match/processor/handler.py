@@ -22,17 +22,11 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from sdk.python.address import Address
-# from sawtooth_sdk.processor.exceptions import AuthorizationException
+from modules.address import Address
 
 from protobuf.match_pb2 import MatchEvent
 from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ
-
-# initiate 5:2:3
-# initiate 10:7:13
-# reciprocate <exchange_id> 10:7:13 2:7:13 1:2:3
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -63,7 +57,7 @@ class MatchTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
-        return Address.NAMESPACE_MATCH
+        return self.addresser.namespace
 
     @property
     def family_versions(self):

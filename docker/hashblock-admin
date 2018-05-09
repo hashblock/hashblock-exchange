@@ -27,10 +27,8 @@ RUN mkdir -p /builder && \
 WORKDIR /builder
 
 COPY bin bin
-COPY cli cli
 COPY protos protos
 COPY families families
-COPY sdk sdk
 COPY apps apps
 
 RUN bin/protogen && \

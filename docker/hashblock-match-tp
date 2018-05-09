@@ -41,12 +41,12 @@ RUN mkdir -p /builder && \
 WORKDIR /builder
 
 COPY bin bin
- COPY cli cli
- COPY protos protos
- COPY families families
- COPY sdk sdk
+COPY apps apps
+COPY modules modules
+COPY protos protos
+COPY families families
 
- RUN bin/protogen && \
+RUN bin/protogen && \
  	pip3 uninstall -y grpcio grpcio-tools
 
 # The final image
@@ -56,12 +56,12 @@ FROM python:3.5-slim
 RUN	pip3 install sawtooth-sdk --upgrade && \
 	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
-  	mkdir -p /project/hashblock-exchange/sdk && \
+  	mkdir -p /project/hashblock-exchange/modules && \
   	mkdir -p /project/hashblock-exchange/families/match && \
   	mkdir -p /var/log/sawtooth
 
 COPY --from=base /builder/bin/match-tp /project/hashblock-exchange/bin
-COPY --from=base /builder/sdk /project/hashblock-exchange/sdk
+COPY --from=base /builder/modules /project/hashblock-exchange/modules
 COPY --from=base /builder/families/match/hashblock_match /project/hashblock-exchange/families/match/hashblock_match
 
 WORKDIR /project/hashblock-exchange

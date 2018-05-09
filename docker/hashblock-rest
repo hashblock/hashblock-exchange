@@ -27,14 +27,12 @@ RUN mkdir -p /builder && \
 WORKDIR /builder
 
 COPY bin bin
- COPY cli cli
- COPY protos protos
- COPY families families
- COPY sdk sdk
- COPY apps apps
+COPY apps apps
+COPY protos protos
+COPY families families
 
- RUN bin/protogen && \
- 	pip3 uninstall -y grpcio grpcio-tools
+RUN bin/protogen && \
+	pip3 uninstall -y grpcio grpcio-tools
 
 FROM python:3.5-slim
 LABEL maintainers="Frank V. Castellucci, Arthur Greef"

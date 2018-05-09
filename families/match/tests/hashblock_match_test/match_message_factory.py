@@ -18,11 +18,8 @@ import logging
 
 from sawtooth_processor_test.message_factory import MessageFactory
 from protobuf.match_pb2 import MatchEvent
-from protobuf.match_pb2 import UTXQ
-from protobuf.match_pb2 import MTXQ
 
-
-from sdk.python.address import Address
+from modules.address import Address
 
 LOGGER = logging.getLogger(__name__)
 

@@ -36,7 +36,7 @@ from processor.config.asset import \
 from processor.config.asset import \
     merge_asset_config
 
-DISTRIBUTION_NAME = 'hashblock-units'
+DISTRIBUTION_NAME = 'hashblock-assets'
 
 
 def create_console_handler(verbose_level):

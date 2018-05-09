@@ -27,7 +27,7 @@ warn() {
 }
 
 protos() {
-	bin/build_python
+	bin/protogen
 }
 
 CLITP="hashblock-admin"
@@ -65,7 +65,6 @@ main() {
     top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
     info "Building hashblock distribution images from: $top_dir"
-    protos
     docker_build $top_dir/docker/$ASSETTP . $ASSETTAG
     docker_build $top_dir/docker/$MATCHTP . $MATCHTAG
     docker_build $top_dir/docker/$SETTINGSTP . $SETTINGTAG

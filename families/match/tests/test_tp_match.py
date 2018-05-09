@@ -28,7 +28,7 @@ from hashblock_match_test.match_message_factory \
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
 
-from sdk.python.address import Address
+from modules.address import Address
 
 
 class TestEvent(TransactionProcessorTestCase):

@@ -21,36 +21,48 @@
 version: '2.1'
 
 services:
-  shell:
-    image: hashblock-dev-python
-    container_name: hbshell
-    volumes:
-      - ../../../hashblock-exchange/:/project/hashblock-exchange
-      - ../../../sawtooth-core/:/project/sawtooth-core
+
+  setting-processor:
+    image: hashblock/hashblock-setting-tp:latest
+    container_name: hashblock-setting-tp-latest
+    restart: always
     environment:
       - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - validator
-      - rest-api
     command: "bash -c \"\
-        python3 /project/hashblock-exchange/sdk/python/get-pip.py && \
-        pip3 install ptvsd==3.0.0.0 && \
-        pip3 install ply && \
-        sawtooth keygen your_key && \
-        tail -f /dev/null \
-        \""
+         sleep 1 && \
+         setting-tp -vv \
+           -C tcp://validator:4004 \
+       \""
     stop_signal: SIGKILL
 
   asset-processor:
     image: hashblock/hashblock-asset-tp:latest
-    container_name: hbasset-tp
+    container_name: hashblock-asset-tp-latest
+    restart: always
     environment:
       - PYTHONPATH=/project/hashblock-exchange
     depends_on:
-      - validator
+      - setting-processor
     command: "bash -c \"\
-        sleep 1 &&
-        asset-tp -vv \
+       sleep 1 && \
+       asset-tp -vv \
+         -C tcp://validator:4004 \
+     \""
+    stop_signal: SIGKILL
+
+  match-processor:
+    image: hashblock/hashblock-match-tp:latest
+    container_name: hashblock-match-tp-latest
+    restart: always
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
+    depends_on:
+      - asset-processor
+    command: "bash -c \"\
+        sleep 1 && \
+        match-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL
@@ -58,91 +70,55 @@ services:
   hashblock_rest:
     image: hashblock/hashblock-rest:latest
     container_name: hashblock-rest
+    volumes:
+      - ../..:/project/hashblock-exchange
+    ports:
+      - '8000:8000'
+    environment:
+      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
+      - PYTHONUNBUFFERED='true'
     depends_on:
       - validator
       - rest-api
     command: >
       gunicorn -b 0.0.0.0:8000
       --access-logfile -
-      --reload
       "hashblock_rest.app:application"
-    environment:
-      - PYTHONUNBUFFERED='true'
-      - PYTHONPATH=/project
-    ports:
-      - '8000:8000'
-    stop_signal: SIGKILL
-
-
-  setting-processor:
-    image: hashblock/hashblock-setting-tp:latest
-    container_name: hbsetting-tp
-    environment:
-      - PYTHONPATH=/project/hashblock-exchange
-    depends_on:
-      - validator
-    command: "bash -c \"\
-        sleep 1 &&
-        setting-tp -vv \
-          -C tcp://validator:4004 \
-      \""
-    stop_signal: SIGKILL
-
-  match-processor:
-    image: hashblock/hashblock-match-tp:latest
-    container_name: hbmatch-tp
-    environment:
-      - PYTHONPATH=/project/hashblock-exchange
-    depends_on:
-      - validator
-    command: "bash -c \"\
-        sleep 1 &&
-        match-tp -vv \
-          -C tcp://validator:4004 \
-      \""
     stop_signal: SIGKILL
 
   settings-tp:
-    image: sawtooth-settings-tp:latest
+    image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-validator:latest
+    image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
     volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core
-      - ../../:/project/hashblock-exchange
-    environment:
-      - PYTHONPATH=/project/hashblock-exchange
+      - ../../localkeys/:/project/keys
+      - ../../sampledata/:/project/genbatch
     expose:
       - 4004
     ports:
       - "4004:4004"
-    # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawadm keygen && \
-        sawtooth keygen my_key && \
-        sawtooth keygen your_key && \
-        sawset genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-settings.batch && \
-        /project/hashblock-exchange/bin/hbsetting genesis -k /root/.sawtooth/keys/my_key.priv -o /etc/config-hbsettings.batch -T 2 -A $$(cat /root/.sawtooth/keys/your_key.pub) && \
-        sawadm genesis /etc/config-settings.batch /etc/config-hbsettings.batch && \
+        sawset genesis -k /project/keys/signer1.priv -o /etc/config-settings.batch && \
+        sawadm genesis /etc/config-settings.batch /project/genbatch/hbgenesis.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
         \""
+    stop_signal: SIGKILL
 
   rest-api:
-    image: sawtooth-rest-api:latest
+    image: hyperledger/sawtooth-rest_api:latest
     container_name: sawtooth-rest-api-local
-    volumes:
-      - ../../../sawtooth-core/:/project/sawtooth-core
     ports:
       - "8008:8008"
     depends_on:
