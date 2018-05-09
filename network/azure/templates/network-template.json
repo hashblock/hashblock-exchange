@@ -92,6 +92,30 @@
           "description": "Fernet key."
         }
       },
+      "churchPrivKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Church private key."
+        }
+      },
+      "turingPrivKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Turing private key."
+        }
+      },
+      "genesisBatch": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Genesis batch."
+        }
+      },
+      "hashbockConfig": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Hashblock configuration."
+        }
+      },
       "dnsNameForPublicIP": {
         "type": "string",
         "metadata": {
@@ -299,7 +323,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"', ' \"', parameters('networkPrivKey'), '\"', ' \"', parameters('networkPubKey'), '\"', ' \"', parameters('enigmaPrivKey'), '\"', ' \"', parameters('enigmaPubKey'), '\"', ' \"', parameters('fernetKey'), '\"')]"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"', ' \"', parameters('networkPrivKey'), '\"', ' \"', parameters('networkPubKey'), '\"', ' \"', parameters('enigmaPrivKey'), '\"', ' \"', parameters('enigmaPubKey'), '\"', ' \"', parameters('fernetKey'), '\"', ' \"', parameters('churchPrivKey'), '\"', ' \"', parameters('turingPrivKey'), '\"', ' \"', parameters('genesisBatch'), '\"', ' \"', parameters('hashblockConfig'), '\"')]"
           }
         },
         "copy": {

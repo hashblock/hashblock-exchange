@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 10 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+if [ $# -lt 14 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
 NODEINDEX=$2
@@ -12,6 +12,10 @@ NETWORKPUBKEY=$7
 ENIGMAPRIVKEY=$8
 ENIGMAPUBKEY=$9
 FERNETKEY=$9
+CHURCHPRIVKEY=$10
+TURINGPRIVKEY=$11
+GENESISBATCH=$12
+HASHBLOCKCONFIG=$13
 
 TMP_HOME="/sawtooth"
 
@@ -50,6 +54,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 sudo mkdir -p "$SAWTOOTH_HOME/keys"
 sudo mkdir -p "$SAWTOOTH_HOME/logs"
 sudo mkdir -p "$SAWTOOTH_HOME/etc"
+sudo mkdir -p "$SAWTOOTH_HOME/config"
 sudo mkdir -p $SAWTOOTH_DATA;
 
 if [ ! -e "/sawtooth/keys/validator.priv" ]; then
@@ -83,10 +88,24 @@ if [ ! -e "/sawtooth/etc/validator.toml" ]; then
   sudo echo "network_public_key = '$NETWORKPUBKEY'" >> /sawtooth/etc/validator.toml;
 fi
 
+if [ ! -e "/sawtooth/keys/church.priv" ]; then
+  sudo echo "Adding /sawtooth/keys/church.priv key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $CHURCHPRIVKEY >> /sawtooth/keys/church.priv;
+fi
+
+if [ ! -e "/sawtooth/keys/turing.priv" ]; then
+  sudo echo "Adding /sawtooth/keys/turing.priv key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $TURINGPRIVKEY >> /sawtooth/keys/turing.priv;
+fi
+
 if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
   sudo echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
-  cd $SAWTOOTH_DATA;
-  sudo wget -N $GENESIS_BATCH;
+  sudo echo $GENESISBATCH >> /sawtooth/data/genesis.batch;
+fi
+
+if [ ! -e "/sawtooth/config/hashblock_config.yaml" ]; then
+  sudo echo "Adding /sawtooth/config/hashblock_config.yaml file" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $HASHBLOCKCONFIG >> /sawtooth/config/hashblock_config.yaml;
 fi
 
 cd $HOMEDIR;
