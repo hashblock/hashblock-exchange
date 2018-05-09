@@ -18,8 +18,16 @@ GENESISBATCH=$12
 HASHBLOCKCONFIG=$13
 
 TMP_HOME="/sawtooth"
+HOMEDIR="/home/$USER";
+SAWTOOTH_DATA="$SAWTOOTH_HOME/data"
+CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
+echo "Fernet key: $FERNETKEY" >> $CONFIG_LOG_FILE_PATH;
+echo "Church key: $CHURCHPRIVKEY" >> $CONFIG_LOG_FILE_PATH;
+echo "Turing key: $TURINGPRIVKEY" >> $CONFIG_LOG_FILE_PATH;
+echo "Genesis batch: $GENESISBATCH" >> $CONFIG_LOG_FILE_PATH;
+echo "Hashblock configuration: $HASHBLOCKCONFIG" >> $CONFIG_LOG_FILE_PATH;
 
 if [[ -z "${SAWTOOTH_HOME}" ]]; then
   sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
@@ -28,9 +36,6 @@ fi
 
 export SAWTOOTH_HOME=$TMP_HOME
 
-HOMEDIR="/home/$USER";
-SAWTOOTH_DATA="$SAWTOOTH_HOME/data"
-CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
 GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/genesis.batch"
 
