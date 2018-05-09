@@ -1,4 +1,4 @@
-# sawtooth-uom/bin
+# hashblock-exchange/bin
 
 This script directory is 'pathed' into the various containers of hashblock-exchange.
 
@@ -7,13 +7,10 @@ This script directory is 'pathed' into the various containers of hashblock-excha
 name | description
 -----|------------
 build_all | builds local containers helpful for hashblock-exchange development
-build_distro | builds production ready containers for deploying hashblock-exchange
-build_python | builds a shell for local transaction processing support
-protogen | Compiles the protobuff descriptors (in protos folder) and copies to cli and processor families
-run_tests | Runs the TP family unit tests
-hbasset | Administrative utility for proposing and voting on hashblock-asset
-hbsetting | Administrative utility for managing hashblock-asset settings as well as creating a geneis.batch file
-txq | Administrative utility for creating exchange transactions
+build_distro | builds production ready containers for testing. Actual distro built on Docker Hub
+protogen | Compiles the protobuff descriptors (in protos folder) and copies to apps and TP families
+run_tests | Initiates TP family unit tests
+run_docker_test | Executes TP family unit tests
 asset-tp | Called within the asset-processor container to start the asset transaction processor
-match-tp | Called within the asset-processor container to start the asset transaction processor
-setting-tp | Called within the asset-processor container to start the asset transaction processor
+match-tp | Called within the asset-processor container to start the match transaction processor
+setting-tp | Called within the asset-processor container to start the setting transaction processor

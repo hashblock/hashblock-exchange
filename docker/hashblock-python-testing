@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +14,24 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
-FROM ubuntu:16.04
+# This Dockerfile is for running unit-tests
 
-# Remove python debug library from this container
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD && \
-    echo 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe' >> /etc/apt/sources.list && \
-    apt-get update 
+FROM python:3.5-slim
+LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 
-RUN apt-get install -y -q python3-sawtooth-sdk
+RUN python3 -m ensurepip && \
+    pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
+    rm -r /root/.cache
 
-WORKDIR /project/hashblock-exchange
+WORKDIR /project
+
+RUN pip3 install \
+    sawtooth-sdk \
+    nose2==0.7.2 \
+    ptvsd \
+    cryptography && \
+    mkdir -p /var/log/sawtooth
 
 ENV PATH $PATH:/project/hashblock-exchange/bin
 
-CMD match-tp
+WORKDIR /project/hashblock-exchange
