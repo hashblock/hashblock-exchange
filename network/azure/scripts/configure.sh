@@ -3,26 +3,26 @@
 if [ $# -lt 14 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
-NODEINDEX=$2
-DNS=$3
-PRIVKEY=$4
-PUBKEY=$5
-NETWORKPRIVKEY=$6
-NETWORKPUBKEY=$7
-ENIGMAPRIVKEY=$8
-ENIGMAPUBKEY=$9
-shift
-FERNETKEY=$9
-shift
-CHURCHPRIVKEY=$9
-shift
-TURINGPRIVKEY=$9
-shift
-GENESISBATCH=$9
-shift
-HASHBLOCKCONFIG=$9
+NODEINDEX=$2;
+DNS=$3;
+PRIVKEY=$4;
+PUBKEY=$5;
+NETWORKPRIVKEY=$6;
+NETWORKPUBKEY=$7;
+ENIGMAPRIVKEY=$8;
+ENIGMAPUBKEY=$9;
+shift;
+FERNETKEY=$9;
+shift;
+CHURCHPRIVKEY=$9;
+shift;
+TURINGPRIVKEY=$9;
+shift;
+GENESISBATCH=$9;
+shift;
+HASHBLOCKCONFIG=$9;
 
-TMP_HOME="/sawtooth"
+TMP_HOME="/sawtooth";
 HOMEDIR="/home/$USER";
 CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 
@@ -38,8 +38,9 @@ if [[ -z "${SAWTOOTH_HOME}" ]]; then
   sudo echo "SAWTOOTH_HOME=$TMP_HOME" >> /etc/environment;
 fi
 
-export SAWTOOTH_HOME=$TMP_HOME
-SAWTOOTH_DATA="$SAWTOOTH_HOME/data"
+SAWTOOTH_HOME=$TMP_HOME;
+export SAWTOOTH;
+SAWTOOTH_DATA="$TMP_HOME/data";
 
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
 GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/genesis.batch"
@@ -61,11 +62,11 @@ sudo service docker start
 sudo curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 
-sudo mkdir -p "$SAWTOOTH_HOME/keys"
-sudo mkdir -p "$SAWTOOTH_HOME/logs"
-sudo mkdir -p "$SAWTOOTH_HOME/etc"
-sudo mkdir -p "$SAWTOOTH_HOME/config"
-sudo mkdir -p $SAWTOOTH_DATA;
+sudo mkdir -p "$SAWTOOTH_HOME/keys";
+sudo mkdir -p "$SAWTOOTH_HOME/logs";
+sudo mkdir -p "$SAWTOOTH_HOME/etc";
+sudo mkdir -p "$SAWTOOTH_HOME/config";
+sudo mkdir -p "$SAWTOOTH_DATA";
 
 if [ ! -e "/sawtooth/keys/validator.priv" ]; then
   sudo echo "Adding /sawtooth/keys/validator.priv key" >> $CONFIG_LOG_FILE_PATH;
