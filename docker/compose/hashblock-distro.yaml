@@ -72,11 +72,12 @@ services:
     container_name: hashblock-rest
     volumes:
       - ../..:/project/hashblock-exchange
+      - ../../../hbruntime:/project/kandc
     ports:
       - '8000:8000'
     environment:
-      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
-      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
+      - HASHBLOCK_KEYS=/project/kandc
+      - HASHBLOCK_CONFIG=/project/kandc
       - PYTHONUNBUFFERED='true'
     depends_on:
       - validator
@@ -99,16 +100,15 @@ services:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-local
     volumes:
-      - ../../localkeys/:/project/keys
-      - ../../sampledata/:/project/genbatch
+      - ../../../hbruntime:/project/kandc
     expose:
       - 4004
     ports:
       - "4004:4004"
     entrypoint: "bash -c \"\
         sawadm keygen && \
-        sawset genesis -k /project/keys/signer1.priv -o /etc/config-settings.batch && \
-        sawadm genesis /etc/config-settings.batch /project/genbatch/hbgenesis.batch && \
+        sawset genesis -k /project/kandc/turing.priv -o /etc/config-settings.batch && \
+        sawadm genesis /etc/config-settings.batch /project/kandc/hbgenesis.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
