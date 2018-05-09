@@ -110,7 +110,7 @@
           "description": "Genesis batch."
         }
       },
-      "hashbockConfig": {
+      "hashblockConfig": {
         "type": "securestring",
         "metadata": {
           "description": "Hashblock configuration."

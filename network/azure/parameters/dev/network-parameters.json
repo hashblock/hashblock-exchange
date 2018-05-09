@@ -146,7 +146,7 @@
           "secretName": "genesis-batch"
         }
       },
-      "hashbockConfig": {
+      "hashblockConfig": {
         "reference": {
           "keyVault": {
             "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
