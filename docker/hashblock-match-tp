@@ -22,7 +22,7 @@
 # 	1. Installs protobuf
 #	2. Generates protobuf files
 # final image:
-#	1. Installs sawtooth-sdk
+#	1. Installs sawtooth-sdk and crypto
 # 	2. Copies relevant files from base
 # Build:
 #   $ cd hashblock-exchange
@@ -34,8 +34,7 @@ FROM python:3.5-slim as base
 RUN mkdir -p /builder && \
  	pip3 install \
  		grpcio-tools \
- 		grpcio \
-		cryptography && \
+ 		grpcio && \
  	rm -rf /var/lib/apt/lists/
 
 WORKDIR /builder
@@ -54,6 +53,7 @@ RUN bin/protogen && \
 FROM python:3.5-slim
 
 RUN	pip3 install sawtooth-sdk --upgrade && \
+	pip3 install cryptography && \
 	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
   	mkdir -p /project/hashblock-exchange/modules && \
