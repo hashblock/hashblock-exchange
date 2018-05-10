@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 14 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+if [ $# -lt 12 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
 NODEINDEX=$2;
@@ -17,10 +17,6 @@ shift;
 CHURCHPRIVKEY=$9;
 shift;
 TURINGPRIVKEY=$9;
-shift;
-GENESISBATCH=$9;
-shift;
-HASHBLOCKCONFIG=$9;
 
 TMP_HOME="/sawtooth";
 HOMEDIR="/home/$USER";
@@ -44,6 +40,7 @@ SAWTOOTH_DATA="$TMP_HOME/data";
 
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
 GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/genesis.batch"
+HASHBLOCK_CONFIG="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/hashblock_config.yaml"
 
 sudo apt-get -y update
 sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
@@ -111,12 +108,14 @@ fi
 
 if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
   sudo echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
-  sudo echo $GENESISBATCH >> $SAWTOOTH_DATA/genesis.batch;
+  cd $SAWTOOTH_DATA;
+  sudo wget -N $GENESIS_BATCH; 
 fi
 
 if [ ! -e "/sawtooth/config/hashblock_config.yaml" ]; then
   sudo echo "Adding /sawtooth/config/hashblock_config.yaml file" >> $CONFIG_LOG_FILE_PATH;
-  sudo echo $HASHBLOCKCONFIG >> /sawtooth/config/hashblock_config.yaml;
+  cd /sawtooth/config
+  sudo wget -N $HASHBLOCK_CONFIG;
 fi
 
 cd $HOMEDIR;
