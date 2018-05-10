@@ -33,7 +33,7 @@ if [[ -z "${SAWTOOTH_HOME}" ]]; then
 fi
 
 SAWTOOTH_HOME=$TMP_HOME;
-export SAWTOOTH;
+export SAWTOOTH_HOME;
 SAWTOOTH_DATA="$TMP_HOME/data";
 
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
