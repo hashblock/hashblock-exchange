@@ -26,8 +26,6 @@ echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PAT
 echo "Fernet key: $FERNETKEY" >> $CONFIG_LOG_FILE_PATH;
 echo "Church key: $CHURCHPRIVKEY" >> $CONFIG_LOG_FILE_PATH;
 echo "Turing key: $TURINGPRIVKEY" >> $CONFIG_LOG_FILE_PATH;
-echo "Genesis batch: $GENESISBATCH" >> $CONFIG_LOG_FILE_PATH;
-echo "Hashblock configuration: $HASHBLOCKCONFIG" >> $CONFIG_LOG_FILE_PATH;
 
 if [[ -z "${SAWTOOTH_HOME}" ]]; then
   sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
@@ -39,8 +37,8 @@ export SAWTOOTH;
 SAWTOOTH_DATA="$TMP_HOME/data";
 
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
-GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/genesis.batch"
-HASHBLOCK_CONFIG="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/hashblock_config.yaml"
+GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/artifacts/genesis.batch"
+HASHBLOCK_CONFIG="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/artifacts/hashblock_config.yaml"
 
 sudo apt-get -y update
 sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
@@ -114,7 +112,7 @@ fi
 
 if [ ! -e "/sawtooth/config/hashblock_config.yaml" ]; then
   sudo echo "Adding /sawtooth/config/hashblock_config.yaml file" >> $CONFIG_LOG_FILE_PATH;
-  cd /sawtooth/config
+  cd /sawtooth/config;
   sudo wget -N $HASHBLOCK_CONFIG;
 fi
 
