@@ -20,11 +20,12 @@ This module is referenced when posting asset proposals and votes
 """
 import datetime
 import json
-import time
+from functools import partial
 from pprint import pprint
 from math import sqrt
 from itertools import count, islice
 from shared.transactions import (
+    create_batch, submit_batch,
     submit_single_txn, create_transaction, compose_builder)
 from modules.address import Address
 from modules.config import valid_signer
@@ -40,16 +41,6 @@ VOTE_KEY_SET = {'signer', 'proposal_id', 'vote'}
 VOTE_SET = {'accept', 'reject', 'rescind'}
 VOTE_ITEMS = ['rescind', 'accept', 'reject']
 
-# {
-#     'action': 'ask',
-#     'plus': 'turing',
-#     'minus': 'church',
-#     'quantity': {
-#         'value': '5',
-#         'resource': 'food.peanuts',
-#         'unit': 'imperial.bags'
-#     }
-# }
 
 _addresser = Address(Address.FAMILY_ASSET, "0.1.0")
 
@@ -93,7 +84,7 @@ def __validate_proposal(dimension, data):
     return target_address
 
 
-def __validate_vote(dimension, data):
+def __validate_vote(dimension, data, ignoreAddress=False):
     """Validate the vote content"""
     print("Validating {} vote {}".format(dimension, data))
     if set(data.keys()) != VOTE_KEY_SET:
@@ -110,7 +101,6 @@ def __validate_vote(dimension, data):
     proposal_id = data['proposal_id']
     result = decode_proposals(
         _addresser.candidates(dimension))['data']
-    pprint(result)
     if result:
         proposal_match = []
         for x in result:
@@ -120,9 +110,11 @@ def __validate_vote(dimension, data):
         if not proposal_match:
             print("No match for id {}".format(proposal_id))
             raise DataException
-    else:
+    elif not ignoreAddress:
         print("No result for proposals")
         raise DataException
+    else:
+        pass
 
 
 def __create_asset_vote(ingest):
@@ -174,7 +166,6 @@ def __create_propose_txn(ingest):
 def __create_vote_txn(ingest):
     """Create an asset proposal and payload"""
     signatore, address, prop_id, vote = ingest
-    print("Create vote payload for {}".format(vote))
     if vote.vote == AssetVote.VOTE_UNSET:
         action = AssetPayload.ACTION_UNSET
     else:
@@ -256,23 +247,82 @@ def create_vote(dimension, data):
 
 
 def create_asset_batch(json_file):
-    """Consume a batch of json entities and convert to assets"""
+    """Consume a batch of json asset entities"""
+
+    # Proposal boilerplates
+    propose_unit = compose_builder(
+        create_transaction,
+        __create_proposal_inputs_outputs, __create_propose_txn,
+        __create_unit_asset)
+    propose_reousrce = compose_builder(
+        create_transaction,
+        __create_proposal_inputs_outputs, __create_propose_txn,
+        __create_resource_asset)
+
+    # proposal entries {asset_id: [dimension, proposal_id, prop_txq_id]}
     id_track = {}
+    # Holds transactions
+    prop_txns = []
+    # Proposal signer
+    propSigner = None
+    # Read in the file
     with open(json_file) as data_file:
         data = json.loads(data_file.read())
-    for asset in data['proposals']:
-        asset_id = asset['id']
-        dimension = asset['dimension']
-        if id_track.get(asset_id, None):
-            raise DataException
-        id_track[asset['id']] = (dimension, _addresser.asset_item(
-            asset['dimension'], asset['system'], asset['key']))
-        del asset['id']
-        del asset['dimension']
-        create_proposal(dimension, asset)
 
-    time.sleep(5)
+    # Loop through the proposals, collecting data points
+    for asset in data['proposals']:
+        accum = []
+        fn = None
+        if not propSigner:
+            propSigner = asset['signer']
+        asset_id = asset.pop('id')
+        if asset_id in id_track:
+            raise DataException("Duplicate proposal.id found")
+        dimension = asset.pop('dimension')
+        accum.append(dimension)
+        proposal_id = __validate_proposal(dimension, asset)
+        accum.append(proposal_id)
+        fn = propose_unit \
+            if dimension == Address.DIMENSION_UNIT else propose_reousrce
+        _, txq = fn((
+            asset['signer'],
+            Address(Address.FAMILY_ASSET, "0.1.0", dimension),
+            asset))
+        prop_txns.append(txq)
+        accum.append(txq.header_signature)
+        id_track[asset_id] = accum
+
+    # Submit proposals
+    submit_batch([create_batch((propSigner, prop_txns))])
+
+    # Vote signer
+    voteSigner = None
+    # Vote transactions
+    vote_txns = []
+
+    def create_dependency(ingest, dep):
+        """Imbue asset permissions with dependency"""
+        signatore, address, permissions, payload = ingest
+        permissions['dependencies'] = [dep]
+        return (signatore, address, permissions, payload)
+
     for vote in data['votes']:
-        dimension, prop_id = id_track[vote['proposal_id']]
+        if not voteSigner:
+            voteSigner = vote['signer']
+        dimension, prop_id, txq_id = id_track[vote.pop('proposal_id')]
         vote['proposal_id'] = prop_id
-        create_vote(dimension, vote)
+        __validate_vote(dimension, vote, True)
+        print('{} {} {}'.format(dimension, prop_id, txq_id))
+        asset_vote = compose_builder(
+            create_transaction,
+            partial(create_dependency, dep=txq_id),
+            __create_vote_inputs_outputs, __create_vote_txn,
+            __create_asset_vote)
+        _, txq = asset_vote((
+            vote['signer'],
+            Address(Address.FAMILY_ASSET, "0.1.0", dimension),
+            vote))
+        vote_txns.append(txq)
+
+    # Submit proposals
+    submit_batch([create_batch((voteSigner, vote_txns))])

@@ -187,6 +187,8 @@ def __decode_match(address, data):
         deep = True
     item.ParseFromString(data)
     match = MessageToDict(item)
+    match["plus"] = key_owner(item.plus.decode())
+    match["minus"] = key_owner(item.minus.decode())
     quantity_to_prime(match['quantity'], item.quantity)
     if deep:
         quantity_to_prime(
@@ -198,6 +200,8 @@ def __decode_match(address, data):
         quantity_to_prime(
             match['unmatched']['quantity'],
             item.unmatched.quantity)
+        match['unmatched']["plus"] = key_owner(item.unmatched.plus.decode())
+        match['unmatched']["minus"] = key_owner(item.unmatched.minus.decode())
     return {
         'family': 'match',
         'dimension': dim,
@@ -233,8 +237,8 @@ def decode_match_initiate_list(address):
         utxq.ParseFromString(b64decode(__get_leaf_data(ladd)['data']))
         data.append((
             {
-                "plus": utxq.plus.decode("utf-8"),
-                "minus": utxq.minus.decode("utf-8"),
+                "plus": key_owner(utxq.plus.decode("utf-8")),
+                "minus": key_owner(utxq.minus.decode("utf-8")),
                 "text": __format_quantity(utxq.quantity)
             },
             ladd))
@@ -256,8 +260,8 @@ def decode_match_reciprocate_list(address):
         mtxq = MTXQ()
         mtxq.ParseFromString(b64decode(__get_leaf_data(ladd)['data']))
         data.append(({
-            "plus": mtxq.plus.decode("utf-8"),
-            "minus": mtxq.minus.decode("utf-8"),
+            "plus": key_owner(mtxq.plus.decode("utf-8")),
+            "minus": key_owner(mtxq.minus.decode("utf-8")),
             "text": '{} for {}'.format(
                 __format_quantity(mtxq.quantity),
                 __format_quantity(mtxq.unmatched.quantity))

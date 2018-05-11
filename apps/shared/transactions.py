@@ -49,9 +49,9 @@ def create_transaction(ingest):
         signer_public_key=signer,
         family_name=address.namespace,
         family_version=address.version,
-        inputs=permissions['inputs'],
-        outputs=permissions['outputs'],
-        dependencies=[],
+        inputs=permissions.get('inputs', []),
+        outputs=permissions.get('outputs', []),
+        dependencies=permissions.get('dependencies', []),
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_public_key=signer
     ).SerializeToString()
