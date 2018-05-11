@@ -23,12 +23,14 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
 from modules.address import Address
+from modules.config import load_hashblock_config, valid_key
 
 from protobuf.match_pb2 import MatchEvent
 from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ
 
 LOGGER = logging.getLogger(__name__)
+load_hashblock_config()
 
 # Number of seconds to wait for key operations to succeed
 STATE_TIMEOUT_SEC = 10
@@ -147,6 +149,15 @@ RECIPROCATE_VSET = {'plus', 'minus', 'quantity', 'ratio'}
 
 
 def __check_existence(exchange, exchangeset):
+    ep = valid_key(exchange.plus.decode())
+    em = valid_key(exchange.minus.decode())
+    # LOGGER.debug('P: {} => {}, M: {} => {}'.format(
+    #     exchange.plus,
+    #     ep,
+    #     exchange.minus,
+    #     em))
+    if not ep or not em:
+        throw_invalid("Unknown exchange partner keys")
     zset = set([f[0].name for f in exchange.ListFields()])
     return exchangeset == zset
 
@@ -162,7 +173,7 @@ def apply_initiate(payload, context):
             __set_exchange(context, exchange_initiate, payload.ukey)
             LOGGER.debug("Added unbalanced %s to state", payload.ukey)
     else:
-        throw_invalid('Unbalanced exchange not well formed')
+        throw_invalid('Initiate exchange not well formed')
 
 
 def apply_reciprocate(payload, context):
@@ -194,6 +205,10 @@ def apply_reciprocate(payload, context):
 
 
 def __check_reciprocate(reciprocate, initiate):
+    if initiate.plus.decode() != reciprocate.minus.decode() \
+            or initiate.minus.decode() != reciprocate.plus.decode():
+        throw_invalid(
+            "Reciprocate partner out of synch with initiate partners")
     __check_balance(reciprocate, initiate, 'value')
     __check_balance(reciprocate, initiate, 'valueUnit')
     __check_balance(reciprocate, initiate, 'resourceUnit')

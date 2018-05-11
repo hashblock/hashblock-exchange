@@ -75,6 +75,11 @@ def key_owner(key_value):
     return result
 
 
+def valid_key(key_value):
+    """Tests key against known keys"""
+    return False if key_owner(key_value) == UNKNOWN_OWNER else True
+
+
 def __read_signer(key_filename):
     """Reads the given file as a hex key.
 

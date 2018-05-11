@@ -95,6 +95,8 @@ services:
     volumes:
       - ../..:/project/hashblock-exchange
     environment:
+      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
       - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - validator

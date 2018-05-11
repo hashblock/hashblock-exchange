@@ -72,10 +72,11 @@ def __validate_assets(value, unit, resource):
 
 
 def __validate_utxq_exists(address):
+    """Check that the utxq exists to recipricate on"""
     try:
         decode_from_leaf(address)
     except RestException:
-        raise DataException
+        raise DataException('Invalid initiate (utxq) address')
 
 
 def __validate_utxq(request):
@@ -109,6 +110,7 @@ def __validate_mtxq(request):
 
 
 def __create_quantity(value, quantity):
+    """Converts a quantity type into byte string from prime number"""
     unit_data, resource_data = quantity
     return Quantity(
         value=int(value).to_bytes(2, byteorder='little'),
@@ -129,6 +131,7 @@ def __create_utxq(ingest):
 
 
 def __create_initiate_payload(ingest):
+    """Create the utxq payload"""
     operation, addresser, signer, data = ingest
     return (operation, addresser, signer, MatchEvent(
         data=data.SerializeToString(),
@@ -138,6 +141,7 @@ def __create_initiate_payload(ingest):
 
 
 def __create_initiate_inputs_outputs(ingest):
+    """Create utxq address (state) authorizations"""
     operation, addresser, signer, payload = ingest
     inputs = []
     outputs = [payload.ukey]
@@ -146,6 +150,7 @@ def __create_initiate_inputs_outputs(ingest):
 
 
 def __create_mtxq(ingest):
+    """Create the mtxq object"""
     operation, addresser, qassets, data = ingest
     quantity, numerator, denominator = qassets
     # mtxq = MTXQ()
@@ -161,6 +166,7 @@ def __create_mtxq(ingest):
 
 
 def __create_reciprocate_payload(ingest):
+    """Create the mtxq payload"""
     operation, addresser, request, payload = ingest
     return (operation, addresser, request['plus'], MatchEvent(
         data=payload.SerializeToString(),
@@ -171,6 +177,7 @@ def __create_reciprocate_payload(ingest):
 
 
 def __create_reciprocate_inputs_outputs(ingest):
+    """Create mtxq address (state) authorizations"""
     operation, addresser, signer, payload = ingest
     inputs = [payload.ukey]
     outputs = [payload.ukey, payload.mkey]

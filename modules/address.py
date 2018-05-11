@@ -97,7 +97,7 @@ class Address():
         self._family_hash = self.hashup(family)[0:6]
 
     @classmethod
-    def __valid_address(cls, address):
+    def valid_address(cls, address):
         if len(address) \
                 and re.fullmatch(r"^[0-9a-fA-F]+$", address) \
                 and len(address) % 2 == 0:
@@ -107,7 +107,7 @@ class Address():
 
     @classmethod
     def valid_leaf_address(cls, address):
-        return True if cls.__valid_address(address) \
+        return True if cls.valid_address(address) \
             and len(address) == 70 else False
 
     @classmethod
