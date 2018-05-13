@@ -12,8 +12,8 @@
 			"signer": "turing",
 			"id": "2",
 			"dimension":"unit",
-			"system": "imperial",
-			"key": "bags",
+			"system": "purchasing",
+			"key": "bag",
 			"value": "2"
 		},
 		{
@@ -44,8 +44,8 @@
 			"signer": "turing",
 			"id": "6",
 			"dimension":"unit",
-			"system": "imperial",
-			"key": "bales",
+			"system": "purchasing",
+			"key": "bale",
 			"value": "11"
 		},
 		{

@@ -135,12 +135,12 @@ __revmachadd = {
 match_prime_lookup = {
     "bag": 2,
     "bags": 2,
-    "{peanuts}": 3,
+    "peanuts": 3,
     "$": 5,
-    "{usd}": 7,
+    "USD": 7,
     "bale": 11,
     "bales": 11,
-    "{hay}": 13
+    "hay": 13
 }
 
 
