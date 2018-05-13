@@ -155,7 +155,6 @@ def __create_propose_txn(ingest):
         asset=asset.SerializeToString(),
         nonce=nonce)
 
-    print("Proposal = {}".format(proposal))
     return (signatore, address, asset, AssetPayload(
         data=proposal.SerializeToString(),
         dimension=address.dimension,
@@ -266,7 +265,10 @@ def create_asset_batch(json_file):
     propSigner = None
     # Read in the file
     with open(json_file) as data_file:
-        data = json.loads(data_file.read())
+        try:
+            data = json.loads(data_file.read())
+        except ValueError as error:
+            raise DataException('Error in json read {}'.format(error))
 
     # Loop through the proposals, collecting data points
     for asset in data['proposals']:

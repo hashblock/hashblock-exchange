@@ -14,10 +14,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
 import logging
 
 from flask import Flask, request, url_for
 from flask_restplus import Resource, Api, fields
+from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
 
 from modules.exceptions import DataException, AuthException, NotPrimeException
 from modules.config import load_hashblock_config
@@ -34,9 +37,15 @@ from modules.decode import decode_match_reciprocate_list
 import shared.asset as asset
 import shared.match as match
 
+UPLOAD_FOLDER = '/uploads/files/'
+ALLOWED_EXTENSIONS = set(['json'])
 LOGGER = logging.getLogger(__name__)
 
 application = Flask(__name__)
+application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 # Load up our configuration for URLs and keys
 
@@ -96,30 +105,9 @@ def matchtermlinks(data, url_path):
     return new_data
 
 
-# Entry points
-
-@ns.route('/')
-class StateDecode(Resource):
-    def get(self):
-        """Return a list of hashblock entities"""
-        return {"data": "TBD"}, 200
-
-
-@ns.route('/assets')
-class ASDecode(Resource):
-    def get(self):
-        """Returns list of all asset units"""
-        result = decode_asset_list(_asset_address.ns_family)
-        result['data'] = assetlinks(result['data'])
-        return result, 200
-
-
-@ns.route('/resource-settings')
-class RASDecode(Resource):
-    def get(self):
-        """Returns the resource asset unit settings"""
-        return decode_settings(
-            _setting_address.settings(Address.DIMENSION_RESOURCE)), 200
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 asset_fields = ns.model('asset', {
@@ -138,6 +126,52 @@ asset_vote_fields = ns.model('asset-vote', {
         required=True, description='The vote for proposal_id',),
     'signer': fields.String(
         required=True, description='The authorized voter')})
+
+asset_propose_upload_parser = ns.parser()
+asset_propose_upload_parser.add_argument(
+    'file', location='files',
+    type=FileStorage, required=True)
+
+# Entry points
+
+
+@ns.route('/asset-seed')
+class ABFIngest(Resource):
+    @ns.expect(asset_propose_upload_parser)
+    def post(self):
+        """Batch process asset propose/vote seed data onto chain"""
+        args = asset_propose_upload_parser.parse_args()
+        in_name = args['file'].filename
+        if not allowed_file(in_name):
+            return {
+                "DataException":
+                "{} unsupported file type".format(in_name)}, 400
+        try:
+            destination = application.config.get('UPLOAD_FOLDER')
+            filename = '%s%s' % (destination, secure_filename(in_name))
+            args['file'].save(filename)
+            args['file'].close()
+            asset.create_asset_batch(filename)
+        except (DataException, ValueError, NotPrimeException):
+            return {"DataException": "invalid payload"}, 400
+        return {"data": "TBD"}, 200
+
+
+@ns.route('/assets')
+class ASDecode(Resource):
+    def get(self):
+        """Returns list of all asset units"""
+        result = decode_asset_list(_asset_address.ns_family)
+        result['data'] = assetlinks(result['data'])
+        return result, 200
+
+
+@ns.route('/resource-settings')
+class RASDecode(Resource):
+    def get(self):
+        """Returns the resource asset unit settings"""
+        return decode_settings(
+            _setting_address.settings(Address.DIMENSION_RESOURCE)), 200
 
 
 @ns.route('/propose-resource')
