@@ -21,7 +21,6 @@ This module is referenced when posting asset proposals and votes
 import datetime
 import json
 from functools import partial
-from pprint import pprint
 from math import sqrt
 from itertools import count, islice
 from shared.transactions import (

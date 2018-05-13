@@ -19,6 +19,7 @@
 This module is referenced when fetching an address to
 decode into it's type data structure
 """
+from functools import lru_cache
 from base64 import b64decode
 
 from google.protobuf.json_format import MessageToDict
@@ -34,13 +35,81 @@ from protobuf.asset_pb2 import Unit
 from protobuf.asset_pb2 import Resource
 from protobuf.asset_pb2 import AssetCandidates
 
+asset_addresser = Address(Address.FAMILY_ASSET, "0.1.0")
+
+__revmachadd = {
+    Address._ask_hash: 'ask',
+    Address._tell_hash: 'tell',
+    Address._offer_hash: 'offer',
+    Address._accept_hash: 'accept',
+    Address._commitment_hash: 'commitment',
+    Address._obligation_hash: 'obligation',
+    Address._give_hash: 'give',
+    Address._take_hash: 'take'
+}
+
 
 def __get_leaf_data(address):
+    """Fetch leaf data from chain"""
     return RestClient(sawtooth_rest_host()).get_leaf(address)
 
 
 def __get_list_data(address):
+    """Fetch list data from chain"""
     return RestClient(sawtooth_rest_host()).list_state(address)
+
+
+@lru_cache(maxsize=128)
+def __resource_asset_cache(prime):
+    """Prime (value) lookup for resource asset"""
+    res = __get_list_data(
+        asset_addresser.asset_prefix(Address.DIMENSION_RESOURCE))
+    resource = None
+    for entry in res['data']:
+        er = Resource()
+        er.ParseFromString(b64decode(entry['data']))
+        if prime == er.value:
+            resource = er
+            break
+    return resource
+
+
+@lru_cache(maxsize=128)
+def __unit_asset_cache(prime):
+    """Prime (value) lookup for unit asset"""
+    res = __get_list_data(
+        asset_addresser.asset_prefix(Address.DIMENSION_UNIT))
+    unit = None
+    for entry in res['data']:
+        eu = Unit()
+        eu.ParseFromString(b64decode(entry['data']))
+        if prime == eu.value:
+            unit = eu
+            break
+    return unit
+
+
+def __resource_key_lookup(prime_value):
+    """Get key string of asset for type resource"""
+    return __resource_asset_cache(
+        str(int.from_bytes(prime_value, byteorder='little'))).key
+
+
+def __unit_key_lookup(prime_value):
+    """Get key string of asset for type unit-of-measure"""
+    return __unit_asset_cache(
+        str(int.from_bytes(prime_value, byteorder='little'))).key
+
+
+def __format_quantity(quantity):
+    """Replaces primes with asset information"""
+    value_magnitude = int.from_bytes(quantity.value, byteorder='little')
+    value_unit = __unit_key_lookup(quantity.valueUnit)
+    resource_unit = __resource_key_lookup(quantity.resourceUnit)
+    return '{} {} of {}'.format(
+        value_magnitude,
+        value_unit,
+        resource_unit)
 
 
 def __decode_settings(address, data):
@@ -63,6 +132,7 @@ def __decode_settings(address, data):
 
 
 def decode_settings(address, data=None):
+    """Prepare settings json"""
     if not data:
         data = __get_leaf_data(address)
     return __decode_settings(
@@ -71,9 +141,7 @@ def decode_settings(address, data=None):
 
 
 def __decode_proposals(address, data):
-    """Decode a proposals address
-    """
-
+    """Decode a proposals address"""
     proposals = AssetCandidates()
     proposals.ParseFromString(data)
     if address[18:24] == Address._unit_hash:
@@ -105,8 +173,7 @@ def decode_proposals(address, data=None):
 
 
 def __decode_asset(address, data):
-    """Decode a unit or resource asset address
-    """
+    """Decode a unit or resource asset address"""
     if address[12:18] == Address._unit_hash:
         asset = Unit()
         dim = Address.DIMENSION_UNIT
@@ -121,54 +188,8 @@ def __decode_asset(address, data):
     }
 
 
-__revmachadd = {
-    Address._ask_hash: 'ask',
-    Address._tell_hash: 'tell',
-    Address._offer_hash: 'offer',
-    Address._accept_hash: 'accept',
-    Address._commitment_hash: 'commitment',
-    Address._obligation_hash: 'obligation',
-    Address._give_hash: 'give',
-    Address._take_hash: 'take'
-}
-
-match_prime_lookup = {
-    "bag": 2,
-    "bags": 2,
-    "peanuts": 3,
-    "$": 5,
-    "USD": 7,
-    "bale": 11,
-    "bales": 11,
-    "hay": 13
-}
-
-
-def __match_reverse_lookup(lookup_value):
-    """Reverse hash lookup
-    """
-    return [key for key,
-            value in match_prime_lookup.items() if value == lookup_value]
-
-
-def __format_quantity(quantity):
-    value_magnitude = int.from_bytes(quantity.value, byteorder='little')
-    value_units = __match_reverse_lookup(
-        int.from_bytes(quantity.valueUnit, byteorder='little'))
-    value_unit = value_units[0]
-    if value_magnitude > 1 and value_unit.endswith('s') is True:
-        value_unit = value_units[1]
-    resource_unit = __match_reverse_lookup(
-        int.from_bytes(quantity.resourceUnit, byteorder='little'))[0]
-    return '{} {} of {}'.format(
-        value_magnitude,
-        value_unit,
-        resource_unit)
-
-
 def __decode_match(address, data):
-    """Decode a unmatched or matched address
-    """
+    """Detail decode a unmatched or matched address"""
     def quantity_to_prime(quantity, rquant):
         quantity['value'] = \
             int.from_bytes(rquant.value, byteorder='little')
@@ -227,6 +248,7 @@ def decode_match_dimension(address):
 
 
 def decode_match_initiate_list(address):
+    """Decorate initiates with text conversions"""
     results = __get_list_data(address)['data']
     ops = __revmachadd[address[18:24]]
 
@@ -251,6 +273,7 @@ def decode_match_initiate_list(address):
 
 
 def decode_match_reciprocate_list(address):
+    """Decorate reciprocates with text conversions"""
     results = __get_list_data(address)['data']
     ops = __revmachadd[address[18:24]]
 
