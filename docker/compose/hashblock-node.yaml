@@ -52,7 +52,11 @@ services:
     image: hashblock/hashblock-match-tp:latest
     container_name: hashblock-match-tp-latest
     restart: always
+    volumes:
+        - /sawtooth:/sawtooth
     environment:
+      - HASHBLOCK_KEYS=/sawtooth/keys
+      - HASHBLOCK_CONFIG=/sawtooth/config
       - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - asset-processor
@@ -61,6 +65,26 @@ services:
         match-tp -vv \
           -C tcp://validator:4004 \
       \""
+    stop_signal: SIGKILL
+
+  hashblock_rest:
+    image: hashblock/hashblock-rest:latest
+    container_name: hashblock-rest
+    volumes:
+        - /sawtooth:/sawtooth
+    ports:
+      - '8000:8000'
+    depends_on:
+      - validator
+      - rest-api
+    environment:
+      - HASHBLOCK_KEYS=/sawtooth/keys
+      - HASHBLOCK_CONFIG=/sawtooth/config
+      - PYTHONUNBUFFERED='true'
+    command: >
+      gunicorn -b 0.0.0.0:8000
+      --access-logfile -
+      "hashblock_rest.app:application"
     stop_signal: SIGKILL
 
   settings-tp:
@@ -93,26 +117,6 @@ services:
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
         \""
-    stop_signal: SIGKILL
-
-  hashblock_rest:
-    image: hashblock/hashblock-rest:latest
-    container_name: hashblock-rest
-    volumes:
-        - /sawtooth:/sawtooth
-    ports:
-      - '8000:8000'
-    depends_on:
-      - validator
-      - rest-api
-    environment:
-      - HASHBLOCK_KEYS=/sawtooth/keys
-      - HASHBLOCK_CONFIG=/sawtooth/config
-      - PYTHONUNBUFFERED='true'
-    command: >
-      gunicorn -b 0.0.0.0:8000
-      --access-logfile -
-      "hashblock_rest.app:application"
     stop_signal: SIGKILL
 
   rest-api:
