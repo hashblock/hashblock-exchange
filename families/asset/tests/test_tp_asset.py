@@ -29,7 +29,7 @@ from hashblock_asset_test.asset_message_factory \
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
 
-from sdk.python.address import Address
+from modules.address import Address
 
 _asset_addr = Address(Address.FAMILY_ASSET)
 _setting_addr = Address(Address.FAMILY_SETTING)

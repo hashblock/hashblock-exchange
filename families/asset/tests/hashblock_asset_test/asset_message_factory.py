@@ -21,7 +21,7 @@ from protobuf.asset_pb2 import AssetProposal
 from protobuf.asset_pb2 import AssetVote
 from protobuf.asset_pb2 import AssetPayload
 
-from sdk.python.address import Address
+from modules.address import Address
 
 LOGGER = logging.getLogger(__name__)
 

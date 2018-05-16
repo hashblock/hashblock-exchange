@@ -18,7 +18,7 @@ from protobuf.asset_pb2 import AssetCandidates
 from protobuf.setting_pb2 import Settings
 from protobuf.setting_pb2 import SettingPayload
 
-from sdk.python.address import Address
+from modules.address import Address
 
 from hashblock_setting_test.setting_message_factory \
     import SettingMessageFactory
