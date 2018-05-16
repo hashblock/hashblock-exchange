@@ -1,0 +1,54 @@
+#!/bin/bash
+
+info() {
+    echo -e "\033[0;36m\n[--- $1 ---]\n\033[0m"
+}
+
+warn() {
+    echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
+}
+
+docker_build() {
+    image=$1
+    context=$2
+    tag=$3
+
+    if [ ! -z $ISOLATION_ID ]
+    then
+        tag=$tag:$ISOLATION_ID
+    fi
+
+    info "Building $tag from $image in context $context"
+
+    # Build the image and pass in any proxy information if set
+    docker build -f $image -t $tag $context \
+        --build-arg https_proxy=$https_proxy \
+        --build-arg http_proxy=$http_proxy \
+        --build-arg HTTPS_PROXY=$HTTPS_PROXY \
+        --build-arg HTTP_PROXY=$HTTP_PROXY
+}
+
+main () {
+	top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+	info 'Creating temp directory'
+	mkdir -p $top_dir/temp
+
+	info 'Fetching libsnark build Dockerfile'
+	curl https://raw.githubusercontent.com/scipr-lab/libsnark/master/Dockerfile --output temp/libsnark
+
+	info 'Building libsnark'
+	# docker_build $top_dir/temp/libsnark $top_dir libsnark
+
+	info 'Removing temp directory'
+	rm -R $top_dir/temp
+
+	info 'Building hashblock_zksnark'
+	docker_build $top_dir/docker/hashblock-zksnark $top_dir hashblock-zksnark
+
+	info 'Removing libsnark image'
+	info 'Copying hashblock_zksnark extension out of image'
+	info 'Remvoing hashblock-zksnark image'
+
+}
+
+main

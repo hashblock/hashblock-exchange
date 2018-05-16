@@ -1,0 +1,23 @@
+FROM libsnark
+
+WORKDIR /root
+
+# install prerequisite
+RUN apt-get update && apt-get install -y nano libpcre3-dev python3-dev python3-pip && \
+	wget http://prdownloads.sourceforge.net/swig/swig-3.0.12.tar.gz && \
+	tar xf swig-3.0.12.tar.gz && cd swig-3.0.12 && \
+	./configure --prefix=/usr && make -j 4 && make install && \
+	python3 -m pip install --upgrade pip && \
+	mkdir -p /hashblock-exchange/zkSNARK
+
+WORKDIR /hashblock-exchange/zkSNARK
+COPY zkSNARK/hashblock_zksnark .
+
+RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/usr/local/lib
+# RUN	export CPATH=/usr/local/usr/local/include/libsnark/:/usr/local/usr/local/include/libff:/usr/local/usr/local/include/libff/common:/usr/local/usr/local/include/libsnark/zk_proof_systems
+RUN	swig -python -c++ hashblock_zksnark.i
+# RUN	g++ -c -O2 -fPIC -std=c++11 generate.cpp
+RUN	g++ -c -O2 -fPIC hashblock_zksnark_wrap.cxx -std=c++11 -I/usr/include/python3.5
+# RUN	g++ -shared -Wl,-L:libsnark -L:libff -L:libsnark_adsnark generate.o hashblock_zksnark_wrap.o -o _hashblock_zksnark.so
+
+
