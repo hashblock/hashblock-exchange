@@ -56,7 +56,12 @@ services:
     image: hashblock/hashblock-match-tp:latest
     container_name: hashblock-match-tp-latest
     restart: always
+    volumes:
+      - ../..:/project/hashblock-exchange
+      - ../../../hbruntime:/project/kandc
     environment:
+      - HASHBLOCK_KEYS=/project/kandc
+      - HASHBLOCK_CONFIG=/project/kandc
       - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - asset-processor

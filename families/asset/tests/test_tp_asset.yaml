@@ -47,5 +47,4 @@ services:
         TEST_BIND: "tcp://eth0:4004"
         PYTHONPATH: "/project/hashblock-exchange/families/asset/hashblock_asset:\
             /project/hashblock-exchange:\
-            /project/hashblock-exchange/families/asset/tests:\
-            /project/hashblock-exchange/sdk/python"
+            /project/hashblock-exchange/families/asset/tests"
