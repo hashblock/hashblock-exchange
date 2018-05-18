@@ -18,7 +18,7 @@ docker_build() {
         tag=$tag:$ISOLATION_ID
     fi
 
-    info "Building $tag from $image in context $context"
+    info "Building $image with $tag"
 
     # Build the image and pass in any proxy information if set
     docker build -f $image -t $tag $context \
