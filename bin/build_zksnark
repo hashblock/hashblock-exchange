@@ -28,6 +28,11 @@ docker_build() {
         --build-arg HTTP_PROXY=$HTTP_PROXY
 }
 
+docker_clean() {
+    image=$1
+    docker rmi $image
+}
+
 main () {
 	top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 	info 'Creating temp directory'
@@ -37,7 +42,7 @@ main () {
 	curl https://raw.githubusercontent.com/scipr-lab/libsnark/master/Dockerfile --output temp/libsnark
 
 	info 'Building libsnark'
-	# docker_build $top_dir/temp/libsnark $top_dir libsnark
+	docker_build $top_dir/temp/libsnark $top_dir libsnark
 
 	info 'Removing temp directory'
 	rm -R $top_dir/temp
@@ -46,8 +51,10 @@ main () {
 	docker_build $top_dir/docker/hashblock-zksnark $top_dir hashblock-zksnark
 
 	info 'Removing libsnark image'
+    # docker_clean libsnark
 	info 'Copying hashblock_zksnark extension out of image'
 	info 'Remvoing hashblock-zksnark image'
+    # docker_clean libsnark hashblock-zksnark
 
 }
 
