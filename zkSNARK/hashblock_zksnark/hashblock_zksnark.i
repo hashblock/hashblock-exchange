@@ -1,6 +1,6 @@
-%module hashblock_zksnark 
+%module hashblock_zksnark
 %{
-#include "hashblock_zksnark.h"
+#include "hashblock_zksnark.hpp"
 %}
 // Now list ANSI C/C++ declarations
 void generate(void);

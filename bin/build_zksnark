@@ -33,28 +33,50 @@ docker_clean() {
     docker rmi $image
 }
 
+
+check_cmnd() {
+    if [ $? -eq 0 ]
+    then
+      info "Success"
+    else
+      warn $?
+    fi
+}
+
 main () {
 	top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+    hbsnark_lib=$top_dir/libs
+    temp_files=$top_dir/temp
+    zksnark_dockerfile=$temp_files/libsnark
+
 	info 'Creating temp directory'
-	mkdir -p $top_dir/temp
+	mkdir -p $temp_files
+    check_cmnd
 
 	info 'Fetching libsnark build Dockerfile'
-	curl https://raw.githubusercontent.com/scipr-lab/libsnark/master/Dockerfile --output temp/libsnark
+	curl https://raw.githubusercontent.com/scipr-lab/libsnark/master/Dockerfile --output $zksnark_dockerfile
+    check_cmnd
 
 	info 'Building libsnark'
-	docker_build $top_dir/temp/libsnark $top_dir libsnark
-
-	info 'Removing temp directory'
-	rm -R $top_dir/temp
+	docker_build $zksnark_dockerfile $top_dir libsnark
+    check_cmnd
 
 	info 'Building hashblock_zksnark'
 	docker_build $top_dir/docker/hashblock-zksnark $top_dir hashblock-zksnark
+    check_cmnd
 
 	info 'Removing libsnark image'
     # docker_clean libsnark
+    # check_cmnd
 	info 'Copying hashblock_zksnark extension out of image'
+    # docker run --rm -v $hbsnark_lib:/hbsnark swigtest sh -c "cp -r dist/*.whl /hbsnark"
+    # check_cmnd
 	info 'Remvoing hashblock-zksnark image'
     # docker_clean libsnark hashblock-zksnark
+    # check_cmnd
+
+    info 'Removing temp directory'
+    rm -R $temp_files
 
 }
 
