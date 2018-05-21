@@ -27,6 +27,8 @@ from setuptools.command.build_ext import build_ext
 class BuildExt(build_ext):
     def build_extensions(self):
         self.compiler.compiler_so.remove('-Wstrict-prototypes')
+        self.compiler.compiler_so.append('-DCURVE_EDWARDS')
+        self.compiler.compiler_so.append('-std=c++11')
         super(BuildExt, self).build_extensions()
 
 

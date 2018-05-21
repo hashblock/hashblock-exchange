@@ -7,6 +7,7 @@
 #include <libff/common/profiling.hpp>
 
 #include <libsnark/common/default_types/r1cs_ppzkadsnark_pp.hpp>
+#include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/r1cs_ppzkadsnark.hpp>
 #include "hashblock_r1cs.hpp"
 
 using namespace libsnark;
