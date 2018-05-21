@@ -34,6 +34,6 @@ namespace libsnark {
 
 } // libsnark
 
-#include <hashblock_r1cs.tcc>
+#include "hashblock_r1cs.tcc"
 
 #endif // R1CS_EXAMPLES_HPP_

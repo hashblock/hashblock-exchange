@@ -7,7 +7,7 @@
 #include <libff/common/profiling.hpp>
 
 #include <libsnark/common/default_types/r1cs_ppzkadsnark_pp.hpp>
-#include <hashblock_r1cs.hpp>
+#include "hashblock_r1cs.hpp"
 
 using namespace libsnark;
 
@@ -39,7 +39,7 @@ void generate()
     std::string spk = pkss.str();
     std::string encoded_spk = base64_encode(reinterpret_cast<const unsigned char*>(spk.c_str()), spk.length());
     vkss << keypair.vk;
-    std::string svk = vkss.str();    
+    std::string svk = vkss.str();
     std::string encoded_svk = base64_encode(reinterpret_cast<const unsigned char*>(svk.c_str()), svk.length());
 
     std::cout << "pk: " << encoded_spk << std::endl;
