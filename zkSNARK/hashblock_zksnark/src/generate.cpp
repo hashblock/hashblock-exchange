@@ -3,12 +3,14 @@
 #include <cstdio>
 #include <cstring>
 #include <vector>
+#include <fstream>
 
 #include <libff/common/profiling.hpp>
 
 #include <libsnark/common/default_types/r1cs_ppzkadsnark_pp.hpp>
 #include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/r1cs_ppzkadsnark.hpp>
 #include "hashblock_r1cs.hpp"
+#include "base64.h"
 
 using namespace libsnark;
 
@@ -24,14 +26,14 @@ void generate()
 
     libff::enter_block("Call to hashblock_r1cs_keys");
 
-    r1cs_ppzkadsnark_auth_keys<ppT> auth_keys = r1cs_ppzkadsnark_auth_generator<ppT>();
+    r1cs_ppzkadsnark_auth_keys<default_r1cs_ppzkadsnark_pp> auth_keys = r1cs_ppzkadsnark_auth_generator<default_r1cs_ppzkadsnark_pp>();
 
     libff::print_header("Hashblock R1CS ppzkADSNARK Generator");
-    r1cs_ppzkadsnark_keypair<ppT> keypair = r1cs_ppzkadsnark_generator<ppT>(r1cs.constraint_system,auth_keys.pap);
+    r1cs_ppzkadsnark_keypair<default_r1cs_ppzkadsnark_pp> keypair = r1cs_ppzkadsnark_generator<default_r1cs_ppzkadsnark_pp>(r1cs.constraint_system,auth_keys.pap);
     printf("\n"); libff::print_indent(); libff::print_mem("after generator");
 
     libff::print_header("Preprocess verification key");
-    r1cs_ppzkadsnark_processed_verification_key<ppT> pvk = r1cs_ppzkadsnark_verifier_process_vk<ppT>(keypair.vk);
+    r1cs_ppzkadsnark_processed_verification_key<default_r1cs_ppzkadsnark_pp> pvk = r1cs_ppzkadsnark_verifier_process_vk<default_r1cs_ppzkadsnark_pp>(keypair.vk);
 
     libff::enter_block("Write encoded keys");
     std::stringstream pkss;
