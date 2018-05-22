@@ -34,7 +34,7 @@ class BuildExt(build_ext):
 
 zksnark_module = Extension(
     '_hashblock_zksnark',
-    sources=['src/hashblock_zksnark.cxx', 'src/generate.cpp'])
+    sources=['src/hashblock_zksnark.cxx', 'src/generate.cpp', 'src/base64.cpp'])
 
 setup(
     name='hashblock_zksnark',
