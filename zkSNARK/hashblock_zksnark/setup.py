@@ -27,18 +27,22 @@ from setuptools.command.build_ext import build_ext
 class BuildExt(build_ext):
     def build_extensions(self):
         self.compiler.compiler_so.remove('-Wstrict-prototypes')
-        self.compiler.compiler_so.append('-DCURVE_EDWARDS')
+        self.compiler.compiler_so.append('-DCURVE_ALT_BN128')
         self.compiler.compiler_so.append('-std=c++11')
         super(BuildExt, self).build_extensions()
 
 
 zksnark_module = Extension(
-    '_hashblock_zksnark',
-    sources=['src/hashblock_zksnark.cxx', 'src/generate.cpp', 'src/base64.cpp'])
+    '_hbgenerate',
+    language='c++',
+    sources=['src/hbgenerate.cxx', 'src/generate.cpp', 'src/base64.cpp'],
+    # libraries=['libff.a', 'libsnark.a', 'libsnark_adsnark.a'],
+    # extra_objects=['/usr/local/usr/local/lib/libsnark.a','/usr/local/usr/local/lib/libff.a','/usr/local/usr/local/lib/libsnark_adsnark.a']
+    )
 
 setup(
-    name='hashblock_zksnark',
+    name='hbgenerate',
     version='0.1.0',
     cmdclass={'build_ext': BuildExt},
     ext_modules=[zksnark_module],
-    py_modules=["hashblock_zksnark"])
+    py_modules=["hbgenerate"])

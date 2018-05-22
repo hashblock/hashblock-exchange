@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y nano libpcre3-dev python3-dev python3-p
 	mkdir -p /hashblock-exchange/zkSNARK
 
 ENV CPATH /usr/local/usr/local/include
+ENV LD_LIBRARY_PATH /usr/local/usr/local/lib:$LD_LIBRARY_PATH
 
 WORKDIR /hashblock-exchange/zkSNARK
 COPY zkSNARK .
@@ -19,6 +20,6 @@ WORKDIR /hashblock-exchange/zkSNARK/hashblock_zksnark
 RUN cp -r /root/libsnark/libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/examples /usr/local/usr/local/include/libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/
 RUN cp -r /root/libsnark/depends/libfqfft/libfqfft /usr/local/usr/local/include/libfqfft/
 
-RUN	swig -c++ -python -o src/hashblock_zksnark.cxx hashblock_zksnark.i
-# RUN python3 setup.py build_ext && cp src/hashblock_zksnark.py . && python3 setup.py bdist_wheel
+RUN	swig -c++ -python -o src/hbgenerate.cxx hbgenerate.i
+RUN python3 setup.py build_ext && cp src/hbgenerate.py . && python3 setup.py bdist_wheel
 
