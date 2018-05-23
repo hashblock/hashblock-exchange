@@ -38,12 +38,13 @@ zksnark_module = Extension(
     '_hbgenerate',
     language='c++',
     sources=['src/hbgenerate.cxx', 'src/generate.cpp', 'src/base64.cpp'],
-    libraries=['gmp', 'gmpxx', 'procps', 'crypto'],
+    libraries=['gmp', 'gmpxx', 'procps'],
     extra_objects=[
         '/usr/local/usr/local/lib/libsnark.a',
         '/usr/local/usr/local/lib/libff.a',
         '/usr/local/usr/local/lib/libsnark_adsnark.a',
-        '/root/libsnark/build/depends/libsnark_supercop.a'])
+        '/root/libsnark/build/depends/libsnark_supercop.a',
+        '/usr/local/usr/local/lib/libzm.a'])
 
 setup(
     name='hbgenerate',
