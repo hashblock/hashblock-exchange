@@ -10,16 +10,25 @@ RUN apt-get update && apt-get install -y nano libpcre3-dev python3-dev python3-p
 	python3 -m pip install --upgrade pip && \
 	mkdir -p /hashblock-exchange/zkSNARK
 
-ENV CPATH /usr/local/usr/local/include
-ENV LD_LIBRARY_PATH /usr/local/usr/local/lib:$LD_LIBRARY_PATH
+WORKDIR /root/libsnark
+RUN rm -R build && \
+	mkdir build && cd build && cmake .. -DCURVE=EDWARDS -DWITH_PROCPS=OFF -DCMAKE_INSTALL_PREFIX=/usr/local && \
+	make && \
+	make install && \
+	cp -r /root/libsnark/libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/examples /usr/local/include/libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/ && \
+	cp -r /root/libsnark/depends/libfqfft/libfqfft /usr/local/include/libfqfft/
+
 
 WORKDIR /hashblock-exchange/zkSNARK
 COPY zkSNARK .
-WORKDIR /hashblock-exchange/zkSNARK/hashblock_zksnark
+WORKDIR /hashblock-exchange/zkSNARK/hashblock_zksnark/src
+RUN gcc -c base64.cpp -o base64.o && \
+	gcc -c -std=c++11 -DBINARY_OUTPUT -DCURVE_EDWARDS -DMONTGOMERY_OUTPUT -DNO_PROCPS -DUSE_ASM -I/root/libsnark/. -I/root/libsnark/depends/libff -I/root/libsnark/depends/libfqfft -I/root/libsnark/depends/libff/libff/.. -isystem /usr/include/x86_64-linux-gnu -c generate.cpp -o generate.o && \
+	gcc  -c dogenerate.cpp -o dogenerate.o
 
-RUN cp -r /root/libsnark/libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/examples /usr/local/usr/local/include/libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/
-RUN cp -r /root/libsnark/depends/libfqfft/libfqfft /usr/local/usr/local/include/libfqfft/
+# Copy the following (uncomment) line to link to executable
+# g++ -std=c++11 -Wall -Wextra -Wfatal-errors -ggdb3 -O2 -march=native -mtune=native -O2 -g -DNDEBUG  /usr/local/lib/libsnark_adsnark.a /usr/local/lib/libsnark.a /usr/local/lib/libff.a -lgmp -lgmpxx -lprocps /root/libsnark/build/depends/libsnark_supercop.a -lcrypto base64.o generate.o dogenerate.o -o dogen
 
-RUN	swig -c++ -python -o src/hbgenerate.cxx hbgenerate.i
-RUN python3 setup.py build_ext && cp src/hbgenerate.py . && python3 setup.py bdist_wheel
+# RUN	swig -c++ -python -o src/hbgenerate.cxx hbgenerate.i
+# RUN python3 setup.py build_ext && cp src/hbgenerate.py . && python3 setup.py bdist_wheel
 
