@@ -75,6 +75,16 @@ def key_owner(key_value):
     return result
 
 
+def zksnark_prover_key():
+    """Returns the registered prover key"""
+    return REST_CONFIG['rest']['zksnark_keys']['prover']
+
+
+def zksnark_verifier_key():
+    """Returns the registered verifier key"""
+    return REST_CONFIG['rest']['zksnark_keys']['verifier']
+
+
 def valid_key(key_value):
     """Tests key against known keys"""
     return False if key_owner(key_value) == UNKNOWN_OWNER else True
@@ -110,6 +120,15 @@ def __read_signer(key_filename):
     return crypto_factory.new_signer(private_key)
 
 
+def __read_zksnark(key_filename):
+    try:
+        with open(key_filename, 'r') as key_file:
+            zksnark_key = key_file.read().strip()
+    except IOError as e:
+        raise CliException('Unable to read key file: {}'.format(str(e)))
+    return zksnark_key
+
+
 def __load_cfg_and_keys(configfile):
     """Reads the configuration file and converts any priv keys to public"""
     print("Reading {} from {}".format(configfile, DEFAULT_CFGR_PATH))
@@ -130,6 +149,13 @@ def __load_cfg_and_keys(configfile):
 
     doc['rest']['signer_keys'] = signer_keys
     doc['rest']['submitters'] = submitter_keys
+
+    zksnark_keys = {}
+    for key, value in doc['rest']['zksnark'].items():
+        zksnarkkey = __read_zksnark(os.path.join(DEFAULT_KEYS_PATH, value))
+        zksnark_keys[key] = zksnarkkey
+    doc['rest']['zksnark_keys'] = submitter_keys
+
     return doc
 
 
