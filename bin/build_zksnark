@@ -69,7 +69,7 @@ main () {
     # docker_clean libsnark
     # check_cmnd
 	info 'Copying hashblock_zksnark executables out of image'
-    # docker run --rm -v $(pwd)/libs:/hbsnark_libs hashblock-zksnark sh -c "cp -r exedir/nameofexe /hbsnark_libs/.”
+    docker run --rm -v $(pwd)/libs:/hbsnark_libs hashblock-zksnark bash -c "cp -r hbzksnark /hbsnark_libs/."
     # check_cmnd
 	info 'Remvoing hashblock-zksnark image'
     # docker_clean libsnark hashblock-zksnark
