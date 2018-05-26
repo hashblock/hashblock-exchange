@@ -16,7 +16,14 @@
 
 # This docker file creates the development hashblock-dev-rest image
 
-FROM python:3.5-slim as base
+FROM ubuntu:xenial as base
+LABEL maintainers="Frank V. Castellucci, Arthur Greef"
+
+RUN apt-get update && \
+ 	apt-get install -y -q \
+    apt-transport-https \
+    python3-dev \
+    python3-pip
 
 RUN mkdir -p /builder && \
  	pip3 install \
@@ -27,6 +34,7 @@ RUN mkdir -p /builder && \
 WORKDIR /builder
 
 COPY bin bin
+COPY libs libs
 COPY apps apps
 COPY protos protos
 COPY families families
@@ -34,16 +42,29 @@ COPY families families
 RUN bin/protogen && \
 	pip3 uninstall -y grpcio grpcio-tools
 
-FROM python:3.5-slim
+# The final image
+
+FROM ubuntu:xenial
 LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 
-RUN python3 -m ensurepip && \
-    pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
+RUN apt-get update \
+ && apt-get install -y -q \
+    apt-transport-https \
+	libssl-dev \
+	libffi-dev  \
+    python3-dev \
+    python3-pip
+
+RUN pip3 install --upgrade pip setuptools && \
+	# pip3 install wheel && \
     rm -r /root/.cache
+
+RUN pip3 install cryptography --no-binary cryptography
 
 WORKDIR /project/hashblock-exchange
 RUN touch __init__.py
 COPY modules modules
+COPY --from=base /builder/libs/hbzksnark /project/hashblock-exchange/bin
 COPY apps/shared apps/shared
 COPY --from=base /builder/apps/protobuf apps/protobuf
 COPY apps/hashblock_rest apps/hashblock_rest

@@ -28,7 +28,14 @@
 #   $ docker build . -f docker/hashblock-setting-tp -t hashblock/hashblock-setting-tp:latest
 #
 
-FROM python:3.5-slim as base
+FROM ubuntu:xenial as base
+LABEL maintainers="Frank V. Castellucci, Arthur Greef"
+
+RUN apt-get update \
+ && apt-get install -y -q \
+    apt-transport-https \
+    python3-dev \
+    python3-pip
 
 RUN mkdir -p /builder && \
  	pip3 install \
@@ -39,6 +46,7 @@ RUN mkdir -p /builder && \
 WORKDIR /builder
 
 COPY bin bin
+COPY libs libs
 COPY apps apps
 COPY modules modules
 COPY protos protos
@@ -50,7 +58,14 @@ RUN bin/protogen && \
 
 # The final image
 
-FROM python:3.5-slim
+FROM ubuntu:xenial
+LABEL maintainers="Frank V. Castellucci, Arthur Greef"
+
+RUN apt-get update \
+ && apt-get install -y -q \
+    apt-transport-https \
+    python3-dev \
+    python3-pip
 
 RUN	pip3 install sawtooth-sdk --upgrade && \
 	mkdir -p /project/hashblock-exchange && \
@@ -60,6 +75,7 @@ RUN	pip3 install sawtooth-sdk --upgrade && \
   	mkdir -p /var/log/sawtooth
 
 COPY --from=base /builder/bin/setting-tp /project/hashblock-exchange/bin
+COPY --from=base /builder/libs/hbzksnark /project/hashblock-exchange/bin
 COPY --from=base /builder/modules /project/hashblock-exchange/modules
 COPY --from=base /builder/families/setting/hashblock_setting /project/hashblock-exchange/families/setting/hashblock_setting
 

@@ -15,12 +15,16 @@
 # -----------------------------------------------------------------------------
 
 # This docker file creates the development hashblock-dev-rest image
-
-FROM python:3.5-slim
+FROM ubuntu:xenial
 LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 
-RUN python3 -m ensurepip && \
-    pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
+RUN apt-get update \
+ && apt-get install -y -q \
+    apt-transport-https \
+    python3-dev \
+    python3-pip
+
+RUN pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
     rm -r /root/.cache
 
 WORKDIR /project/hashblock-exchange

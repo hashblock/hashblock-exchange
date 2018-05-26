@@ -58,10 +58,10 @@ services:
     restart: always
     volumes:
       - ../..:/project/hashblock-exchange
-      - ../../../hbruntime:/project/kandc
+      - ../../../hbruntime:/project/private
     environment:
-      - HASHBLOCK_KEYS=/project/kandc
-      - HASHBLOCK_CONFIG=/project/kandc
+      - HASHBLOCK_KEYS=/project/private
+      - HASHBLOCK_CONFIG=/project/private
       - PYTHONPATH=/project/hashblock-exchange
     depends_on:
       - asset-processor
@@ -77,12 +77,12 @@ services:
     container_name: hashblock-rest
     volumes:
       - ../..:/project/hashblock-exchange
-      - ../../../hbruntime:/project/kandc
+      - ../../../hbruntime:/project/private
     ports:
       - '8000:8000'
     environment:
-      - HASHBLOCK_KEYS=/project/kandc
-      - HASHBLOCK_CONFIG=/project/kandc
+      - HASHBLOCK_KEYS=/project/private
+      - HASHBLOCK_CONFIG=/project/private
       - PYTHONUNBUFFERED='true'
     depends_on:
       - validator
