@@ -9,22 +9,22 @@
 
 #include <libsnark/common/default_types/r1cs_ppzkadsnark_pp.hpp>
 #include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/r1cs_ppzkadsnark.hpp>
-#include "hashblock_r1cs.hpp"
-#include "base64.h"
+#include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/hashblock/match_r1cs.hpp>
+#include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/hashblock/base64.h>
 
 using namespace libsnark;
 
-void generate()
+int main(int argc, const char * argv[])
 {
     default_r1cs_ppzkadsnark_pp::init_public_params();
     libff::start_profiling();
 
     libff::enter_block("Generate Hashblock R1CS");
-    hashblock_r1cs<libff::Fr<snark_pp<default_r1cs_ppzkadsnark_pp>>> r1cs =
-        generate_hashblock_r1cs<libff::Fr<snark_pp<default_r1cs_ppzkadsnark_pp>>>();
+    match_r1cs<libff::Fr<snark_pp<default_r1cs_ppzkadsnark_pp>>> r1cs =
+        generate_match_r1cs<libff::Fr<snark_pp<default_r1cs_ppzkadsnark_pp>>>();
     libff::leave_block("Generate Hashblock R1CS");
 
-    libff::enter_block("Call to hashblock_r1cs_keys");
+    libff::enter_block("Call to generate keys");
 
     r1cs_ppzkadsnark_auth_keys<default_r1cs_ppzkadsnark_pp> auth_keys = r1cs_ppzkadsnark_auth_generator<default_r1cs_ppzkadsnark_pp>();
 
@@ -56,6 +56,6 @@ void generate()
 
     libff::leave_block("Write encoded keys");
 
-    libff::leave_block("Call to hashblock_r1cs_keys");
+    libff::leave_block("Call to generate keys");
 }
 

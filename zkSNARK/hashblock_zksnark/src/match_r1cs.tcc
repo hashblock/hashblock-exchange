@@ -1,5 +1,5 @@
-#ifndef R1CS_EXAMPLES_TCC_
-#define R1CS_EXAMPLES_TCC_
+#ifndef MATCH_R1CS_TCC__
+#define MATCH_R1CS_TCC__
 
 #include <cassert>
 
@@ -8,12 +8,12 @@
 namespace libsnark {
 
 template<typename FieldT>
-hashblock_r1cs<FieldT> generate_hashblock_r1cs()
+match_r1cs<FieldT> generate_match_r1cs()
 {
     const size_t num_constraints = 14;
     const size_t num_inputs = 13;
 
-    libff::enter_block("Call to generate_hashblock_r1cs_example_with_field_input");
+    libff::enter_block("Call to generate_match_r1cst");
 
     assert(num_inputs <= num_constraints + 2);
 
@@ -236,11 +236,11 @@ hashblock_r1cs<FieldT> generate_hashblock_r1cs()
     assert(cs.num_constraints() == num_constraints);
     assert(cs.is_satisfied(primary_input, auxiliary_input));
 
-    libff::leave_block("Call to generate_hashblock_r1cs_example_with_field_input");
+    libff::leave_block("Call to generate_match_r1cs");
 
-    return hashblock_r1cs<FieldT>(std::move(cs), std::move(primary_input), std::move(auxiliary_input));
+    return match_r1cs<FieldT>(std::move(cs), std::move(primary_input), std::move(auxiliary_input));
 }    
 
 } // libsnark
 
-#endif // R1CS_EXAMPLES_TCC
+#endif // MATCH_R1CS_TCC_
