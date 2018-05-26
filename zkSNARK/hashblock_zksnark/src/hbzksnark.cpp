@@ -7,6 +7,8 @@
 
 #include <libff/common/profiling.hpp>
 
+#include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/examples/prf/aes_ctr_prf.tcc>
+#include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/examples/signature/ed25519_signature.tcc>
 #include <libsnark/common/default_types/r1cs_ppzkadsnark_pp.hpp>
 #include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/r1cs_ppzkadsnark.hpp>
 #include <libsnark/zk_proof_systems/ppzkadsnark/r1cs_ppzkadsnark/hashblock/match_r1cs.hpp>
@@ -20,8 +22,7 @@ int main(int argc, const char * argv[])
     libff::start_profiling();
 
     libff::enter_block("Generate Hashblock R1CS");
-    match_r1cs<libff::Fr<snark_pp<default_r1cs_ppzkadsnark_pp>>> r1cs =
-        generate_match_r1cs<libff::Fr<snark_pp<default_r1cs_ppzkadsnark_pp>>>();
+    match_r1cs<libff::Fr<snark_pp<default_r1cs_ppzkadsnark_pp>>> r1cs = generate_match_r1cs<libff::Fr<snark_pp<default_r1cs_ppzkadsnark_pp>>>();
     libff::leave_block("Generate Hashblock R1CS");
 
     libff::enter_block("Call to generate keys");

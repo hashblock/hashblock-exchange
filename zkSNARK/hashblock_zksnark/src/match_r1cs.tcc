@@ -13,7 +13,7 @@ match_r1cs<FieldT> generate_match_r1cs()
     const size_t num_constraints = 14;
     const size_t num_inputs = 13;
 
-    libff::enter_block("Call to generate_match_r1cst");
+    libff::enter_block("Call to generate_match_r1cs");
 
     assert(num_inputs <= num_constraints + 2);
 

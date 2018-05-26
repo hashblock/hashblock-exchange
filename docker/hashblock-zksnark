@@ -17,7 +17,7 @@ RUN cp -r ./hashblock_zksnark/src/ ~/libsnark/libsnark/zk_proof_systems/ppzkadsn
 	sed 's/^.*__PLACEHOLDER__/if("${WITH_SUPERCOP}")\n  add_executable(\n    demo_r1cs_ppzkadsnark\n\n    zk_proof_systems\/ppzkadsnark\/r1cs_ppzkadsnark\/examples\/demo_r1cs_ppzkadsnark.cpp\n  )\n  target_link_libraries(\n    demo_r1cs_ppzkadsnark\n\n    snark_adsnark\n  )\nendif()\n\nif("${WITH_SUPERCOP}")\n  add_executable(\n    hbzksnark\n\n    zk_proof_systems\/ppzkadsnark\/r1cs_ppzkadsnark\/hashblock\/hbzksnark.cpp\n    zk_proof_systems\/ppzkadsnark\/r1cs_ppzkadsnark\/hashblock\/base64.cpp\n  )\n  target_link_libraries(\n    hbzksnark\n\n    snark_adsnark\n  )\nendif()/' ~/libsnark/libsnark/r2.txt > ~/libsnark/libsnark/CMakeLists.txt
 
 WORKDIR /root/libsnark
-# RUN rm -R build && \
-#	mkdir build && cd build && cmake .. && \
-#	make && \
-#	make install 
+ RUN rm -R build && \
+	mkdir build && cd build && cmake .. && \
+	make && \
+	make install 
