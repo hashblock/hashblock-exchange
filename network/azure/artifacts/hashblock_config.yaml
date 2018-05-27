@@ -25,3 +25,8 @@ rest:
   signers:
     church: church.priv
     turing: turing.priv
+
+  # zksnark prover and verifier keys based on #B balancing equation constraints
+  zksnark:
+    prover: hashblock_zkSNARK.pk
+    verifier: hashblock_zkSNARK.vk
