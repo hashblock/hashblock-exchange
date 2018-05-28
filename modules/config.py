@@ -85,6 +85,11 @@ def zksnark_verifier_key():
     return REST_CONFIG['rest']['zksnark_keys']['verifier']
 
 
+def encrypt_key():
+    """Returns the fernet key for encryption"""
+    return REST_CONFIG['rest']['encrypt_keys']['lock']
+
+
 def valid_key(key_value):
     """Tests key against known keys"""
     return False if key_owner(key_value) == UNKNOWN_OWNER else True
@@ -120,13 +125,13 @@ def __read_signer(key_filename):
     return crypto_factory.new_signer(private_key)
 
 
-def __read_zksnark(key_filename):
+def __read_keyfile(key_filename):
     try:
         with open(key_filename, 'r') as key_file:
-            zksnark_key = key_file.read().strip()
+            key_file_key = key_file.read().strip()
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))
-    return zksnark_key
+    return key_file_key
 
 
 def __load_cfg_and_keys(configfile):
@@ -152,10 +157,15 @@ def __load_cfg_and_keys(configfile):
 
     zksnark_keys = {}
     for key, value in doc['rest']['zksnark'].items():
-        zksnarkkey = __read_zksnark(os.path.join(DEFAULT_KEYS_PATH, value))
+        zksnarkkey = __read_keyfile(os.path.join(DEFAULT_KEYS_PATH, value))
         zksnark_keys[key] = zksnarkkey
     doc['rest']['zksnark_keys'] = submitter_keys
 
+    encrypt_keys = {}
+    for key, value in doc['rest']['encrypt'].items():
+        encrypt_key = __read_keyfile(os.path.join(DEFAULT_KEYS_PATH, value))
+        encrypt_keys[key] = encrypt_key
+    doc['rest']['encrypt_keys'] = encrypt_keys
     return doc
 
 

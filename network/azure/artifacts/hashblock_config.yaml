@@ -30,3 +30,7 @@ rest:
   zksnark:
     prover: hashblock_zkSNARK.pk
     verifier: hashblock_zkSNARK.vk
+
+  # Fernet key used for encryption
+  encrypt:
+    lock: fernet.key
