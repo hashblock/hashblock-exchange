@@ -62,6 +62,7 @@ sudo mkdir -p "$SAWTOOTH_HOME/keys";
 sudo mkdir -p "$SAWTOOTH_HOME/logs";
 sudo mkdir -p "$SAWTOOTH_HOME/etc";
 sudo mkdir -p "$SAWTOOTH_HOME/config";
+sudo mkdir -p "$SAWTOOTH_HOME/lib";
 sudo mkdir -p "$SAWTOOTH_DATA";
 
 if [ ! -e "/sawtooth/keys/validator.priv" ]; then
@@ -91,9 +92,10 @@ fi
 
 if [ ! -e "/sawtooth/keys/hashblock_zkSNARK.pk" ]; then
   sudo echo "Generating /sawtooth/keys/hashblock_zkSNARK.pk and /sawtooth/keys/hashblock_zkSNARK.vk" >> $CONFIG_LOG_FILE_PATH;
-  sudo cd /lib
+  sudo cd "$SAWTOOTH_HOME/lib"
   sudo wget -N $HBZKSNARK;
-  hbzksnark -g /sawtooth/keys/
+  sudo chmod +x hbzksnark;
+  ./hbzksnark -g /sawtooth/keys/
 fi
 
 if [ ! -e "/sawtooth/etc/validator.toml" ]; then
