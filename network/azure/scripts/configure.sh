@@ -39,6 +39,7 @@ SAWTOOTH_DATA="$TMP_HOME/data";
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
 GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/artifacts/genesis.batch"
 HASHBLOCK_CONFIG="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/artifacts/hashblock_config.yaml"
+HBZKSNARK="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/libs/bhzksnark"
 
 sudo apt-get -y update
 sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
@@ -86,6 +87,13 @@ fi
 if [ ! -e "/sawtooth/keys/fernet.key" ]; then
   sudo echo "Adding /sawtooth/keys/fernet.key key" >> $CONFIG_LOG_FILE_PATH;
   sudo echo $FERNETKEY >> /sawtooth/keys/fernet.key;
+fi
+
+if [ ! -e "/sawtooth/keys/hashblock_zkSNARK.pk" ]; then
+  sudo echo "Generating /sawtooth/keys/hashblock_zkSNARK.pk and /sawtooth/keys/hashblock_zkSNARK.vk" >> $CONFIG_LOG_FILE_PATH;
+  sudo cd /lib
+  sudo wget -N $HBZKSNARK;
+  hbzksnark -g /sawtooth/keys/
 fi
 
 if [ ! -e "/sawtooth/etc/validator.toml" ]; then
