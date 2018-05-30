@@ -32,6 +32,22 @@ namespace libsnark {
     template<typename FieldT>
     match_r1cs<FieldT> generate_match_r1cs();
 
+    template<typename FieldT>
+    match_r1cs<FieldT> generate_match_r1cs(
+        const int _i_0,
+        const int _n_0,
+        const int _d_0,
+        const int _r_0,
+        const int _i_1,
+        const int _n_1,
+        const int _d_1,
+        const int _r_1,
+        const int _i_2,
+        const int _n_2,
+        const int _d_2,
+        const int _r_2
+    );
+
 } // libsnark
 
 #include "match_r1cs.tcc"
