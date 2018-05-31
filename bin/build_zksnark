@@ -61,6 +61,10 @@ main () {
 	docker_build $zksnark_dockerfile $top_dir libsnark
     check_cmnd
 
+    info 'Building Development hashblock_zksnark'
+    docker_build $top_dir/docker/hashblock-dev-zksnark $top_dir hashblock-dev-zksnark
+    check_cmnd
+
 	info 'Building hashblock_zksnark'
 	docker_build $top_dir/docker/hashblock-zksnark $top_dir hashblock-zksnark
     check_cmnd

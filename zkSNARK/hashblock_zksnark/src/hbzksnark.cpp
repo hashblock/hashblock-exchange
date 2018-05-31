@@ -10,8 +10,8 @@
 
 #include <libsnark/common/default_types/r1cs_ppzksnark_pp.hpp>
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp>
-#include <libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/hashblock/match_r1cs.hpp>
-#include <libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/hashblock/base64.h>
+#include <match_r1cs.hpp>
+#include <base64.h>
 
 using namespace libsnark;
 
