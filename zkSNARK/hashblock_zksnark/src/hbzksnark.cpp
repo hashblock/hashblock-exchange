@@ -15,7 +15,11 @@
 
 using namespace libsnark;
 
+void proove();
+void verify();
+
 match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> _r1cs;
+match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> __r1cs;
 r1cs_ppzksnark_proving_key<default_r1cs_ppzksnark_pp> _pk;
 r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp> _vk;
 r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> _proof;
@@ -61,74 +65,70 @@ void generate_keys(std::string file_path) {
     file_vk << encoded_svk;
 }
 
-void generate_keys_test() {
+void zksnark_test(std::string file_path) {
     default_r1cs_ppzksnark_pp::init_public_params();
-    match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> r1cs = generate_match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>>();
-    r1cs_ppzksnark_keypair<default_r1cs_ppzksnark_pp> keypair = r1cs_ppzksnark_generator<default_r1cs_ppzksnark_pp>(r1cs.constraint_system);
 
-    std::stringstream pkss;
-    std::stringstream vkss;
-    pkss << keypair.pk ;
-    std::string spk = pkss.str();
-    vkss << keypair.vk;
-    std::string svk = vkss.str();
+    generate_keys(file_path);
 
-    const int _i_0 = 5;
-    const int _n_0 = 2;
-    const int _d_0 = 1;
-    const int _r_0 = 10;
-    const int _i_1 = 2;
-    const int _n_1 = 5;
-    const int _d_1 = 2;
-    const int _r_1 = 5;
-    const int _i_2 = 3;
-    const int _n_2 = 7;
-    const int _d_2 = 3;
-    const int _r_2 = 7;
+    const size_t num_inputs = 13;
 
-    match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> r1cs_1 = generate_match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>>(
+    // This is a PASS test
+     int _i_0 = 10;
+     int _n_0 = 4;
+     int _d_0 = 2;
+     int _r_0 = 20;
+     int _i_1 = 11;
+     int _n_1 = 13;
+     int _d_1 = 11;
+     int _r_1 = 13;
+     int _i_2 = 17;
+     int _n_2 = 19;
+     int _d_2 = 17;
+     int _r_2 = 19;
+
+    match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> r1cs = generate_match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>>(
              _i_0, _n_0, _d_0, _r_0,
             _i_1, _n_1, _d_1, _r_1,
             _i_2, _n_2, _d_2, _r_2);
-    r1cs_ppzksnark_keypair<default_r1cs_ppzksnark_pp> keypair_1 = r1cs_ppzksnark_generator<default_r1cs_ppzksnark_pp>(r1cs_1.constraint_system);
+    __r1cs = r1cs;
 
-    std::stringstream pkss_1;
-    std::stringstream vkss_1;
-    pkss_1 << keypair_1.pk ;
-    std::string spk_1 = pkss_1.str();
-    vkss_1 << keypair_1.vk;
-    std::string svk_1 = vkss_1.str();
+    proove();
+    verify();
 
-    if(spk.compare(spk_1) !=0 )
-    {
-        std::cout << "pk NOT equal" << std::endl;
-    }
-    else
-    {
-        std::cout << "pk ARE equal" << std::endl;
-    }
+    // This is a FAIL test
+     _i_0 = 0;  // Should be 10
+     _n_0 = 4;
+     _d_0 = 2;
+     _r_0 = 20;
+     _i_1 = 11;
+     _n_1 = 13;
+     _d_1 = 11;
+     _r_1 = 13;
+     _i_2 = 17;
+     _n_2 = 19;
+     _d_2 = 17;
+     _r_2 = 19;
 
-    if(svk.compare(svk_1) != 0)
-    {
-        std::cout << "vk NOT equal" << std::endl;
-    }
-    else
-    {
-        std::cout << "vk ARE equal" << std::endl;
-    }
+    r1cs = generate_match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>>(
+             _i_0, _n_0, _d_0, _r_0,
+            _i_1, _n_1, _d_1, _r_1,
+            _i_2, _n_2, _d_2, _r_2);
+    __r1cs = r1cs;
 
+    proove();
+    verify();
 }
 
 void proove() {
     default_r1cs_ppzksnark_pp::init_public_params();
-    r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> proof = r1cs_ppzksnark_prover<default_r1cs_ppzksnark_pp>(_pk, _r1cs.primary_input, _r1cs.auxiliary_input);
+    r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> proof = r1cs_ppzksnark_prover<default_r1cs_ppzksnark_pp>(_pk, __r1cs.primary_input, __r1cs.auxiliary_input);
     _proof = proof;
 }
 
 void verify()
 {
     default_r1cs_ppzksnark_pp::init_public_params();
-    const bool ans = r1cs_ppzksnark_verifier_strong_IC<default_r1cs_ppzksnark_pp>(_vk, _r1cs.primary_input, _proof);
+    const bool ans = r1cs_ppzksnark_verifier_strong_IC<default_r1cs_ppzksnark_pp>(_vk, __r1cs.primary_input, _proof);
     printf("\n"); libff::print_indent(); libff::print_mem("after verifier");
     printf("* The verification result is: %s\n", (ans ? "PASS" : "FAIL"));
 }
@@ -160,7 +160,8 @@ int main(int argc, const char * argv[]) {
         verify();
     }
     else if (strcmp(argv[1], "-t") == 0) {
-        generate_keys_test();
+            std::string file_path(argv[2]);
+            zksnark_test(file_path);
     }
     else {
         std::cerr <<  "No command match. Correct input and try again" << std::endl;
