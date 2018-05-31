@@ -44,7 +44,7 @@ void generate_keys(std::string file_path) {
             _i_1, _n_1, _d_1, _r_1,
             _i_2, _n_2, _d_2, _r_2);
     _r1cs = r1cs;
-    
+
     r1cs_ppzksnark_keypair<default_r1cs_ppzksnark_pp> keypair = r1cs_ppzksnark_generator<default_r1cs_ppzksnark_pp>(r1cs.constraint_system);
     _pk = keypair.pk;
     _vk = keypair.vk;
@@ -136,12 +136,12 @@ void verify()
 int main(int argc, const char * argv[]) {
 
     if (argc < 3) {
-        std::cerr <<  "Invalid catll. hbzksnark [-g, -p, -v] [options]" << std::endl;
+        std::cerr <<  "Invalid call. hbzksnark [-g, -p, -v, -t] [options]" << std::endl;
         return -1;
     }
     else if (strcmp(argv[1], "-g") == 0) {
         if (argc > 3) {
-            std::cerr << "Invalid catll. hbzksnark -g file_path" << std::endl;
+            std::cerr << "Invalid call. hbzksnark -g file_path" << std::endl;
             return -1;
         }
         else {

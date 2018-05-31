@@ -18,6 +18,6 @@ RUN cp -r ./hashblock_zksnark/src/ ~/libsnark/libsnark/zk_proof_systems/ppzksnar
 
 WORKDIR /root/libsnark
 RUN rm -R build && \
-	mkdir build && cd build && cmake .. && make
+	mkdir build && cd build && cmake .. && make && make install
 
 WORKDIR /root/libsnark/build/libsnark
