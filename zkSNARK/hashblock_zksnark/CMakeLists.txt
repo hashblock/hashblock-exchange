@@ -12,12 +12,11 @@ set(SOURCES src/hbzksnark.cpp src/base64.cpp)
 
 # Build settings
 set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -Wall -Wextra -Wfatal-errors -O2")
-add_definitions(-DCURVE_BN128 -DBINARY_OUTPUT -DBN_SUPPORT_SNARK=1 -DMONTGOMERY_OUTPUT -DUSE_ASM)
+add_definitions(-DCURVE_BN128 -DBINARY_OUTPUT -DWITH_PROCPS=OFF -DBN_SUPPORT_SNARK=1 -DMONTGOMERY_OUTPUT -DUSE_ASM)
 
 # Link settings
 find_library(HB_GMP NAMES gmp)
 find_library(HB_GMPXX NAMES gmpxx)
-find_library(HB_PPS NAMES procps)
 find_library(HB_CRYPTO NAMES crypto)
 find_library(HB_SNARK NAMES snark)
 find_library(HB_FF NAMES ff)
@@ -30,7 +29,6 @@ target_link_libraries(hbzksnark
 	-std=c++11 -Wall -Wextra -Wfatal-errors
 	${HB_GMP}
 	${HB_GMPXX}
-	${HB_PPS}
 	${HB_SNARK}
 	${HB_FF}
 	${HB_ZM}
