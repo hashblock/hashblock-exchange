@@ -6,24 +6,37 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <regex>
 
 #include <libff/common/profiling.hpp>
 
 #include <libsnark/common/default_types/r1cs_ppzksnark_pp.hpp>
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp>
+#include <keyutils.hpp>
 #include <match_r1cs.hpp>
 #include <base64.h>
 
 using namespace libsnark;
 
-void proove();
-void verify();
-
 match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> _r1cs;
 match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> __r1cs;
-r1cs_ppzksnark_proving_key<default_r1cs_ppzksnark_pp> _pk;
-r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp> _vk;
 r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> _proof;
+
+// Loads a key from file and decodes from base64
+template<class T>
+T get_constraint_key(std::string const& file_path,
+                                std::string const& file_name)
+{
+    std::ofstream key_file;
+    key_file.open(file_path + file_name, std::fstream::in);
+    std::stringstream encoded_key;
+    encoded_key << key_file.rdbuf();
+    std::string key = base64_decode(encoded_key.str());
+    std::stringstream _key(key);
+    T the_pk;
+    _key >> the_pk;
+    return the_pk;
+}
 
 void generate_keys(std::string file_path) {
     default_r1cs_ppzksnark_pp::init_public_params();
@@ -47,8 +60,6 @@ void generate_keys(std::string file_path) {
     _r1cs = r1cs;
 
     r1cs_ppzksnark_keypair<default_r1cs_ppzksnark_pp> keypair = r1cs_ppzksnark_generator<default_r1cs_ppzksnark_pp>(r1cs.constraint_system);
-    _pk = keypair.pk;
-    _vk = keypair.vk;
 
     std::stringstream pkss;
     std::stringstream vkss;
@@ -66,10 +77,35 @@ void generate_keys(std::string file_path) {
     file_vk << encoded_svk;
 }
 
+void proove(std::string const& file_path)
+{
+    default_r1cs_ppzksnark_pp::init_public_params();
+    std::string prvkey("hashblock_zkSNARK.pk");
+    static r1cs_ppzksnark_proving_key<default_r1cs_ppzksnark_pp> _pk =
+         get_constraint_key<r1cs_ppzksnark_proving_key<default_r1cs_ppzksnark_pp>>
+            (file_path, prvkey);
+
+    r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> proof =
+        r1cs_ppzksnark_prover<default_r1cs_ppzksnark_pp>(_pk,
+            __r1cs.primary_input, __r1cs.auxiliary_input);
+    _proof = proof;
+}
+
+void verify(std::string const& file_path)
+{
+    default_r1cs_ppzksnark_pp::init_public_params();
+    std::string verkey("hashblock_zkSNARK.vk");
+    r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp> _vk =
+        get_constraint_key<r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp>>
+        (file_path, verkey);
+    const bool ans = r1cs_ppzksnark_verifier_strong_IC<default_r1cs_ppzksnark_pp>(
+        _vk, __r1cs.primary_input, _proof);
+    printf("\n"); libff::print_indent(); libff::print_mem("after verifier");
+    printf("* The verification result is: %s\n", (ans ? "PASS" : "FAIL"));
+}
+
 void zksnark_test(std::string file_path) {
     default_r1cs_ppzksnark_pp::init_public_params();
-
-    generate_keys(file_path);
 
     const size_t num_inputs = 13;
 
@@ -93,8 +129,8 @@ void zksnark_test(std::string file_path) {
             _i_2, _n_2, _d_2, _r_2);
     __r1cs = r1cs;
 
-    proove();
-    verify();
+    proove(file_path);
+    verify(file_path);
 
     // This is a FAIL test
      _i_0 = 0;  // Should be 10
@@ -116,49 +152,60 @@ void zksnark_test(std::string file_path) {
             _i_2, _n_2, _d_2, _r_2);
     __r1cs = r1cs;
 
-    proove();
-    verify();
+    proove(file_path);
+    verify(file_path);
 }
 
-void proove() {
-    default_r1cs_ppzksnark_pp::init_public_params();
-    r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> proof = r1cs_ppzksnark_prover<default_r1cs_ppzksnark_pp>(_pk, __r1cs.primary_input, __r1cs.auxiliary_input);
-    _proof = proof;
-}
-
-void verify()
+static const std::regex INT_TYPE("[+-]?[0-9]+");
+int toInt(const std::string& sval)
 {
-    default_r1cs_ppzksnark_pp::init_public_params();
-    const bool ans = r1cs_ppzksnark_verifier_strong_IC<default_r1cs_ppzksnark_pp>(_vk, __r1cs.primary_input, _proof);
-    printf("\n"); libff::print_indent(); libff::print_mem("after verifier");
-    printf("* The verification result is: %s\n", (ans ? "PASS" : "FAIL"));
+    int val;
+    if(std::regex_match(sval, INT_TYPE))
+        val = atoi(sval.c_str());
+    else
+        throw std::runtime_error("Not valid integer: " + sval);
+    return val;
+}
+
+std::vector<int> extract_ints(std::string const& input_str)  {
+    size_t num_inputs = 12;
+    std::vector<int> ints;
+    std::istringstream input(input_str);
+
+    std::string number;
+    while (std::getline(input, number, ',')) {
+        int i = toInt(number);
+        ints.push_back(i);
+    }
+    if(ints.size() != num_inputs)
+        throw std::runtime_error("12 comma separated integers required, got: "
+            + input_str);
+
+    return ints;
 }
 
 int main(int argc, const char * argv[]) {
 
     if (argc < 3) {
-        std::cerr <<  "Invalid call. hbzksnark [-g, -p, -v, -t] [options]" << std::endl;
+        std::cerr <<  "Invalid call. hbzksnark [-g, -p, -v] [options]" << std::endl;
         return -1;
     }
     else if (strcmp(argv[1], "-g") == 0) {
-        if (argc > 3) {
+        if (argc > 4) {
             std::cerr << "Invalid call. hbzksnark -g file_path" << std::endl;
             return -1;
         }
         else {
             std::string file_path(argv[2]);
-            generate_keys(file_path);
-
-            //TODO: Remove the following lines
-            proove();
-            verify();
+            std::string keyvars(argv[3]);
+            generate_constraint_keys(file_path, extract_ints(keyvars));
         }
     }
     else if (strcmp(argv[1], "-p") == 0) {
-        proove();
+        // proove();
     }
     else if (strcmp(argv[1], "-v") == 0) {
-        verify();
+        // verify();
     }
     else if (strcmp(argv[1], "-t") == 0) {
             std::string file_path(argv[2]);

@@ -30,9 +30,6 @@ namespace libsnark {
     };
 
     template<typename FieldT>
-    match_r1cs<FieldT> generate_match_r1cs();
-
-    template<typename FieldT>
     match_r1cs<FieldT> generate_match_r1cs(
         const int _i_0,
         const int _n_0,

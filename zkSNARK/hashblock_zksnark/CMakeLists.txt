@@ -8,7 +8,7 @@ project (hbzksnark)
 
 include_directories(/usr/local/include /root/libsnark /root/libsnark/depends/libff /root/libsnark/depends/libfqfft /root/libsnark/depends/libff/libff/.. include -isystem /usr/include/x86_64-linux-gnu)
 
-set(SOURCES src/hbzksnark.cpp src/base64.cpp)
+set(SOURCES src/hbzksnark.cpp src/base64.cpp src/keyutils.cpp)
 
 # Build settings
 set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -Wall -Wextra -Wfatal-errors -O2")
