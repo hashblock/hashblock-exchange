@@ -1,4 +1,4 @@
-/*
+# ------------------------------------------------------------------------------
 # Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-*/
+# ------------------------------------------------------------------------------
 
-#ifndef _KEYUTILS_HPP
-#define _KEYUTILS_HPP
+import subprocess
 
-void generate_constraint_keys(std::string const&, std::vector<int> const&);
+data_str = "10,4,2,20,11,13,11,13,17,19,17,19"
 
-#endif /* _KEYUTILS_HPP */
+key_gen = subprocess.run(['./hbzksnark', '-g', './'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
