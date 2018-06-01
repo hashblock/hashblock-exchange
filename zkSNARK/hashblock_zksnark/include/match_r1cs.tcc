@@ -2,7 +2,7 @@
 #define MATCH_R1CS_TCC__
 
 #include <cassert>
-
+#include <stdexcept>
 #include <libff/common/utils.hpp>
 
 namespace libsnark {
@@ -251,10 +251,13 @@ match_r1cs<FieldT> generate_match_r1cs(
     assert(cs.num_inputs() == num_inputs);
     assert(cs.num_constraints() == num_constraints);
     assert(cs.is_satisfied(primary_input, auxiliary_input));
-
     // libff::leave_block("Call to generate_hashblock_r1cs_example_with_field_input");
+    if (cs.is_satisfied(primary_input, auxiliary_input))
+        return match_r1cs<FieldT>(std::move(cs), std::move(primary_input), std::move(auxiliary_input));
+    else {
+        throw std::invalid_argument("CS not valid");
+    }
 
-    return match_r1cs<FieldT>(std::move(cs), std::move(primary_input), std::move(auxiliary_input));
 }
 
 } // libsnark

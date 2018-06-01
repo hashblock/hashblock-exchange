@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 
 #include <libff/common/profiling.hpp>
@@ -162,43 +163,64 @@ int main(int argc, const char * argv[]) {
         return -1;
     }
     else if (strcmp(argv[1], "-g") == 0) {
+        //  Generate keys returns 0 for successful generation else
+        //  exception in secret key given. If exception, return -1 and stderr has reason
         if (argc > 4) {
             std::cerr << "Invalid call. hbzksnark -g file_path secret_string" << std::endl;
             return -1;
         }
         else {
-            std::string file_path(argv[2]);
-            std::string keyvars(argv[3]);
-            // match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> r1csP =
-            //     generate_constraint(extract_ints(keyvars));
-            return generate_constraint_keys(file_path,
-                generate_constraint(keyvars));
-                //keyvars);
+            try {
+                std::string file_path(argv[2]);
+                std::string keyvars(argv[3]);
+                return generate_constraint_keys(file_path,
+                    generate_constraint(keyvars));
+            }
+            catch(std::invalid_argument & e) {
+                std::cerr << e.what() << std::endl;
+                return -1;
+            }
         }
     }
     else if (strcmp(argv[1], "-p") == 0) {
+        //  Generate proof returns 0 for successful generation else
+        //  exception in secret key given. If exception, return -1 and stderr has reason
         if (argc != 4) {
             std::cerr << "Invalid call. hbzksnark -p file_path data_str" << std::endl;
             return -1;
         }
         else {
-            std::string file_path(argv[2]);
-            std::string keyvars(argv[3]);
-            proove(file_path,generate_constraint(keyvars));
-            return 0;
+            try {
+                std::string file_path(argv[2]);
+                std::string keyvars(argv[3]);
+                proove(file_path,generate_constraint(keyvars));
+                return 0;
+            }
+            catch(std::invalid_argument & e) {
+                std::cerr << e.what() << std::endl;
+                return -1;
+            }
         }
     }
     else if (strcmp(argv[1], "-v") == 0) {
+        //  Verify proof returns 0 for successful generation else
+        //  exception in secret key given. If exception, return -1 and stderr has reason
         if (argc != 5) {
             std::cerr << "Invalid call. hbzksnark -v file_path proof_str data_str" << std::endl;
             return -1;
         }
         else {
-            std::string file_path(argv[2]);
-            std::string proofstr(argv[3]);
-            std::string keyvars(argv[4]);
-            verify(file_path, decode_proof_string(proofstr), generate_constraint(keyvars));
-            return 0;
+            try {
+                std::string file_path(argv[2]);
+                std::string proofstr(argv[3]);
+                std::string keyvars(argv[4]);
+                verify(file_path, decode_proof_string(proofstr), generate_constraint(keyvars));
+                return 0;
+            }
+            catch(std::invalid_argument & e) {
+                std::cerr << e.what() << std::endl;
+                return -1;
+            }
         }
     }
     else if (strcmp(argv[1], "-t") == 0) {

@@ -32,7 +32,7 @@ int toInt(const string& sval)
     if(std::regex_match(sval, INT_TYPE))
         val = atoi(sval.c_str());
     else
-        throw std::runtime_error("Not valid integer: " + sval);
+        throw invalid_argument("Not valid integer: " + sval);
     return val;
 }
 
@@ -47,7 +47,7 @@ vector<int> extract_ints(string const& input_str)  {
         ints.push_back(i);
     }
     if(ints.size() != num_inputs)
-        throw runtime_error("12 comma separated integers required, got: "
+        throw invalid_argument("12 comma separated integers required, got: "
             + input_str);
 
     return ints;
