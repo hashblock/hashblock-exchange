@@ -9,18 +9,22 @@ namespace libsnark {
 
 template<typename FieldT>
 match_r1cs<FieldT> generate_match_r1cs(
-    const int _i_0,
-    const int _n_0,
-    const int _d_0,
-    const int _r_0,
-    const int _i_1,
-    const int _n_1,
-    const int _d_1,
-    const int _r_1,
-    const int _i_2,
-    const int _n_2,
-    const int _d_2,
-    const int _r_2)
+    // The match equation is Q_i * (Q_n/Q_d) = Q_r
+    // Q = quantity, i = initiate, r = reciprocate, n = reciprocate ratio numerator, d = reciprocate ratio denominator
+    // When expanded this is v_i * (v_n/v_d) = v_r && u_i * (u_n/u_d) = u_r && r_i * (r_n/r_d) = r_r
+    // Where v = quantity value, u = quantity unit, r = quanity resource
+    const int v_i,
+    const int v_n,
+    const int v_d,
+    const int v_r,
+    const int u_i,
+    const int u_n,
+    const int u_d,
+    const int u_r,
+    const int r_i,
+    const int r_n,
+    const int r_d,
+    const int r_r)
 {
     const size_t num_constraints = 14;
     const size_t num_inputs = 13;
@@ -34,20 +38,20 @@ match_r1cs<FieldT> generate_match_r1cs(
     cs.auxiliary_input_size = 13;
 
     r1cs_variable_assignment<FieldT> full_variable_assignment;
-    FieldT i_0 = FieldT(_i_0);
-    FieldT n_0 = FieldT(_n_0);
-    FieldT d_0 = FieldT(_d_0);
-    FieldT r_0 = FieldT(_r_0);
+    FieldT i_0 = FieldT(v_i);
+    FieldT n_0 = FieldT(v_n);
+    FieldT d_0 = FieldT(v_d);
+    FieldT r_0 = FieldT(v_r);
 
-    FieldT i_1 = FieldT(_i_1);
-    FieldT n_1 = FieldT(_n_1);
-    FieldT d_1 = FieldT(_d_1);
-    FieldT r_1 = FieldT(_r_1);
+    FieldT i_1 = FieldT(u_i);
+    FieldT n_1 = FieldT(u_n);
+    FieldT d_1 = FieldT(u_d);
+    FieldT r_1 = FieldT(u_r);
 
-    FieldT i_2 = FieldT(_i_2);
-    FieldT n_2 = FieldT(_n_2);
-    FieldT d_2 = FieldT(_d_2);
-    FieldT r_2 = FieldT(_r_2);
+    FieldT i_2 = FieldT(r_i);
+    FieldT n_2 = FieldT(r_n);
+    FieldT d_2 = FieldT(r_d);
+    FieldT r_2 = FieldT(r_r);
 
     FieldT out = FieldT::one();
 
