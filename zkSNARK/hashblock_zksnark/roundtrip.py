@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci and Arthur Greef
+# Copyright 2018 Frank V. Castellucci and Turing Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,10 +33,10 @@ if key_gen.returncode == 0:
             ['build/hbzksnark', '-v', 'build/', prf_str, data_str],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if ver_gen.returncode == 0:
-            print("Frank is a GOD!")
+            print("Church is a GOD!")
         else:
-            print("Arthur's fault {}".format(ver_gen))
+            print("Turing's fault {}".format(ver_gen))
     else:
-        print("Arthur's fault {}".format(prf_gen))
+        print("Turing's fault {}".format(prf_gen))
 else:
-    print("Arthur's fault {}".format(key_gen))
+    print("Turing's fault {}".format(key_gen))
