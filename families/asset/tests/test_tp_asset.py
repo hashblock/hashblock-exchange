@@ -29,7 +29,7 @@ from hashblock_asset_test.asset_message_factory \
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
 
-from sdk.python.address import Address
+from modules.address import Address
 
 _asset_addr = Address(Address.FAMILY_ASSET)
 _setting_addr = Address(Address.FAMILY_SETTING)
@@ -129,7 +129,7 @@ class TestAsset(TransactionProcessorTestCase):
             nonce="somenonce")
         record = AssetCandidate.VoteRecord(
             public_key=pkey,
-            vote=AssetVote.ACCEPT)
+            vote=AssetVote.VOTE_ACCEPT)
         return AssetCandidates(candidates=[
             AssetCandidate(
                 proposal_id=proposal_id,
@@ -237,7 +237,7 @@ class TestAsset(TransactionProcessorTestCase):
         proposal_id = self._setup_vote(
             asset,
             dimension,
-            AssetVote.ACCEPT,
+            AssetVote.VOTE_ACCEPT,
             VOTER2)
         self._expect_set(proposal_id, x)
         self._expect_add_event(proposal_id)
@@ -248,7 +248,7 @@ class TestAsset(TransactionProcessorTestCase):
         self._setup_vote(
             asset,
             dimension,
-            AssetVote.REJECT,
+            AssetVote.VOTE_REJECT,
             VOTER2)
         self._set_empty_candidates(dimension)
         self._expect_ok()
@@ -309,7 +309,7 @@ class TestAsset(TransactionProcessorTestCase):
             nonce="somenonce")
         record = AssetCandidate.VoteRecord(
             public_key=voter,
-            vote=AssetVote.ACCEPT)
+            vote=AssetVote.VOTE_ACCEPT)
         return AssetCandidates(candidates=[
             AssetCandidate(
                 proposal_id=proposal_id,
@@ -340,7 +340,7 @@ class TestAsset(TransactionProcessorTestCase):
             uproposal_id,
             self.unit,
             Address.DIMENSION_UNIT,
-            AssetVote.ACCEPT)
+            AssetVote.VOTE_ACCEPT)
         self._get_setting(Address.DIMENSION_UNIT)
         self._expect_get(
             _asset_addr.candidates(Address.DIMENSION_UNIT),
@@ -357,6 +357,6 @@ class TestAsset(TransactionProcessorTestCase):
         self._setup_vote(
             self.unit,
             Address.DIMENSION_UNIT,
-            AssetVote.ACCEPT,
+            AssetVote.VOTE_ACCEPT,
             self._public_key)
         self._expect_invalid_transaction()

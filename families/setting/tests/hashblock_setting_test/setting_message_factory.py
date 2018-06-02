@@ -18,7 +18,7 @@ from sawtooth_processor_test.message_factory import MessageFactory
 
 from protobuf.setting_pb2 import SettingPayload
 from protobuf.setting_pb2 import Settings
-from sdk.python.address import Address
+from modules.address import Address
 
 
 class SettingMessageFactory(object):

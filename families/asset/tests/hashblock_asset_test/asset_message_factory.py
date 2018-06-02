@@ -21,7 +21,7 @@ from protobuf.asset_pb2 import AssetProposal
 from protobuf.asset_pb2 import AssetVote
 from protobuf.asset_pb2 import AssetPayload
 
-from sdk.python.address import Address
+from modules.address import Address
 
 LOGGER = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class AssetMessageFactory(object):
             else AssetProposal.RESOURCE,
             nonce=nonce)
         payload = AssetPayload(
-            action=AssetPayload.PROPOSE,
+            action=AssetPayload.ACTION_PROPOSE,
             dimension=dimension,
             data=proposal.SerializeToString())
 
@@ -84,7 +84,7 @@ class AssetMessageFactory(object):
             proposal_id=proposal_id,
             vote=vote)
         payload = AssetPayload(
-            action=AssetPayload.VOTE,
+            action=AssetPayload.ACTION_VOTE,
             dimension=dimension,
             data=avote.SerializeToString())
 

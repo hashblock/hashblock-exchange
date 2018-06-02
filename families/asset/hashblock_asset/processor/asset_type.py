@@ -20,8 +20,7 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 
 from protobuf.asset_pb2 import Unit
 from protobuf.asset_pb2 import Resource
-
-from sdk.python.address import Address
+from modules.address import Address
 
 
 class AssetType(ABC):

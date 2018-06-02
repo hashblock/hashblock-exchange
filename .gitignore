@@ -118,3 +118,5 @@ protobuf/
 .vscode/
 
 
+
+temp/libsnark

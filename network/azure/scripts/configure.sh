@@ -1,31 +1,45 @@
 #!/bin/bash
 
-if [ $# -lt 7 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+if [ $# -lt 12 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
-NODEINDEX=$2
-DNS=$3
-PRIVKEY=$4
-PUBKEY=$5
-NETWORKPRIVKEY=$6
-NETWORKPUBKEY=$7
+NODEINDEX=$2;
+DNS=$3;
+PRIVKEY=$4;
+PUBKEY=$5;
+NETWORKPRIVKEY=$6;
+NETWORKPUBKEY=$7;
+ENIGMAPRIVKEY=$8;
+ENIGMAPUBKEY=$9;
+shift;
+FERNETKEY=$9;
+shift;
+CHURCHPRIVKEY=$9;
+shift;
+TURINGPRIVKEY=$9;
 
-TMP_HOME="/sawtooth"
+TMP_HOME="/sawtooth";
+HOMEDIR="/home/$USER";
+CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
+echo "Fernet key: $FERNETKEY" >> $CONFIG_LOG_FILE_PATH;
+echo "Church key: $CHURCHPRIVKEY" >> $CONFIG_LOG_FILE_PATH;
+echo "Turing key: $TURINGPRIVKEY" >> $CONFIG_LOG_FILE_PATH;
 
 if [[ -z "${SAWTOOTH_HOME}" ]]; then
   sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
   sudo echo "SAWTOOTH_HOME=$TMP_HOME" >> /etc/environment;
 fi
 
-export SAWTOOTH_HOME=$TMP_HOME
+SAWTOOTH_HOME=$TMP_HOME;
+export SAWTOOTH_HOME;
+SAWTOOTH_DATA="$TMP_HOME/data";
 
-HOMEDIR="/home/$USER";
-SAWTOOTH_DATA="$SAWTOOTH_HOME/data"
-CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 ARTIFACTS_URL_PREFIX="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/docker/compose";
-GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/config/genesis.batch"
+GENESIS_BATCH="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/artifacts/genesis.batch"
+HASHBLOCK_CONFIG="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/network/azure/artifacts/hashblock_config.yaml"
+HBZKSNARK="https://raw.githubusercontent.com/hashblock/hashblock-exchange/master/libs/hbzksnark"
 
 sudo apt-get -y update
 sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
@@ -44,10 +58,12 @@ sudo service docker start
 sudo curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 
-sudo mkdir -p "$SAWTOOTH_HOME/keys"
-sudo mkdir -p "$SAWTOOTH_HOME/logs"
-sudo mkdir -p "$SAWTOOTH_HOME/etc"
-sudo mkdir -p $SAWTOOTH_DATA;
+sudo mkdir -p "$SAWTOOTH_HOME/keys";
+sudo mkdir -p "$SAWTOOTH_HOME/logs";
+sudo mkdir -p "$SAWTOOTH_HOME/etc";
+sudo mkdir -p "$SAWTOOTH_HOME/config";
+sudo mkdir -p "$SAWTOOTH_HOME/lib";
+sudo mkdir -p "$SAWTOOTH_DATA";
 
 if [ ! -e "/sawtooth/keys/validator.priv" ]; then
   sudo echo "Adding /sawtooth/keys/validator.priv key" >> $CONFIG_LOG_FILE_PATH;
@@ -59,16 +75,55 @@ if [ ! -e "/sawtooth/keys/validator.pub" ]; then
   sudo echo $PUBKEY >> /sawtooth/keys/validator.pub;
 fi
 
+if [ ! -e "/sawtooth/keys/enigma.priv" ]; then
+  sudo echo "Adding /sawtooth/keys/enigma.priv key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $ENIGMAPRIVKEY >> /sawtooth/keys/enigma.priv;
+fi
+
+if [ ! -e "/sawtooth/keys/enigma.pub" ]; then
+  sudo echo "Adding /sawtooth/keys/enigma.pub key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $ENIGMAPUBKEY >> /sawtooth/keys/enigma.pub;
+fi
+
+if [ ! -e "/sawtooth/keys/fernet.key" ]; then
+  sudo echo "Adding /sawtooth/keys/fernet.key key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $FERNETKEY >> /sawtooth/keys/fernet.key;
+fi
+
+if [ ! -e "/sawtooth/keys/hashblock_zkSNARK.pk" ]; then
+  sudo echo "Generating /sawtooth/keys/hashblock_zkSNARK.pk and /sawtooth/keys/hashblock_zkSNARK.vk" >> $CONFIG_LOG_FILE_PATH;
+  sudo cd "$SAWTOOTH_HOME/lib"
+  sudo wget -N $HBZKSNARK;
+  sudo chmod +x hbzksnark;
+  ./hbzksnark -g /sawtooth/keys/
+fi
+
 if [ ! -e "/sawtooth/etc/validator.toml" ]; then
-  sudo echo "Adding networ public and private keys to /sawtooth/etc/validator.toml" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo "Adding networt public and private keys to /sawtooth/etc/validator.toml" >> $CONFIG_LOG_FILE_PATH;
   sudo echo "network_private_key = '$NETWORKPRIVKEY'" >> /sawtooth/etc/validator.toml;
   sudo echo "network_public_key = '$NETWORKPUBKEY'" >> /sawtooth/etc/validator.toml;
+fi
+
+if [ ! -e "/sawtooth/keys/church.priv" ]; then
+  sudo echo "Adding /sawtooth/keys/church.priv key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $CHURCHPRIVKEY >> /sawtooth/keys/church.priv;
+fi
+
+if [ ! -e "/sawtooth/keys/turing.priv" ]; then
+  sudo echo "Adding /sawtooth/keys/turing.priv key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $TURINGPRIVKEY >> /sawtooth/keys/turing.priv;
 fi
 
 if [ $NODEINDEX -eq 0 ] && [ ! -e "$SAWTOOTH_DATA/block-chain-id" ]; then
   sudo echo "Adding genisis batch file to directory: $SAWTOOTH_DATA" >> $CONFIG_LOG_FILE_PATH;
   cd $SAWTOOTH_DATA;
-  sudo wget -N $GENESIS_BATCH;
+  sudo wget -N $GENESIS_BATCH; 
+fi
+
+if [ ! -e "/sawtooth/config/hashblock_config.yaml" ]; then
+  sudo echo "Adding /sawtooth/config/hashblock_config.yaml file" >> $CONFIG_LOG_FILE_PATH;
+  cd /sawtooth/config;
+  sudo wget -N $HASHBLOCK_CONFIG;
 fi
 
 cd $HOMEDIR;

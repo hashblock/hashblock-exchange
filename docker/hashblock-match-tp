@@ -22,14 +22,21 @@
 # 	1. Installs protobuf
 #	2. Generates protobuf files
 # final image:
-#	1. Installs sawtooth-sdk
+#	1. Installs sawtooth-sdk and crypto
 # 	2. Copies relevant files from base
 # Build:
 #   $ cd hashblock-exchange
 #   $ docker build . -f docker/hashblock-match-tp -t hashblock/hashblock-match-tp:latest
 #
 
-FROM python:3.5-slim as base
+FROM ubuntu:xenial as base
+LABEL maintainers="Frank V. Castellucci, Arthur Greef"
+
+RUN apt-get update \
+ && apt-get install -y -q \
+    apt-transport-https \
+    python3-dev \
+    python3-pip
 
 RUN mkdir -p /builder && \
  	pip3 install \
@@ -40,27 +47,40 @@ RUN mkdir -p /builder && \
 WORKDIR /builder
 
 COPY bin bin
- COPY cli cli
- COPY protos protos
- COPY families families
- COPY sdk sdk
+COPY libs libs
+COPY apps apps
+COPY modules modules
+COPY protos protos
+COPY families families
 
- RUN bin/protogen && \
+RUN bin/protogen && \
  	pip3 uninstall -y grpcio grpcio-tools
 
 # The final image
 
-FROM python:3.5-slim
+FROM ubuntu:xenial
+LABEL maintainers="Frank V. Castellucci, Arthur Greef"
+
+RUN apt-get update \
+ && apt-get install -y -q \
+    apt-transport-https \
+	libssl-dev \
+	libffi-dev  \
+    python3-dev \
+    python3-pip
+
+RUN pip3 install cryptography --no-binary cryptography
 
 RUN	pip3 install sawtooth-sdk --upgrade && \
 	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
-  	mkdir -p /project/hashblock-exchange/sdk && \
+  	mkdir -p /project/hashblock-exchange/modules && \
   	mkdir -p /project/hashblock-exchange/families/match && \
   	mkdir -p /var/log/sawtooth
 
 COPY --from=base /builder/bin/match-tp /project/hashblock-exchange/bin
-COPY --from=base /builder/sdk /project/hashblock-exchange/sdk
+COPY --from=base /builder/libs/hbzksnark /project/hashblock-exchange/bin
+COPY --from=base /builder/modules /project/hashblock-exchange/modules
 COPY --from=base /builder/families/match/hashblock_match /project/hashblock-exchange/families/match/hashblock_match
 
 WORKDIR /project/hashblock-exchange

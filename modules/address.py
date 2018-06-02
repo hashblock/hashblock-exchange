@@ -48,13 +48,52 @@ class Address():
 
     _namespace_hash = hashlib.sha512(
         NAMESPACE.encode("utf-8")).hexdigest()[0:6]
-    _filler_hash26 = hashlib.sha512('filler'.encode("utf-8")).hexdigest()[0:52]
-    _filler_hash23 = _filler_hash26[0:46]
+
+    _setting_hash = hashlib.sha512(
+        FAMILY_SETTING.encode("utf-8")).hexdigest()[0:6]
+    _match_hash = hashlib.sha512(
+        FAMILY_MATCH.encode("utf-8")).hexdigest()[0:6]
+    _asset_hash = hashlib.sha512(
+        FAMILY_ASSET.encode("utf-8")).hexdigest()[0:6]
+
     _candidates_hash = hashlib.sha512(
         ASSET_CANDIDATES.encode("utf-8")).hexdigest()[0:6]
+    _unit_hash = hashlib.sha512(
+        DIMENSION_UNIT.encode("utf-8")).hexdigest()[0:6]
+    _resource_hash = hashlib.sha512(
+        DIMENSION_RESOURCE.encode("utf-8")).hexdigest()[0:6]
+    _utxq_hash = hashlib.sha512(
+        DIMENSION_UTXQ.encode("utf-8")).hexdigest()[0:6]
+    _mtxq_hash = hashlib.sha512(
+        DIMENSION_MTXQ.encode("utf-8")).hexdigest()[0:6]
 
-    def __init__(self, family):
+    _filler_hash26 = hashlib.sha512('filler'.encode("utf-8")).hexdigest()[0:52]
+    _filler_hash23 = _filler_hash26[0:46]
+
+    _unit_setting_hash = _namespace_hash + _setting_hash + \
+        _unit_hash
+    _resource_setting_hash = _namespace_hash + _setting_hash + \
+        _resource_hash
+    _unit_proposal_hash = _namespace_hash + _asset_hash + \
+        _candidates_hash + _unit_hash
+    _resource_proposal_hash = _namespace_hash + _asset_hash + \
+        _candidates_hash + _resource_hash
+
+    _ask_hash = hashlib.sha512('ask'.encode("utf-8")).hexdigest()[0:6]
+    _tell_hash = hashlib.sha512('tell'.encode("utf-8")).hexdigest()[0:6]
+    _offer_hash = hashlib.sha512('offer'.encode("utf-8")).hexdigest()[0:6]
+    _accept_hash = hashlib.sha512('accept'.encode("utf-8")).hexdigest()[0:6]
+    _commitment_hash = hashlib.sha512(
+        'commitment'.encode("utf-8")).hexdigest()[0:6]
+    _obligation_hash = hashlib.sha512(
+        'obligation'.encode("utf-8")).hexdigest()[0:6]
+    _give_hash = hashlib.sha512('give'.encode("utf-8")).hexdigest()[0:6]
+    _take_hash = hashlib.sha512('take'.encode("utf-8")).hexdigest()[0:6]
+
+    def __init__(self, family, version=None, dimension=None):
         self._family = family
+        self._version = version
+        self._dimension = dimension
         self._family_hash = self.hashup(family)[0:6]
 
     @classmethod
@@ -70,6 +109,23 @@ class Address():
     def valid_leaf_address(cls, address):
         return True if cls.valid_address(address) \
             and len(address) == 70 else False
+
+    @classmethod
+    def leaf_address_type(cls, target, address):
+        return True if cls.valid_leaf_address(address) \
+            and target == address[0:len(target)] else False
+
+    @property
+    def namespace(self):
+        return 'hashblock_' + self._family
+
+    @property
+    def version(self):
+        return self._version
+
+    @property
+    def dimension(self):
+        return self._dimension
 
     @property
     def ns_family(self):
@@ -115,6 +171,14 @@ class Address():
         return self.ns_family \
             + self.hashup(dimension)[0:6] \
             + self._filler_hash26
+
+    # E.g. hashblock.asset.unit or hashblock.asset.resource
+    # 0-2  namespace
+    # 3-5  family
+    # 6-8  dimension
+    def asset_prefix(self, dimension):
+        return self.ns_family \
+            + self.hashup(dimension)[0:6]
 
     # E.g. hashblock.asset.unit.imperial.foot
     # 0-2  namespace

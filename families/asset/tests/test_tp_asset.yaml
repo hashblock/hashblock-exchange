@@ -19,7 +19,7 @@ version: "2.1"
 services:
 
   asset-processor:
-    image: hashblock-dev-asset-tp:latest
+    image: hashblock-dev-generic-tp:latest
     container_name: hashblock-asset-dev-tp
     volumes:
       - ../../..:/project/hashblock-exchange
@@ -32,13 +32,12 @@ services:
 
 
   test-tp-asset:
-    image: sawtooth-dev-python:latest
+    image: hashblock-python-testing:latest
     volumes:
       - ../../..:/project/hashblock-exchange
-      - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
-    command: nose2-3
+    command: nose2
         -c /project/hashblock-exchange/families/asset/nose2.cfg
         -v
         -s /project/hashblock-exchange/families/asset/tests
@@ -48,8 +47,4 @@ services:
         TEST_BIND: "tcp://eth0:4004"
         PYTHONPATH: "/project/hashblock-exchange/families/asset/hashblock_asset:\
             /project/hashblock-exchange:\
-            /project/hashblock-exchange/families/asset/tests:\
-            /project/hashblock-exchange/sdk/python:\
-            /project/sawtooth-core/sdk/python:\
-            /project/sawtooth-core/integration:\
-            /project/sawtooth-core/signing"
+            /project/hashblock-exchange/families/asset/tests"

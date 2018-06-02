@@ -44,10 +44,10 @@ message AssetPayload {
         ACTION_UNSET = 0;
 
         // A proposal action - data will be a AssetProposal
-        PROPOSE = 1;
+        ACTION_PROPOSE = 1;
 
         // A vote action - data will be a AssetVote
-        VOTE = 2;
+        ACTION_VOTE = 2;
     }
     // The action of this payload
     Action action = 1;
@@ -88,8 +88,8 @@ message AssetProposal {
 message AssetVote {
     enum Vote {
         VOTE_UNSET = 0;
-        ACCEPT = 1;
-        REJECT = 2;
+        VOTE_ACCEPT = 1;
+        VOTE_REJECT = 2;
     }
 
     // The id of the proposal being voted on
@@ -107,8 +107,8 @@ message AssetCandidate {
     message VoteRecord {
         enum Vote {
             VOTE_UNSET = 0;
-            ACCEPT = 1;
-            REJECT = 2;
+            VOTE_ACCEPT = 1;
+            VOTE_REJECT = 2;
         }
         // The public key of the voter
         string public_key = 1;

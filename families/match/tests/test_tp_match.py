@@ -22,13 +22,15 @@ from protobuf.match_pb2 import Ratio
 from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ
 
+from modules.config import load_hashblock_config, valid_signer
+
 from hashblock_match_test.match_message_factory \
     import MatchMessageFactory
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
 
-from sdk.python.address import Address
+from modules.address import Address
 
 
 class TestEvent(TransactionProcessorTestCase):
@@ -38,6 +40,7 @@ class TestEvent(TransactionProcessorTestCase):
         super().setUpClass()
         cls.factory = MatchMessageFactory()
         cls._match_addr = Address(Address.FAMILY_MATCH)
+        load_hashblock_config()
 
     def _expect_get(self, address, data=None):
         received = self.validator.expect(
@@ -99,15 +102,15 @@ class TestEvent(TransactionProcessorTestCase):
 
     def _build_initate_event(self, quantity, matched=False):
         return UTXQ(
-            plus=b'public key',
-            minus=b'minus',
+            plus=valid_signer('church').encode(),
+            minus=valid_signer('turing').encode(),
             quantity=quantity,
             matched=matched)
 
     def _build_reciprocate_event(self, ratio, quantity):
         return MTXQ(
-            plus=b'public key',
-            minus=b'minus',
+            plus=valid_signer('turing').encode(),
+            minus=valid_signer('church').encode(),
             ratio=ratio,
             quantity=quantity)
 

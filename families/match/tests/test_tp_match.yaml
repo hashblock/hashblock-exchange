@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,11 +19,13 @@ version: "2.1"
 services:
 
   match-processor:
-    image: hashblock-dev-match-tp:latest
+    image: hashblock-dev-generic-tp:latest
     container_name: hashblock-match-dev-tp
     volumes:
       - ../../..:/project/hashblock-exchange
     environment:
+      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
       - PYTHONPATH=/project/hashblock-exchange
     expose:
       - 4004
@@ -32,24 +34,19 @@ services:
 
 
   test-tp-match:
-    image: sawtooth-dev-python:latest
+    image: hashblock-python-testing:latest
     volumes:
       - ../../..:/project/hashblock-exchange
-      - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
-    command: nose2-3
+    command: nose2
         -c /project/hashblock-exchange/families/match/nose2.cfg
         -v
         -s /project/hashblock-exchange/families/match/tests
         test_tp_match
     stop_signal: SIGKILL
     environment:
-        TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/project/hashblock-exchange/families/match/hashblock_match:\
-            /project/hashblock-exchange:\
-            /project/hashblock-exchange/families/match/tests:\
-            /project/hashblock-exchange/sdk/python:\
-            /project/sawtooth-core/sdk/python:\
-            /project/sawtooth-core/integration:\
-            /project/sawtooth-core/signing"
+      - TEST_BIND=tcp://eth0:4004
+      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
+      - PYTHONPATH=/project/hashblock-exchange/families/match/hashblock_match:/project/hashblock-exchange:/project/hashblock-exchange/families/match/tests

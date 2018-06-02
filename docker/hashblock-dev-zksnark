@@ -1,0 +1,17 @@
+FROM libsnark
+
+WORKDIR /root
+
+# install prerequisite
+RUN apt-get update && apt-get install -y nano libpcre3-dev python3-dev python3-pip && \
+	python3 -m pip install --upgrade pip
+
+WORKDIR /root/libsnark
+
+RUN rm -fR build && \
+	mkdir build && cd build && cmake -DWITH_PROCPS=OFF .. && \
+	make && make install
+
+
+WORKDIR /project/hashblock_exchange
+

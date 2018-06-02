@@ -25,7 +25,7 @@ from protobuf.setting_pb2 import SettingPayload
 from protobuf.setting_pb2 import Settings
 from protobuf.asset_pb2 import AssetCandidates
 
-from sdk.python.address import Address
+from modules.address import Address
 
 LOGGER = logging.getLogger(__name__)
 
@@ -43,8 +43,12 @@ class SettingTransactionHandler(TransactionHandler):
         self._action = None
 
     @property
+    def addresser(self):
+        return self._addresser
+
+    @property
     def family_name(self):
-        return Address.NAMESPACE_SETTING
+        return self.addresser.namespace
 
     @property
     def family_versions(self):

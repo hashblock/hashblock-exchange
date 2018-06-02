@@ -74,6 +74,36 @@
           "description": "Network ZMQ curve public key."
         }
       },
+      "enigmaPrivKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Enigma private key."
+        }
+      },
+      "enigmaPubKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Enigma public key."
+        }
+      },
+      "fernetKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Fernet key."
+        }
+      },
+      "churchPrivKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Church private key."
+        }
+      },
+      "turingPrivKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Turing private key."
+        }
+      },
       "dnsNameForPublicIP": {
         "type": "string",
         "metadata": {
@@ -281,7 +311,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"', ' \"', parameters('networkPrivKey'), '\"', ' \"', parameters('networkPubKey'), '\"')]"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"', ' \"', parameters('networkPrivKey'), '\"', ' \"', parameters('networkPubKey'), '\"', ' \"', parameters('enigmaPrivKey'), '\"', ' \"', parameters('enigmaPubKey'), '\"', ' \"', parameters('fernetKey'), '\"', ' \"', parameters('churchPrivKey'), '\"', ' \"', parameters('turingPrivKey'), '\"')]"
           }
         },
         "copy": {

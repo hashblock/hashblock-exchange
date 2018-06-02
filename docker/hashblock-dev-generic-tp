@@ -16,11 +16,16 @@
 
 # This Dockerfile is for running protogen, lint, and unit-tests
 
-FROM python:3.5-slim
+FROM ubuntu:xenial
 LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 
-RUN python3 -m ensurepip && \
-    pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
+RUN apt-get update \
+ && apt-get install -y -q \
+    apt-transport-https \
+    python3-dev \
+    python3-pip
+
+RUN pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
     rm -r /root/.cache
 
 WORKDIR /project
@@ -28,7 +33,8 @@ WORKDIR /project
 RUN pip3 install \
     sawtooth-sdk \
     nose2==0.7.2 \
-    ptvsd && \
+    ptvsd \
+    cryptography && \
     mkdir -p /var/log/sawtooth
 
 ENV PATH $PATH:/project/hashblock-exchange/bin

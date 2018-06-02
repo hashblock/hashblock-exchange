@@ -19,7 +19,7 @@ version: "2.1"
 services:
 
   settings-processor:
-    image: hashblock-dev-setting-tp:latest
+    image: hashblock-dev-generic-tp:latest
     container_name: hashblock-setting-dev-tp
     volumes:
       - ../../..:/project/hashblock-exchange
@@ -32,13 +32,12 @@ services:
 
 
   test-tp-setting:
-    image: sawtooth-dev-python:latest
+    image: hashblock-python-testing:latest
     volumes:
       - ../../..:/project/hashblock-exchange
-      - ../../../../sawtooth-core:/project/sawtooth-core
     expose:
       - 4004
-    command: nose2-3
+    command: nose2
         -c /project/hashblock-exchange/families/setting/nose2.cfg
         -v
         -s /project/hashblock-exchange/families/setting/tests
@@ -49,7 +48,4 @@ services:
         PYTHONPATH: "/project/hashblock-exchange/families/setting/hashblock_setting:\
             /project/hashblock-exchange:\
             /project/hashblock-exchange/families/setting/tests:\
-            /project/hashblock-exchange/sdk/python:\
-            /project/sawtooth-core/sdk/python:\
-            /project/sawtooth-core/integration:\
-            /project/sawtooth-core/signing"
+            /project/hashblock-exchange/sdk/python"
