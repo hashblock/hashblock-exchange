@@ -64,8 +64,12 @@ message MTXQ {
     //  Transaction quantity structure
     Quantity quantity = 4;
     //  For 0.1.0 this had the content of the initiating (UTXQ)
+    //  When the MTXQ is saved
     //  For 0.2.0 this is deprecated and not used
     UTXQ unmatched = 5;
+    //  New in 0.2.0 and usable by 0.1.0 as well:
+    //  This is the 'proof' to use in verifying matching equation
+    bytes proof = 6;
 }
 
 message MatchEvent {
@@ -105,5 +109,7 @@ message MatchEvent {
     bytes data = 4;
 
     // New in 0.2.0: The encrypted blob of the matched UTXQ
+    // if we are processing MTXQ Actions
+    // This blob is set to merkle once verified
     bytes auxdata = 5;
 }

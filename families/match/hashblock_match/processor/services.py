@@ -14,16 +14,24 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
 import logging
 from abc import ABC, abstractmethod
 
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 
 from modules.state import State
+from modules.hashblock_zksnark import zksnark_verify
 
-from protobuf.match_pb2 import MatchEvent
+from protobuf.match_pb2 import (
+    MatchEvent,
+    UTXQ,
+    MTXQ)
+
 
 LOGGER = logging.getLogger(__name__)
+KEYS_PATH = os.environ['HASHBLOCK_KEYS'] + '/'
+
 
 initiate_actions = frozenset([
     MatchEvent.UTXQ_ASK,
@@ -114,6 +122,11 @@ class BaseService(Service):
                 "payload 'action' must be one of {} or {}".
                 format([initiate_actions, reciprocate_actions]))
 
+    def verify_balances(self, utxq, mtxq):
+        """Utilizes hbzksnark in 0.x.0"""
+        return True
+
+
 
 class V020apply(BaseService):
 
@@ -121,6 +134,7 @@ class V020apply(BaseService):
         super().__init__(txn, state)
 
     def initiate(self):
+        """Version 0.2.0 works with enrypted data blobs"""
         LOGGER.debug("Initiate 0.2.0")
         pass
 
@@ -134,16 +148,26 @@ class V020apply(BaseService):
 
 
 class V010apply(BaseService):
+    """Handles 0.1.0 transactions
 
+    With the refactoring also comes a way to leverage
+    the zkSNARK verification of the balancing equation
+    during MTXQ processing as the proof (so to speak)
+    is part of the MTXQ structure
+    """
     def __init__(self, txn, state):
         super().__init__(txn, state)
 
     def initiate(self):
         LOGGER.debug("Initiate 0.1.0")
+        exchange = UTXQ()
+        exchange.ParseFromString(payload.data)
         pass
 
     def reciprocate(self):
         LOGGER.debug("Reciprocate 0.1.0")
+        exchange = MTXQ()
+        exchange.ParseFromString(payload.data)
         pass
 
     def apply(self):
