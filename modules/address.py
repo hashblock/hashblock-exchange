@@ -222,3 +222,29 @@ class Address():
         """
         return self.txq_list(dimension, ops) \
             + self.hashup(ident)[0:46]
+
+    # E.g. hashblock.match.utxq.ask.ident
+    # 0-2 namespace
+    # 3-5 family
+    # 6-8 dimension
+    # 9-11 ops
+    # 12 is '0'
+    # 13-34 id
+    def match2_initiate_unmatched(self, dimension, ops, ident):
+        """Create a specific match address based on dimenstion, operation and id
+        """
+        return self.txq_list(dimension, ops) \
+            + '0' + self.hashup(ident)[0:45]
+
+    # E.g. hashblock.match.utxq.ask.ident
+    # 0-2 namespace
+    # 3-5 family
+    # 6-8 dimension
+    # 9-11 ops
+    # 12 is '1'
+    # 13-34 id
+    def match2_initiate_matched(self, dimension, ops, ident):
+        """Create a specific match address based on dimenstion, operation and id
+        """
+        return self.txq_list(dimension, ops) \
+            + '1' + self.hashup(ident)[0:45]

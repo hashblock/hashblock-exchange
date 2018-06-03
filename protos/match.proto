@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright 2018 Frank V. Castellucci
+// Copyright 2018 Frank V. Castellucci and Arthur Greef
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,38 +31,40 @@ message Quantity {
 	bytes resourceUnit = 3;
 }
 
-// Quantity ratio
+// Quantity ratio data for matching equation
 message Ratio {
 
-    //  Transaction quantity of unit and resource 
+    //  Transaction quantity of unit and resource
     Quantity numerator = 1;
 
-    //  Transaction quantity of unit and resource 
+    //  Transaction quantity of unit and resource
     Quantity denominator = 2;
 }
 
-// Economic event with plus/minus duality
+//  Initiating data elements
 message UTXQ {
-    //  Keys of resource inc.
+    //  Key for initiator (who am I)
     bytes plus = 1;
-    //  Keys of resource dec.
+    //  Keys for reciprocator (who am I 'asking' for example)
     bytes minus = 2;
-    //  Transaction quantity of unit and resource 
+    //  Transaction quantity structure
     Quantity quantity = 3;
-    //  State flag for reciprocate validity
+    //  State flag for reciprocate validity 0.1.0 only
     bool matched = 4;
 }
 
+//  Reciprocating data elements
 message MTXQ {
-    //  Keys of transaction inc. has to jive with IE minus
+    //  Key for reciprocator (who am I)
     bytes plus = 1;
-    //  Keys of resource dec. has to jive with IE plus
+    //  Key for initiator (who 'asked' for example)
     bytes minus = 2;
-    //  Don't know how this is used
+    //  Contains numerator and denominator for match equation
     Ratio ratio = 3;
-    //  Transaction quantity of unit and resource
+    //  Transaction quantity structure
     Quantity quantity = 4;
-    //  
+    //  For 0.1.0 this had the content of the initiating (UTXQ)
+    //  For 0.2.0 this is deprecated and not used
     UTXQ unmatched = 5;
 }
 
@@ -82,11 +84,26 @@ message MatchEvent {
     Action action = 1;
 
     //  The initiate event key
+    //  If this is 0.1.0 and an initiate based txn then
+    //  this is the old address and the data is serialized protobuf
+    //  If this is 0.2.0 and initiate based txn then
+    //  this is the new address scheme for unmatched initiate and the
+    //  data is an encrypted blob of UTXQ that should be stored at this address
+    //  If this is 0.2.0 and reciprocate based txn then
+    //  the auxdata below (new) is the encrypted block of matching UTXQ
     string ukey = 2;
 
     //  The reciprocate event key
+    //  If this is 0.1.0 and an initiate based txn then
+    //  this is the old address and the data is serialized protobuf
+    //  If this is 0.2.0 and initiate based txn then
+    //  this is the new address scheme for unmatched initiate and the
+    //  data is an encrypted blob of MTXQ that should be stored at this address
     string mkey = 3;
 
-    // The content of this payload
+    // The content of this payload (protobuffed or encrypted blob)
     bytes data = 4;
+
+    // New in 0.2.0: The encrypted blob of the matched UTXQ
+    bytes auxdata = 5;
 }

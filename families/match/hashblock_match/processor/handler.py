@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ from sawtooth_sdk.processor.exceptions import InternalError
 
 from modules.address import Address
 from modules.config import load_hashblock_config, valid_key
+
+from processor.services import Service
 
 from protobuf.match_pb2 import MatchEvent
 from protobuf.match_pb2 import UTXQ
@@ -51,7 +53,7 @@ reciprocateActionSet = frozenset([
 class MatchTransactionHandler(TransactionHandler):
 
     def __init__(self):
-        self._addresser = Address(Address.FAMILY_MATCH)
+        self._addresser = Address(Address.FAMILY_MATCH, ['0.1.0', '0.2.0'])
 
     @property
     def addresser(self):
@@ -63,14 +65,18 @@ class MatchTransactionHandler(TransactionHandler):
 
     @property
     def family_versions(self):
-        return ['0.1.0']
+        return self.addresser.version
 
     @property
     def namespaces(self):
         return [self.addresser.ns_family]
 
     def apply(self, transaction, context):
-
+        """match-tp transaction handling entry point"""
+        Service.factory(
+            transaction,
+            context,
+            self.addresser).apply()
         exchange_payload = MatchEvent()
         exchange_payload.ParseFromString(transaction.payload)
         if exchange_payload.action in initiateActionSet:
@@ -81,11 +87,10 @@ class MatchTransactionHandler(TransactionHandler):
             return throw_invalid(
                 "'action' must be one of {} or {}".
                 format([initiateActionSet, reciprocateActionSet]))
-
         generateTxnSuccessFor(exchange_payload, context)
 
 
-# Module functions
+# Version 0.1.0 Module functions
 
 
 matchEventKeyMap = {
