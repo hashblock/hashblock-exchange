@@ -20,6 +20,7 @@ from abc import ABC, abstractmethod
 
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 
+from modules.config import valid_key
 from modules.state import State
 from modules.hashblock_zksnark import zksnark_verify
 
@@ -32,18 +33,21 @@ from protobuf.match_pb2 import (
 LOGGER = logging.getLogger(__name__)
 KEYS_PATH = os.environ['HASHBLOCK_KEYS'] + '/'
 
-
-initiate_actions = frozenset([
+_initiate_actions = frozenset([
     MatchEvent.UTXQ_ASK,
     MatchEvent.UTXQ_OFFER,
     MatchEvent.UTXQ_COMMITMENT,
     MatchEvent.UTXQ_GIVE])
 
-reciprocate_actions = frozenset([
+_reciprocate_actions = frozenset([
     MatchEvent.MTXQ_TELL,
     MatchEvent.MTXQ_ACCEPT,
     MatchEvent.MTXQ_OBLIGATION,
     MatchEvent.MTXQ_TAKE])
+
+_initiate_key_set = frozenset(['plus', 'minus', 'quantity'])
+_reciprocate010_key_set = frozenset(['plus', 'minus', 'quantity', 'ratio'])
+_reciprocate020_key_set = frozenset(['proof']).union(_reciprocate010_key_set)
 
 
 class Service(ABC):
@@ -113,19 +117,26 @@ class BaseService(Service):
         return self._payload
 
     def process(self, initiateFn, reciprocateFn):
-        if self.payload.action in initiate_actions:
+        if self.payload.action in _initiate_actions:
             initiateFn()
-        elif self.payload.action in reciprocate_actions:
+        elif self.payload.action in _reciprocate_actions:
             reciprocateFn()
         else:
             raise InvalidTransaction(
-                "payload 'action' must be one of {} or {}".
-                format([initiate_actions, reciprocate_actions]))
+                "Payload 'action' must be one of {} or {}".
+                format([_initiate_actions, _reciprocate_actions]))
 
-    def verify_balances(self, utxq, mtxq):
+    def match(self, utxq, mtxq):
         """Utilizes hbzksnark in 0.x.0"""
         return True
 
+    def check_payload_coherence(self, exchange, basis):
+        """Validate coherent transaction payload content"""
+        ep = valid_key(exchange.plus.decode())
+        em = valid_key(exchange.minus.decode())
+        zset = set([f[0].name for f in exchange.ListFields()])
+        if basis != zset or not ep or not em:
+            raise InvalidTransaction("Incoherent transaction payload")
 
 
 class V020apply(BaseService):
@@ -159,16 +170,15 @@ class V010apply(BaseService):
         super().__init__(txn, state)
 
     def initiate(self):
-        LOGGER.debug("Initiate 0.1.0")
         exchange = UTXQ()
-        exchange.ParseFromString(payload.data)
-        pass
+        exchange.ParseFromString(self.payload.data)
+        self.check_payload_coherence(exchange, _initiate_key_set)
+        self.state.set(self.payload.data, self.payload.ukey)
 
     def reciprocate(self):
-        LOGGER.debug("Reciprocate 0.1.0")
         exchange = MTXQ()
-        exchange.ParseFromString(payload.data)
-        pass
+        exchange.ParseFromString(self.payload.data)
+        self.check_payload_coherence(exchange, _reciprocate010_key_set)
 
     def apply(self):
         LOGGER.debug("Applying 0.1.0 logic")
