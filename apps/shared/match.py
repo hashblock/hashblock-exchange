@@ -134,7 +134,7 @@ def __create_initiate_payload(ingest):
     """Create the utxq payload"""
     operation, addresser, signer, data = ingest
     return (operation, addresser, signer, MatchEvent(
-        data=data.SerializeToString(),
+        mdata=data.SerializeToString(),
         ukey=addresser.txq_item(
             addresser.dimension, operation, str(uuid.uuid4)),
         action=_ACTION_MAP[operation]))
@@ -169,7 +169,7 @@ def __create_reciprocate_payload(ingest):
     """Create the mtxq payload"""
     operation, addresser, request, payload = ingest
     return (operation, addresser, request['plus'], MatchEvent(
-        data=payload.SerializeToString(),
+        mdata=payload.SerializeToString(),
         ukey=request['utxq_address'],
         mkey=addresser.txq_item(
             addresser.dimension, operation, str(uuid.uuid4)),

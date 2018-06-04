@@ -170,7 +170,7 @@ def __check_existence(exchange, exchangeset):
 def apply_reciprocate(payload, context):
     LOGGER.debug("Executing balancing exchange")
     exchange_reciprocate = MTXQ()
-    exchange_reciprocate.ParseFromString(payload.data)
+    exchange_reciprocate.ParseFromString(payload.mdata)
     exchange_initiate = UTXQ()
     __get_exchange(context, exchange_initiate, payload.ukey)
     if exchange_initiate.matched:

@@ -171,13 +171,13 @@ class V010apply(BaseService):
 
     def initiate(self):
         exchange = UTXQ()
-        exchange.ParseFromString(self.payload.data)
+        exchange.ParseFromString(self.payload.mdata)
         self.check_payload_coherence(exchange, _initiate_key_set)
-        self.state.set(self.payload.data, self.payload.ukey)
+        self.state.set(self.payload.mdata, self.payload.ukey)
 
     def reciprocate(self):
         exchange = MTXQ()
-        exchange.ParseFromString(self.payload.data)
+        exchange.ParseFromString(self.payload.mdata)
         self.check_payload_coherence(exchange, _reciprocate010_key_set)
 
     def apply(self):
