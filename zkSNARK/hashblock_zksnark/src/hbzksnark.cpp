@@ -58,6 +58,8 @@ T get_constraint_key(std::string const& file_path,
 
 r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> decode_proof_string(std::string const& proof_str)
 {
+    std::cout << "decoding proof string = " << proof_str << std::endl;
+
     std::stringstream encoded_proof;
     encoded_proof << proof_str;
     std::string decoded_proof = base64_decode(encoded_proof.str());
@@ -65,6 +67,7 @@ r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> decode_proof_string(std::string 
     std::stringstream decoded_proof_stream;
     decoded_proof_stream << decoded_proof;
     decoded_proof_stream >> proof;
+    std::cout << "decoded proof " << std::endl;
     return proof;
 }
 
@@ -107,6 +110,31 @@ int generate_constraint_keys(
     return 0;
 }
 
+int new_verify(std::string const& file_path,
+    r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> proof,
+    std::string const& encoded_pi)
+{
+    default_r1cs_ppzksnark_pp::init_public_params();
+    r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp> verkey =
+        get_constraint_key<r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp>>
+        (file_path, hbutil::VERIFY_KEYNAME);
+
+    libff::Fr<default_r1cs_ppzksnark_pp> field;
+    r1cs_primary_input<libff::Fr<default_r1cs_ppzksnark_pp>>
+        new_primary_input;
+
+    std::stringstream dec_strm(base64_decode(encoded_pi));
+
+    while (dec_strm >> field)
+        new_primary_input.push_back(field);
+
+    const bool ans = r1cs_ppzksnark_verifier_strong_IC<default_r1cs_ppzksnark_pp>(
+        verkey, new_primary_input, proof);
+    std::cout << ans << std::endl;
+
+    return 0;
+}
+
 r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp>
     proove(std::string const& file_path,
         match_r1cs<libff::Fr<default_r1cs_ppzksnark_pp>> const& r1cs)
@@ -119,13 +147,29 @@ r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp>
         r1cs_ppzksnark_prover<default_r1cs_ppzksnark_pp>(prvkey,
             r1cs.primary_input, r1cs.auxiliary_input);
 
+    // Get the primary input and encode
+    std::stringstream pairing_stream;
+    for(auto it = r1cs.primary_input.begin();
+        it != r1cs.primary_input.end(); ++it)
+        pairing_stream << *it;;
+
+    std::string pairing_str = pairing_stream.str();
+    std::string encoded_pairing = base64_encode(
+        reinterpret_cast<const unsigned char*>(
+            pairing_str.c_str()),pairing_str.length());
+
     std::stringstream proofstr;
     proofstr << proof;
     std::string spk = proofstr.str();
     std::string encoded_spk = base64_encode(
         reinterpret_cast<const unsigned char*>(spk.c_str()), spk.length());
-    std::cerr << encoded_spk << std::endl;
-   return proof;
+
+    // new_verify(file_path,
+    //     decode_proof_string(encoded_spk),
+    //     encoded_pairing);
+
+    std::cerr << encoded_spk << ' ' << encoded_pairing;
+    return proof;
 }
 
 int verify(std::string const& file_path,
@@ -136,10 +180,10 @@ int verify(std::string const& file_path,
     r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp> verkey =
         get_constraint_key<r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp>>
         (file_path, hbutil::VERIFY_KEYNAME);
+
     const bool ans = r1cs_ppzksnark_verifier_strong_IC<default_r1cs_ppzksnark_pp>(
         verkey, r1cs.primary_input, proof);
     std::cout << ans << std::endl;
-
     return 0;
 }
 
@@ -215,6 +259,27 @@ int main(int argc, const char * argv[]) {
                 std::string proofstr(argv[3]);
                 std::string keyvars(argv[4]);
                 verify(file_path, decode_proof_string(proofstr), generate_constraint(keyvars));
+                return 0;
+            }
+            catch(std::invalid_argument & e) {
+                std::cerr << e.what() << std::endl;
+                return -1;
+            }
+        }
+    }
+    else if (strcmp(argv[1], "-nv") == 0) {
+        //  Verify proof returns 0 for successful generation else
+        //  exception in secret key given. If exception, return -1 and stderr has reason
+        if (argc != 5) {
+            std::cerr << "Invalid call. hbzksnark -v file_path proof_str pairing_str" << std::endl;
+            return -1;
+        }
+        else {
+            try {
+                std::string file_path(argv[2]);
+                std::string proofstr(argv[3]);
+                std::string pairing(argv[4]);
+                new_verify(file_path, decode_proof_string(proofstr), pairing);
                 return 0;
             }
             catch(std::invalid_argument & e) {

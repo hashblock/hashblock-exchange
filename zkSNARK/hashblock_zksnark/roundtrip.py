@@ -28,7 +28,12 @@ if key_gen.returncode == 0:
         ['build/hbzksnark', '-p', 'build/', data_str],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if prf_gen.returncode == 0:
-        prf_str = prf_gen.stderr
+        prf_str, pairing = prf_gen.stderr.decode("utf-8").split()
+        # UNCOMMENT TO TRY PAIRING DELIVERY
+        # ver_gen = subprocess.run(
+        #     ['build/hbzksnark', '-nv', 'build/', prf_str, pairing],
+        #     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # UNCOMMENT TO USE DEFAULT CLEAR VALS
         ver_gen = subprocess.run(
             ['build/hbzksnark', '-v', 'build/', prf_str, data_str],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
