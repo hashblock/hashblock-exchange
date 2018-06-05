@@ -16,22 +16,23 @@
 
 import logging
 
-
 from cryptography.fernet import Fernet
+from base64 import b64encode, b64decode
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from modules.config import encrypt_key
+from modules.config import encrypt_key, load_hashblock_config
 
 STATE_TIMEOUT_SEC = 10
 LOGGER = logging.getLogger(__name__)
+load_hashblock_config()
 
 
 class State():
-    def __init__(self, context, addresser):
+    def __init__(self, context=None):
         self._context = context
-        self._address = addresser
         self._encrypter = Fernet(encrypt_key())
+        LOGGER.debug("Encrypter = {}".format(self._encrypter))
 
     @property
     def context(self):

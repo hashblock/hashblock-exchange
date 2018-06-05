@@ -237,14 +237,13 @@ class Address():
             + '0' + self.hashup(ident)[0:45]
 
     # E.g. hashblock.match.utxq.ask.ident
-    # 0-2 namespace
-    # 3-5 family
-    # 6-8 dimension
-    # 9-11 ops
-    # 12 is '1'
-    # 13-34 id
-    def match2_initiate_matched(self, dimension, ops, ident):
-        """Create a specific match address based on dimenstion, operation and id
-        """
-        return self.txq_list(dimension, ops) \
-            + '1' + self.hashup(ident)[0:45]
+    # 0-2 namespace (:6)
+    # 3-5 family (6:12)
+    # 6-8 dimension (12:18)
+    # 9-11 ops (18:24)
+    # 12 is '0' (25) in and '1' out
+    # 13-34 id (26:70)
+    def set_utxq_matched(self, address):
+        laddr = list(address)
+        laddr[24] = '1'
+        return ''.join(laddr)

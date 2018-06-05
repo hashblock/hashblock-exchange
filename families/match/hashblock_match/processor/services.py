@@ -60,7 +60,7 @@ class Service(ABC):
         if key not in cls._version_list:
             raise InvalidTransaction("Unhandled version {}".format(key))
         else:
-            state = State(context, address)
+            state = State(context)
             if key == '0.1.0':
                 handler = V010apply(txn, state)
             else:
@@ -100,9 +100,8 @@ class BaseService(Service):
     def __init__(self, txn, state):
         self._txn = txn
         self._state = state
-        exchange_payload = MatchEvent()
-        exchange_payload.ParseFromString(txn.payload)
-        self._payload = exchange_payload
+        self._payload = MatchEvent()
+        self._payload.ParseFromString(txn.payload)
 
     @property
     def state(self):
@@ -147,11 +146,23 @@ class V020apply(BaseService):
     def initiate(self):
         """Version 0.2.0 works with enrypted data blobs"""
         LOGGER.debug("Initiate 0.2.0")
-        pass
+        self.state.set(self.payload.udata, self.payload.ukey)
 
     def reciprocate(self):
         LOGGER.debug("Reciprocate 0.2.0")
-        pass
+        """Version 0.2.0 works with encrypted data blobs
+        and leverages the proof/verify capability of zksnark."""
+        vres = zksnark_verify(
+            KEYS_PATH,
+            self.payload.proof.decode(),
+            self.payload.pairings.decode())
+        if vres:
+            LOGGER.info("UTXQ and MTXQ Balance!")
+            self.state.set(self.payload.udata, self.payload.ukey)
+            self.state.set(self.payload.mdata, self.payload.mkey)
+        else:
+            raise InvalidTransaction(
+                "Invalid zksnark match with reciprocating")
 
     def apply(self):
         LOGGER.debug("Applying 0.2.0 logic")
@@ -189,7 +200,9 @@ class V010apply(BaseService):
             raise InvalidTransaction(
                 "Attempt to balance with reciprocated Initiate")
         vres = zksnark_verify(
-            KEYS_PATH, self.payload.proof.decode(), self.payload.pairings.decode())
+            KEYS_PATH,
+            self.payload.proof.decode(),
+            self.payload.pairings.decode())
         if vres:
             LOGGER.info("UTXQ and MTXQ Balance!")
             exchange_initiate.matched = True

@@ -26,6 +26,8 @@ from google.protobuf.json_format import MessageToDict
 
 from modules.config import sawtooth_rest_host
 from modules.config import key_owner
+from modules.state import State
+
 from shared.rest_client import RestClient
 from modules.address import Address
 from protobuf.match_pb2 import UTXQ
@@ -36,6 +38,7 @@ from protobuf.asset_pb2 import Resource
 from protobuf.asset_pb2 import AssetCandidates
 
 asset_addresser = Address(Address.FAMILY_ASSET, "0.1.0")
+STATE_CRYPTO = State()
 
 __revmachadd = {
     Address._ask_hash: 'ask',
@@ -52,6 +55,14 @@ __revmachadd = {
 def __get_leaf_data(address):
     """Fetch leaf data from chain"""
     return RestClient(sawtooth_rest_host()).get_leaf(address)
+
+
+def __get_encrypted_leaf(address):
+    """Fetch leaf data from chain"""
+    ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
+    print("")
+    ddict['data'] = STATE_CRYPTO.decrypt(b64decode(ddict['data']))
+    return ddict
 
 
 def __get_list_data(address):
@@ -231,6 +242,13 @@ def __decode_match(address, data):
     }
 
 
+def get_utxq_obj_json(address):
+    utxq_obj = __get_encrypted_leaf(address)['data']
+    utxq = UTXQ()
+    utxq.ParseFromString(utxq_obj)
+    return (utxq, __decode_match(address, utxq_obj))
+
+
 def decode_match_dimension(address):
     results = __get_list_data(address)['data']
     dim = 'utxq' if address[12:18] == Address._utxq_hash else 'mtxq'
@@ -256,7 +274,8 @@ def decode_match_initiate_list(address):
     for element in results:
         ladd = element['address']
         utxq = UTXQ()
-        utxq.ParseFromString(b64decode(__get_leaf_data(ladd)['data']))
+        utxq.ParseFromString(b64decode(
+            __get_encrypted_leaf(ladd)['data']))
         data.append((
             {
                 "plus": key_owner(utxq.plus.decode("utf-8")),
@@ -281,7 +300,8 @@ def decode_match_reciprocate_list(address):
     for element in results:
         ladd = element['address']
         mtxq = MTXQ()
-        mtxq.ParseFromString(b64decode(__get_leaf_data(ladd)['data']))
+        mtxq.ParseFromString(b64decode(
+            __get_encrypted_leaf(ladd)['data']))
         data.append(({
             "plus": key_owner(mtxq.plus.decode("utf-8")),
             "minus": key_owner(mtxq.minus.decode("utf-8")),
@@ -356,23 +376,30 @@ def decode_asset_unit_list(address):
 _hash_map = {
     Address._namespace_hash: {
         Address._asset_hash: {
-            Address._candidates_hash: decode_proposals,
-            Address._unit_hash: __decode_asset,
-            Address._resource_hash: __decode_asset
+            Address._candidates_hash:
+                [__get_leaf_data, decode_proposals],
+            Address._unit_hash:
+                [__get_leaf_data, __decode_asset],
+            Address._resource_hash:
+                [__get_leaf_data, __decode_asset]
         },
         Address._match_hash: {
-            Address._utxq_hash: __decode_match,
-            Address._mtxq_hash: __decode_match
+            Address._utxq_hash:
+                [__get_encrypted_leaf, __decode_match],
+            Address._mtxq_hash:
+                [__get_encrypted_leaf, __decode_match]
         },
         Address._setting_hash: {
-            Address._unit_hash: decode_settings,
-            Address._resource_hash: decode_settings
+            Address._unit_hash:
+                [__get_leaf_data, decode_settings],
+            Address._resource_hash:
+                [__get_leaf_data, decode_settings]
         }
     }
 }
 
 
 def decode_from_leaf(address):
-    leaf = __get_leaf_data(address)
-    y = _hash_map[address[:6]][address[6:12]][address[12:18]]
+    f, y = _hash_map[address[:6]][address[6:12]][address[12:18]]
+    leaf = f(address)
     return y(address, b64decode(leaf['data']))

@@ -67,6 +67,9 @@ message MTXQ {
     //  When the MTXQ is saved
     //  For 0.2.0 this is deprecated and not used
     UTXQ unmatched = 5;
+    //  For 0.2.0 this contains the address (same as ukey)
+    //  that refers to the matched initiate
+    bytes utxq_addr = 6;
 }
 
 message MatchEvent {
