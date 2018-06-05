@@ -37,6 +37,6 @@ RUN pip3 install \
     cryptography && \
     mkdir -p /var/log/sawtooth
 
-ENV PATH $PATH:/project/hashblock-exchange/bin
+ENV PATH $PATH:/project/hashblock-exchange/bin:/project/hashblock-exchange/libs
 
 WORKDIR /project/hashblock-exchange

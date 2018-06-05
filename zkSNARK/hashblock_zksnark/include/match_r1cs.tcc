@@ -12,7 +12,7 @@ match_r1cs<FieldT> generate_match_r1cs(
     // The match equation is Q_i * (Q_n/Q_d) = Q_r
     // Q = quantity, i = initiate, r = reciprocate, n = reciprocate ratio numerator, d = reciprocate ratio denominator
     // When expanded this is v_i * (v_n/v_d) = v_r && u_i * (u_n/u_d) = u_r && r_i * (r_n/r_d) = r_r
-    // Where v = quantity value, u = quantity unit, r = quanity resource
+    // Where v = quantity value, u = asset unit, r = asset resource
     const int v_i,
     const int v_n,
     const int v_d,

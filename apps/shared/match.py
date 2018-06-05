@@ -18,12 +18,14 @@
 
 This module is referenced when posting utxq and mtxq exchanges
 """
+import os
 import uuid
 
 from shared.transactions import (
     submit_single_txn, create_transaction, compose_builder)
 
 from modules.address import Address
+from modules.hashblock_zksnark import zksnark_genproof
 from modules.config import valid_signer
 from modules.decode import decode_from_leaf
 from modules.exceptions import RestException, DataException
@@ -31,7 +33,7 @@ from modules.exceptions import AssetNotExistException
 from protobuf.match_pb2 import (
     MatchEvent, UTXQ, MTXQ, Quantity, Ratio)
 
-
+KEYS_PATH = os.environ['HASHBLOCK_KEYS'] + '/'
 _asset_addrs = Address(Address.FAMILY_ASSET, "0.1.0")
 _utxq_addrs = Address(Address.FAMILY_MATCH, "0.1.0", Address.DIMENSION_UTXQ)
 _mtxq_addrs = Address(Address.FAMILY_MATCH, "0.1.0", Address.DIMENSION_MTXQ)
@@ -71,10 +73,10 @@ def __validate_assets(value, unit, resource):
     return (unit_res['data'], resource_res['data'])
 
 
-def __validate_utxq_exists(address):
+def __get_and_validate_utxq(address):
     """Check that the utxq exists to recipricate on"""
     try:
-        decode_from_leaf(address)
+        return decode_from_leaf(address)
     except RestException:
         raise DataException('Invalid initiate (utxq) address')
 
@@ -91,22 +93,38 @@ def __validate_utxq(request):
 
 def __validate_mtxq(request):
     """Validate the content for mtxq"""
-    __validate_utxq_exists(request["utxq_address"])
+    utxq_qblock = __get_and_validate_utxq(
+        request["utxq_address"])['data']['quantity']
     quantity_assets = __validate_assets(
         request['quantity']['value'],
         request['quantity']['unit'],
         request['quantity']['resource'])
-
     numerator_assets = __validate_assets(
         request['ratio']['numerator']['value'],
         request['ratio']['numerator']['unit'],
         request['ratio']['numerator']['resource'])
-
-    demoninator_assets = __validate_assets(
+    denominator_assets = __validate_assets(
         request['ratio']['denominator']['value'],
         request['ratio']['denominator']['unit'],
         request['ratio']['denominator']['resource'])
-    return (quantity_assets, numerator_assets, demoninator_assets)
+    data_tuple = []
+    data_tuple.append(str(utxq_qblock['value']))
+    data_tuple.append(request['ratio']['numerator']['value'])
+    data_tuple.append(request['ratio']['denominator']['value'])
+    data_tuple.append(request['quantity']['value'])
+    data_tuple.append(str(utxq_qblock['valueUnit']))
+    data_tuple.append(numerator_assets[0]['value'])
+    data_tuple.append(denominator_assets[0]['value'])
+    data_tuple.append(quantity_assets[0]['value'])
+    data_tuple.append(str(utxq_qblock['resourceUnit']))
+    data_tuple.append(numerator_assets[1]['value'])
+    data_tuple.append(denominator_assets[1]['value'])
+    data_tuple.append(quantity_assets[1]['value'])
+    data_str = ",".join(data_tuple)
+    print("Pairing tuple = {}".format(data_tuple))
+    print("Pairing data_str = {}".format(data_str))
+    prf_pair = zksnark_genproof(KEYS_PATH, data_str)
+    return (quantity_assets, numerator_assets, denominator_assets, prf_pair)
 
 
 def __create_quantity(value, quantity):
@@ -152,9 +170,9 @@ def __create_initiate_inputs_outputs(ingest):
 def __create_mtxq(ingest):
     """Create the mtxq object"""
     operation, addresser, qassets, data = ingest
-    quantity, numerator, denominator = qassets
+    quantity, numerator, denominator, prf_pair = qassets
     # mtxq = MTXQ()
-    return (operation, addresser, data, MTXQ(
+    return (operation, addresser, prf_pair, data, MTXQ(
         plus=valid_signer(data['plus']).encode(),
         minus=valid_signer(data['minus']).encode(),
         quantity=__create_quantity(data['quantity']['value'], quantity),
@@ -167,12 +185,15 @@ def __create_mtxq(ingest):
 
 def __create_reciprocate_payload(ingest):
     """Create the mtxq payload"""
-    operation, addresser, request, payload = ingest
+    operation, addresser, prf_pair, request, payload = ingest
+    proof, pairing = prf_pair
     return (operation, addresser, request['plus'], MatchEvent(
         mdata=payload.SerializeToString(),
         ukey=request['utxq_address'],
         mkey=addresser.txq_item(
             addresser.dimension, operation, str(uuid.uuid4)),
+        proof=proof.encode(),
+        pairings=pairing.encode(),
         action=_ACTION_MAP[operation]))
 
 

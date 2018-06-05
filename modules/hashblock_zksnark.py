@@ -30,22 +30,26 @@ def zksnark_genkeys(file_path, secret_str):
 
 
 def zksnark_genproof(file_path, data_str):
-    """Generates a proof based on data string"""
+    """Generates a proof based on data string
+
+    Returns a tuple of ('proof' and 'pairing' base64 encoded strings)
+
+    """
     prf_gen = subprocess.run(
         ['hbzksnark', '-p', file_path, data_str],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if prf_gen.returncode == 0:
-        return prf_gen.stderr
+        return prf_gen.stderr.decode("utf-8").split()
     else:
         raise InternalError(
-            "hbzksnark key generated failed with {}".
+            "hbzksnark proof generated failed with {}".
             format(prf_gen))
 
 
-def zksnark_verify(file_path, proof_str, data_str):
+def zksnark_verify(file_path, proof_str, pairing_str):
     """Verifies equation match"""
     ver_gen = subprocess.run(
-        ['hbzksnark', '-v', file_path, proof_str, data_str],
+        ['hbzksnark', '-v', file_path, proof_str, pairing_str],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if ver_gen.returncode == 0:
         return True

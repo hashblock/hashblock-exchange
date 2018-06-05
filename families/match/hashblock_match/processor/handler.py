@@ -80,14 +80,14 @@ class MatchTransactionHandler(TransactionHandler):
             self.addresser).apply()
         exchange_payload = MatchEvent()
         exchange_payload.ParseFromString(transaction.payload)
-        if exchange_payload.action in initiateActionSet:
-            pass
-        elif exchange_payload.action in reciprocateActionSet:
-            apply_reciprocate(exchange_payload, context)
-        else:
-            return throw_invalid(
-                "'action' must be one of {} or {}".
-                format([initiateActionSet, reciprocateActionSet]))
+        # if exchange_payload.action in initiateActionSet:
+        #     pass
+        # elif exchange_payload.action in reciprocateActionSet:
+        #     apply_reciprocate(exchange_payload, context)
+        # else:
+        #     return throw_invalid(
+        #         "'action' must be one of {} or {}".
+        #         format([initiateActionSet, reciprocateActionSet]))
         generateTxnSuccessFor(exchange_payload, context)
 
 
