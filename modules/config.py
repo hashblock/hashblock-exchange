@@ -178,6 +178,9 @@ def load_hashblock_config():
     global DEFAULT_KEYS_PATH
     global DEFAULT_CFGR_PATH
 
+    if REST_CONFIG:
+        return REST_CONFIG
+
     if os.environ.get(ENVIRONMENT_KEYS_PATH):
         DEFAULT_KEYS_PATH = os.environ.get(ENVIRONMENT_KEYS_PATH)
     if os.environ.get(ENVIRONMENT_CFGR_PATH):

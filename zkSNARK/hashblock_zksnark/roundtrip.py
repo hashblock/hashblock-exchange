@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2018 Frank V. Castellucci and Turing Greef
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,15 +28,22 @@ if key_gen.returncode == 0:
         ['build/hbzksnark', '-p', 'build/', data_str],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if prf_gen.returncode == 0:
-        prf_str = prf_gen.stderr
+        prf_str, pairing = prf_gen.stderr.decode("utf-8").split()
+        # print("Proof")
+        # print("{}".format(prf_str))
+        # print("Pairing")
+        # print("{}".format(pairing))
         ver_gen = subprocess.run(
-            ['build/hbzksnark', '-v', 'build/', prf_str, data_str],
+            ['build/hbzksnark', '-v', 'build/', prf_str, pairing],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if ver_gen.returncode == 0:
+            # print("{}".format(ver_gen.stdout))
             print("Church is a GOD!")
         else:
-            print("Turing's fault {}".format(ver_gen))
+            print("{}".format(ver_gen.stdout))
+            print("{}".format(ver_gen.stderr))
+            print("Turing's verify fault {}".format(ver_gen.returncode))
     else:
-        print("Turing's fault {}".format(prf_gen))
+        print("Turing's proof fault {}".format(prf_gen))
 else:
-    print("Turing's fault {}".format(key_gen))
+    print("Turing's genkey fault {}".format(key_gen))

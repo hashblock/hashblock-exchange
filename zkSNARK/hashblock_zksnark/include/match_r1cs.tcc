@@ -2,7 +2,7 @@
 #define MATCH_R1CS_TCC__
 
 #include <cassert>
-
+#include <stdexcept>
 #include <libff/common/utils.hpp>
 
 namespace libsnark {
@@ -12,7 +12,7 @@ match_r1cs<FieldT> generate_match_r1cs(
     // The match equation is Q_i * (Q_n/Q_d) = Q_r
     // Q = quantity, i = initiate, r = reciprocate, n = reciprocate ratio numerator, d = reciprocate ratio denominator
     // When expanded this is v_i * (v_n/v_d) = v_r && u_i * (u_n/u_d) = u_r && r_i * (r_n/r_d) = r_r
-    // Where v = quantity value, u = quantity unit, r = quanity resource
+    // Where v = quantity value, u = asset unit, r = asset resource
     const int v_i,
     const int v_n,
     const int v_d,
@@ -251,10 +251,13 @@ match_r1cs<FieldT> generate_match_r1cs(
     assert(cs.num_inputs() == num_inputs);
     assert(cs.num_constraints() == num_constraints);
     assert(cs.is_satisfied(primary_input, auxiliary_input));
-
     // libff::leave_block("Call to generate_hashblock_r1cs_example_with_field_input");
+    if (cs.is_satisfied(primary_input, auxiliary_input))
+        return match_r1cs<FieldT>(std::move(cs), std::move(primary_input), std::move(auxiliary_input));
+    else {
+        throw std::invalid_argument("CS not valid");
+    }
 
-    return match_r1cs<FieldT>(std::move(cs), std::move(primary_input), std::move(auxiliary_input));
 }
 
 } // libsnark

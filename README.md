@@ -1,9 +1,6 @@
 
 Note: hashblock-exchange is alpha only and not considered production ready.
 
-We are currently working on enforcing data encryption in flight and at rest as well as exchange anonymity.
-
-
 ## hashblock-exchange
 First generation blockchain applications use UTXO transactions to record the value of a single resource that is minted and transferred between blockchain addresses. Bitcoin is an example of a first generation blockchain.
 
@@ -18,7 +15,9 @@ hashblock-exchange overcomes these limitation with multiple smart contract trans
 * The three are the setting, asset, and match smart contract transaction families.
 * The setting transaction family is used to set/update the authorization contraints for asset unit proposals and voting.
 * The asset transaction family is used to propose and vote on units-of-measure and resources asset units on the chain.
-* The match transaction family uses Unmatched Transaction Quantity (UTXQ) and Matched Transaction Quantity (MTXQ) transactions to record the dual initiating and reciprocating events that comprise a value exchange. An exchange could be potential as in an ask/tell duality, or contractual as in an offer/accept duality, or operational as in a commitment/obligation duality, or actual as in a give/take duality.  The match transaction family also validates that initiating events are not double matched and that the value of exchange assets balances. In contrast to a _value-transfer_ balancing equation: input-value=output-value, a `value-exchange` balancing equation requires a ratio, unmatched-quantity * ratio = matched-quantity. Hasblock uses a Godel Hash encoding of units-of-measure and resources so that balancing equations like 5.bags{peanuts} * $2{USD}/1.bag{peanuts} = $10{USD} can be validated algebraically.
+* The match transaction family uses Unmatched Transaction Quantity (UTXQ) and Matched Transaction Quantity (MTXQ) transactions to record the dual initiating and reciprocating events that comprise a value exchange. An exchange could be potential as in an ask/tell duality, or contractual as in an offer/accept duality, or operational as in a commitment/obligation duality, or actual as in a give/take duality.  The match transaction family also validates that initiating events are not double matched and that the value of exchange assets balances. In contrast to a value-transfer balancing equation, **input-value=output-value**, a value-exchange balancing equation requires a ratio, **unmatched-quantity * ratio = matched-quantity**. Hashblock uses a Godel Hash encoding of units-of-measure and resources so that balancing equations like **5.bags{peanuts} * $2{USD}/1.bag{peanuts} = $10{USD}** can be validated algebraically.
+
+Designing hashblock-exchange smart contract validation rules as algebraic expressions simplifies the application of zkSNARK cryptology to the problem of having to expose transaction data to blockchain node validators so that they can validate the accuracy of a transaction. zkSNARK makes it possible to hide transaction data in a non-interactive argument of proof so that blockchain node validators can verify, with a high degree of probability, that balancing equations are satisfied without having to know the magnitudes, units, and resources, of the quantities in the equation. The [zkSNARK wiki page]( https://github.com/hashblock/hashblock-exchange/wiki/zkSNARK) shows how a balancing equation is converted into a rank-1 constraint system that can be used with the [libsnark library]( https://github.com/scipr-lab/libsnark) to generate non-interactive proofs of knowledge off-chain, and to verify proofs of knowledge on-chain. Hashblock-exchange alpha uses a fernet symmetric key algorithm to encrypt and decrypt balancing equation quantities to keep data on the blockchain private to node verifiers, and public to off-chain applications.
 
 ## No Batteries Required
 Refer to the [Quick Start](http://github.com/hashblock/hashblock-exchange/wiki/No-Batteries-Required) document to get up and running with hashblock-exchange.

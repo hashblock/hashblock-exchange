@@ -12,7 +12,7 @@ set(SOURCES src/hbzksnark.cpp src/base64.cpp src/hbutils.cpp)
 
 # Build settings
 set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -Wall -Wextra -Wfatal-errors -O2")
-add_definitions(-DCURVE_BN128 -DBINARY_OUTPUT -DWITH_PROCPS=OFF -DBN_SUPPORT_SNARK=1 -DMONTGOMERY_OUTPUT -DUSE_ASM)
+add_definitions(-DCURVE_BN128 -DBINARY_OUTPUT -DWITH_PROCPS=OFF -DBN_SUPPORT_SNARK=1 -DMONTGOMERY_OUTPUT -DUSE_ASM -DNDEBUG)
 
 # Link settings
 find_library(HB_GMP NAMES gmp)
