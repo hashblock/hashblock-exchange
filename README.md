@@ -1,9 +1,6 @@
 
 Note: hashblock-exchange is alpha only and not considered production ready.
 
-We are currently working on enforcing data encryption in flight and at rest as well as exchange anonymity.
-
-
 ## hashblock-exchange
 First generation blockchain applications use UTXO transactions to record the value of a single resource that is minted and transferred between blockchain addresses. Bitcoin is an example of a first generation blockchain.
 
