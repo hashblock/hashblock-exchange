@@ -20,14 +20,10 @@ from abc import ABC, abstractmethod
 
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 
-from modules.config import valid_key
 from modules.state import State
 from modules.hashblock_zksnark import zksnark_verify
 
-from protobuf.match_pb2 import (
-    MatchEvent,
-    UTXQ,
-    MTXQ)
+from protobuf.match_pb2 import (MatchEvent)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -45,27 +41,17 @@ _reciprocate_actions = frozenset([
     MatchEvent.MTXQ_OBLIGATION,
     MatchEvent.MTXQ_TAKE])
 
-_initiate_key_set = frozenset(['plus', 'minus', 'quantity'])
-_reciprocate010_key_set = frozenset(['plus', 'minus', 'quantity', 'ratio'])
-_reciprocate020_key_set = frozenset(['proof']).union(_reciprocate010_key_set)
-
 
 class Service(ABC):
-    _version_list = ['0.1.0', '0.2.0']
+    _version_list = ['0.2.0']
 
     @classmethod
-    def factory(cls, txn, context, address):
+    def factory(cls, txn, context):
         key = txn.header.family_version
-        LOGGER.debug("Service test for key {}".format(key))
         if key not in cls._version_list:
             raise InvalidTransaction("Unhandled version {}".format(key))
         else:
-            state = State(context)
-            if key == '0.1.0':
-                handler = V010apply(txn, state)
-            else:
-                handler = V020apply(txn, state)
-        LOGGER.debug("Service returning {}".format(type(handler).__name__))
+            handler = V020apply(txn, State(context))
         return handler
 
     @abstractmethod
@@ -125,18 +111,6 @@ class BaseService(Service):
                 "Payload 'action' must be one of {} or {}".
                 format([_initiate_actions, _reciprocate_actions]))
 
-    def match(self, utxq, mtxq):
-        """Utilizes hbzksnark in 0.x.0"""
-        return True
-
-    def check_payload_coherence(self, exchange, basis):
-        """Validate coherent transaction payload content"""
-        ep = valid_key(exchange.plus.decode())
-        em = valid_key(exchange.minus.decode())
-        zset = set([f[0].name for f in exchange.ListFields()])
-        if basis != zset or not ep or not em:
-            raise InvalidTransaction("Incoherent transaction payload")
-
 
 class V020apply(BaseService):
 
@@ -145,11 +119,9 @@ class V020apply(BaseService):
 
     def initiate(self):
         """Version 0.2.0 works with enrypted data blobs"""
-        LOGGER.debug("Initiate 0.2.0")
         self.state.set(self.payload.udata, self.payload.ukey)
 
     def reciprocate(self):
-        LOGGER.debug("Reciprocate 0.2.0")
         """Version 0.2.0 works with encrypted data blobs
         and leverages the proof/verify capability of zksnark."""
         vres = zksnark_verify(
@@ -165,58 +137,4 @@ class V020apply(BaseService):
                 "Invalid zksnark match with reciprocating")
 
     def apply(self):
-        LOGGER.debug("Applying 0.2.0 logic")
-        self.process(self.initiate, self.reciprocate)
-
-
-class V010apply(BaseService):
-    """Handles 0.1.0 transactions
-
-    With the refactoring also comes a way to leverage
-    the zkSNARK verification of the balancing equation
-    during MTXQ processing as the proof (so to speak)
-    is part of the MTXQ structure
-    """
-    def __init__(self, txn, state):
-        super().__init__(txn, state)
-
-    def initiate(self):
-        """Simply copies the intitiate in the clear to chain"""
-        exchange = UTXQ()
-        exchange.ParseFromString(self.payload.mdata)
-        self.check_payload_coherence(exchange, _initiate_key_set)
-        self.state.set(self.payload.mdata, self.payload.ukey)
-
-    def reciprocate(self):
-        """Hybrid that takes the new elements from the transactions
-        and leverages the proof/verify capability of zksnark."""
-        exchange_reciprocate = MTXQ()
-        exchange_reciprocate.ParseFromString(self.payload.mdata)
-        self.check_payload_coherence(
-            exchange_reciprocate, _reciprocate010_key_set)
-        exchange_initiate = UTXQ()
-        self.state.get(exchange_initiate, self.payload.ukey)
-        if exchange_initiate.matched:
-            raise InvalidTransaction(
-                "Attempt to balance with reciprocated Initiate")
-        vres = zksnark_verify(
-            KEYS_PATH,
-            self.payload.proof.decode(),
-            self.payload.pairings.decode())
-        if vres:
-            LOGGER.info("UTXQ and MTXQ Balance!")
-            exchange_initiate.matched = True
-            exchange_reciprocate.unmatched.CopyFrom(exchange_initiate)
-            self.state.set(
-                exchange_initiate.SerializeToString(),
-                self.payload.ukey)
-            self.state.set(
-                exchange_reciprocate.SerializeToString(),
-                self.payload.mkey)
-        else:
-            raise InvalidTransaction(
-                "Invalid zksnark match with reciprocating")
-
-    def apply(self):
-        LOGGER.debug("Applying 0.1.0 logic")
         self.process(self.initiate, self.reciprocate)

@@ -432,8 +432,11 @@ class MTXQ_Ingest(Resource):
     def post(self):
         operation = request.path.split('/')[-1]
         print("Creating {} transaction".format(operation))
-        match.create_mtxq(operation, request.json)
-        return {"status": "OK"}, 200
+        try:
+            match.create_mtxq(operation, request.json)
+            return {"status": "OK"}, 200
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
 
 
 if __name__ == '__main__':

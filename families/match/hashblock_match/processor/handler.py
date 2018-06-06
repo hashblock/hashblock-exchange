@@ -31,7 +31,7 @@ load_hashblock_config()
 class MatchTransactionHandler(TransactionHandler):
 
     def __init__(self):
-        self._addresser = Address(Address.FAMILY_MATCH, ['0.1.0', '0.2.0'])
+        self._addresser = Address(Address.FAMILY_MATCH, ['0.2.0'])
 
     @property
     def addresser(self):
@@ -53,5 +53,4 @@ class MatchTransactionHandler(TransactionHandler):
         """match-tp transaction handling entry point"""
         Service.factory(
             transaction,
-            context,
-            self.addresser).apply()
+            context).apply()

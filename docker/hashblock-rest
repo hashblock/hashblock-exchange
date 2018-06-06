@@ -73,4 +73,6 @@ RUN pip3 install --trusted-host pypi.python.org -r apps/hashblock_rest/requireme
 
 ENV PYTHONPATH /project/hashblock-exchange/apps/hashblock_rest:/project/hashblock-exchange/apps:/project/hashblock-exchange
 
+ENV PATH $PATH:/project/hashblock-exchange/bin
+
 CMD gunicorn -b 0.0.0.0:8000 --access-logfile - "hashblock_rest.app:application"

@@ -54,20 +54,32 @@ __revmachadd = {
 
 def __get_leaf_data(address):
     """Fetch leaf data from chain"""
-    return RestClient(sawtooth_rest_host()).get_leaf(address)
+    ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
+    ddict['data'] = b64decode(ddict['data'])
+    return ddict
 
 
 def __get_encrypted_leaf(address):
-    """Fetch leaf data from chain"""
+    """Fetch encrypted leaf data from chain"""
     ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
-    print("")
     ddict['data'] = STATE_CRYPTO.decrypt(b64decode(ddict['data']))
     return ddict
 
 
 def __get_list_data(address):
     """Fetch list data from chain"""
-    return RestClient(sawtooth_rest_host()).list_state(address)
+    ddict = RestClient(sawtooth_rest_host()).list_state(address)
+    for entry in ddict['data']:
+        entry['data'] = b64decode(entry['data'])
+    return ddict
+
+
+def __get_encrypted_list_data(address):
+    """Fetch encrypted list data from chain"""
+    ddict = RestClient(sawtooth_rest_host()).list_state(address)
+    for entry in ddict['data']:
+        entry['data'] = STATE_CRYPTO.decrypt(b64decode(entry['data']))
+    return ddict
 
 
 @lru_cache(maxsize=128)
@@ -78,7 +90,7 @@ def __resource_asset_cache(prime):
     resource = None
     for entry in res['data']:
         er = Resource()
-        er.ParseFromString(b64decode(entry['data']))
+        er.ParseFromString(entry['data'])
         if prime == er.value:
             resource = er
             break
@@ -93,7 +105,7 @@ def __unit_asset_cache(prime):
     unit = None
     for entry in res['data']:
         eu = Unit()
-        eu.ParseFromString(b64decode(entry['data']))
+        eu.ParseFromString(entry['data'])
         if prime == eu.value:
             unit = eu
             break
@@ -148,7 +160,7 @@ def decode_settings(address, data=None):
         data = __get_leaf_data(address)
     return __decode_settings(
         address,
-        b64decode(__get_leaf_data(address)['data']))
+        __get_leaf_data(address)['data'])
 
 
 def __decode_proposals(address, data):
@@ -179,7 +191,7 @@ def __decode_proposals(address, data):
 
 def decode_proposals(address, data=None):
     if not data:
-        data = b64decode(__get_leaf_data(address)['data'])
+        data = __get_leaf_data(address)['data']
     return __decode_proposals(address, data)
 
 
@@ -221,6 +233,8 @@ def __decode_match(address, data):
     match = MessageToDict(item)
     match["plus"] = key_owner(item.plus.decode())
     match["minus"] = key_owner(item.minus.decode())
+    if address[12:18] == Address._utxq_hash:
+        match["matched"] = "True" if item.matched else "False"
     quantity_to_prime(match['quantity'], item.quantity)
     if deep:
         quantity_to_prime(
@@ -250,7 +264,7 @@ def get_utxq_obj_json(address):
 
 
 def decode_match_dimension(address):
-    results = __get_list_data(address)['data']
+    results = __get_encrypted_list_data(address)['data']
     dim = 'utxq' if address[12:18] == Address._utxq_hash else 'mtxq'
     data = []
     for element in results:
@@ -267,15 +281,14 @@ def decode_match_dimension(address):
 
 def decode_match_initiate_list(address):
     """Decorate initiates with text conversions"""
-    results = __get_list_data(address)['data']
+    results = __get_encrypted_list_data(address)['data']
     ops = __revmachadd[address[18:24]]
 
     data = []
     for element in results:
         ladd = element['address']
         utxq = UTXQ()
-        utxq.ParseFromString(b64decode(
-            __get_encrypted_leaf(ladd)['data']))
+        utxq.ParseFromString(__get_encrypted_leaf(ladd)['data'])
         data.append((
             {
                 "plus": key_owner(utxq.plus.decode("utf-8")),
@@ -293,15 +306,14 @@ def decode_match_initiate_list(address):
 
 def decode_match_reciprocate_list(address):
     """Decorate reciprocates with text conversions"""
-    results = __get_list_data(address)['data']
+    results = __get_encrypted_list_data(address)['data']
     ops = __revmachadd[address[18:24]]
 
     data = []
     for element in results:
         ladd = element['address']
         mtxq = MTXQ()
-        mtxq.ParseFromString(b64decode(
-            __get_encrypted_leaf(ladd)['data']))
+        mtxq.ParseFromString(__get_encrypted_leaf(ladd)['data'])
         data.append(({
             "plus": key_owner(mtxq.plus.decode("utf-8")),
             "minus": key_owner(mtxq.minus.decode("utf-8")),
@@ -334,7 +346,7 @@ def decode_asset_list(address):
         else:
             asset = Resource()
             atype = 'resource'
-        asset.ParseFromString(b64decode(element['data']))
+        asset.ParseFromString(element['data'])
         data.append({
             'link': element['address'],
             'type': atype,
@@ -359,7 +371,7 @@ def decode_asset_unit_list(address):
         atype = 'resource'
     data = []
     for element in results:
-        asset.ParseFromString(b64decode(element['data']))
+        asset.ParseFromString(element['data'])
         data.append({
             'link': element['address'],
             'system': asset.system,
@@ -401,5 +413,4 @@ _hash_map = {
 
 def decode_from_leaf(address):
     f, y = _hash_map[address[:6]][address[6:12]][address[12:18]]
-    leaf = f(address)
-    return y(address, b64decode(leaf['data']))
+    return y(address, f(address)['data'])

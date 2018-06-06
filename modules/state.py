@@ -17,7 +17,6 @@
 import logging
 
 from cryptography.fernet import Fernet
-from base64 import b64encode, b64decode
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InternalError
 
@@ -32,7 +31,6 @@ class State():
     def __init__(self, context=None):
         self._context = context
         self._encrypter = Fernet(encrypt_key())
-        LOGGER.debug("Encrypter = {}".format(self._encrypter))
 
     @property
     def context(self):

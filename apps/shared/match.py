@@ -27,14 +27,17 @@ from shared.transactions import (
 from modules.address import Address
 from modules.hashblock_zksnark import zksnark_genproof
 from modules.config import valid_signer
-from modules.decode import decode_from_leaf, STATE_CRYPTO, get_utxq_obj_json
+from modules.decode import (
+    asset_addresser,
+    decode_from_leaf,
+    STATE_CRYPTO,
+    get_utxq_obj_json)
 from modules.exceptions import RestException, DataException
 from modules.exceptions import AssetNotExistException
 from protobuf.match_pb2 import (
     MatchEvent, UTXQ, MTXQ, Quantity, Ratio)
 
 KEYS_PATH = os.environ['HASHBLOCK_KEYS'] + '/'
-_asset_addrs = Address(Address.FAMILY_ASSET, "0.1.0")
 _utxq_addrs = Address(Address.FAMILY_MATCH, "0.2.0", Address.DIMENSION_UTXQ)
 _mtxq_addrs = Address(Address.FAMILY_MATCH, "0.2.0", Address.DIMENSION_MTXQ)
 
@@ -54,30 +57,41 @@ def __validate_partners(plus, minus):
     """Validate the plus and minus are reachable keys"""
     valid_signer(plus)
     valid_signer(minus)
-    print("Validated partners")
 
 
 def __validate_assets(value, unit, resource):
     """Validate and return asset addresses that are reachable"""
     int(value)
-    unit_add = _asset_addrs.asset_item(
+    unit_add = asset_addresser.asset_item(
         Address.DIMENSION_UNIT,
         unit['system'], unit['key'])
-    resource_add = _asset_addrs.asset_item(
+    resource_add = asset_addresser.asset_item(
         Address.DIMENSION_RESOURCE,
         resource['system'], resource['key'])
 
     unit_res = decode_from_leaf(unit_add)
     resource_res = decode_from_leaf(resource_add)
     if not unit_res['data'] or not resource_res['data']:
-        raise AssetNotExistException
+        raise AssetNotExistException("Asset does not exist")
     return (unit_res['data'], resource_res['data'])
 
 
 def __get_and_validate_utxq(address):
     """Check that the utxq exists to recipricate on"""
+    print("Address to check utxq {}".format(address[24]))
+    if address[24] == '1':
+        raise DataException(
+            'Attempt to match on already matched transaction')
     try:
-        return get_utxq_obj_json(address)
+        utxq = get_utxq_obj_json(address)
+        try:
+            alias = _utxq_addrs.set_utxq_matched(address)
+            get_utxq_obj_json(alias)
+            raise DataException(
+                'Initiating (utxq) transaction already matched')
+        except RestException:
+            pass
+        return utxq
     except RestException:
         raise DataException('Invalid initiate (utxq) address')
 
@@ -122,8 +136,6 @@ def __validate_mtxq(request):
     data_tuple.append(denominator_assets[1]['value'])
     data_tuple.append(quantity_assets[1]['value'])
     data_str = ",".join(data_tuple)
-    print("Pairing tuple = {}".format(data_tuple))
-    print("Pairing data_str = {}".format(data_str))
     prf_pair = zksnark_genproof(KEYS_PATH, data_str)
     return (
         utxq,
@@ -182,6 +194,7 @@ def __create_mtxq(ingest):
     utxq, uaddr, quantity, numerator, denominator, prf_pair = qassets
     # mtxq = MTXQ()
     maddr = _mtxq_addrs.set_utxq_matched(uaddr)
+    utxq.matched = True
     return (operation, utxq, maddr, prf_pair, data, MTXQ(
         plus=valid_signer(data['plus']).encode(),
         minus=valid_signer(data['minus']).encode(),
@@ -221,11 +234,6 @@ def __create_reciprocate_inputs_outputs(ingest):
 def create_utxq(operation, request):
     """Create utxq transaction"""
     quant = __validate_utxq(request)
-    # Creaate utxq
-    # Create payload
-    # Create inputs/outputs
-    # Create transaction
-    # Create batch
     utxq_build = compose_builder(
         submit_single_txn, create_transaction,
         __create_initiate_inputs_outputs, __create_initiate_payload,
@@ -236,11 +244,6 @@ def create_utxq(operation, request):
 def create_mtxq(operation, request):
     """Create mtxq transaction"""
     qnd = __validate_mtxq(request)
-    # Creaate mtxq
-    # Create payload
-    # Create inputs/outputs
-    # Create transaction
-    # Create batch
     mtxq_build = compose_builder(
         submit_single_txn, create_transaction,
         __create_reciprocate_inputs_outputs, __create_reciprocate_payload,
