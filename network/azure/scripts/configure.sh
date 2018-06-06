@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 12 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
+if [ $# -lt 13 ]; then unsuccessful_exit "Insufficient parameters supplied. Exiting" 200; fi
 
 USER=$1;
 NODEINDEX=$2;
@@ -17,6 +17,8 @@ shift;
 CHURCHPRIVKEY=$9;
 shift;
 TURINGPRIVKEY=$9;
+shift;
+ZKSNARKLAMBDA=$9
 
 TMP_HOME="/sawtooth";
 HOMEDIR="/home/$USER";
@@ -95,7 +97,7 @@ if [ ! -e "/sawtooth/keys/hashblock_zkSNARK.pk" ]; then
   sudo cd "$SAWTOOTH_HOME/lib"
   sudo wget -N $HBZKSNARK;
   sudo chmod +x hbzksnark;
-  ./hbzksnark -g /sawtooth/keys/
+  ./hbzksnark -g /sawtooth/keys/ $ZKSNARKLAMBDA
 fi
 
 if [ ! -e "/sawtooth/etc/validator.toml" ]; then
