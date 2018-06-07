@@ -247,3 +247,6 @@ class Address():
         laddr = list(address)
         laddr[24] = '1'
         return ''.join(laddr)
+
+    def is_utxq_matched(self, address):
+        return True if address[24] == '1' else False

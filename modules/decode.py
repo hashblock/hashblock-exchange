@@ -106,6 +106,9 @@ def __unit_asset_cache(prime):
     for entry in res['data']:
         eu = Unit()
         eu.ParseFromString(entry['data'])
+        print(
+            "Checking for {} in {}".
+            format(prime, eu))
         if prime == eu.value:
             unit = eu
             break
@@ -114,18 +117,21 @@ def __unit_asset_cache(prime):
 
 def __resource_key_lookup(prime_value):
     """Get key string of asset for type resource"""
+    print("RKL for {}".format(prime_value))
     return __resource_asset_cache(
         str(int.from_bytes(prime_value, byteorder='little'))).key
 
 
 def __unit_key_lookup(prime_value):
     """Get key string of asset for type unit-of-measure"""
+    print("UKL for {}".format(prime_value))
     return __unit_asset_cache(
         str(int.from_bytes(prime_value, byteorder='little'))).key
 
 
 def __format_quantity(quantity):
     """Replaces primes with asset information"""
+    print("Parsing quantity with {}".format(quantity))
     value_magnitude = int.from_bytes(quantity.value, byteorder='little')
     value_unit = __unit_key_lookup(quantity.valueUnit)
     resource_unit = __resource_key_lookup(quantity.resourceUnit)
@@ -233,21 +239,22 @@ def __decode_match(address, data):
     match = MessageToDict(item)
     match["plus"] = key_owner(item.plus.decode())
     match["minus"] = key_owner(item.minus.decode())
-    if address[12:18] == Address._utxq_hash:
-        match["matched"] = "True" if item.matched else "False"
     quantity_to_prime(match['quantity'], item.quantity)
     if deep:
+        # Get address of utxq
+        match["utxqAddr"] = item.utxq_addr.decode()
+        match["matched"] = asset_addresser.is_utxq_matched(match["utxqAddr"])
         quantity_to_prime(
             match['ratio']['numerator'],
             item.ratio.numerator)
         quantity_to_prime(
             match['ratio']['denominator'],
             item.ratio.denominator)
-        quantity_to_prime(
-            match['unmatched']['quantity'],
-            item.unmatched.quantity)
-        match['unmatched']["plus"] = key_owner(item.unmatched.plus.decode())
-        match['unmatched']["minus"] = key_owner(item.unmatched.minus.decode())
+        # quantity_to_prime(
+        #     match['unmatched']['quantity'],
+        #     item.unmatched.quantity)
+        # match['unmatched']["plus"] = key_owner(item.unmatched.plus.decode())
+        # match['unmatched']["minus"] = key_owner(item.unmatched.minus.decode())
     return {
         'family': 'match',
         'dimension': dim,
@@ -317,9 +324,9 @@ def decode_match_reciprocate_list(address):
         data.append(({
             "plus": key_owner(mtxq.plus.decode("utf-8")),
             "minus": key_owner(mtxq.minus.decode("utf-8")),
-            "text": '{} for {}'.format(
-                __format_quantity(mtxq.quantity),
-                __format_quantity(mtxq.unmatched.quantity))
+            # "text": '{} for {}'.format(
+            #     __format_quantity(mtxq.quantity))
+            #  __format_quantity(mtxq.unmatched.quantity))
         }, ladd))
     return {
         'family': 'match',
