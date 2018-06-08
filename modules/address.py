@@ -236,16 +236,14 @@ class Address():
         return self.txq_list(dimension, ops) \
             + '0' + self.hashup(ident)[0:45]
 
-    # E.g. hashblock.match.utxq.ask.ident
-    # 0-2 namespace (:6)
-    # 3-5 family (6:12)
-    # 6-8 dimension (12:18)
-    # 9-11 ops (18:24)
-    # 12 is '0' (25) in and '1' out
-    # 13-34 id (26:70)
     def set_utxq_matched(self, address):
         laddr = list(address)
         laddr[24] = '1'
+        return ''.join(laddr)
+
+    def set_utxq_unmatched(self, address):
+        laddr = list(address)
+        laddr[24] = '0'
         return ''.join(laddr)
 
     def is_utxq_matched(self, address):

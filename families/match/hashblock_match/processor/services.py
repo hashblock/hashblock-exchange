@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 
-from modules.state import State
+from modules.state import State, StateDataNotFound
 from modules.hashblock_zksnark import zksnark_verify
 
 from protobuf.match_pb2 import (MatchEvent)
@@ -46,7 +46,8 @@ class Service(ABC):
     _version_list = ['0.2.0']
 
     @classmethod
-    def factory(cls, txn, context):
+    def factory(cls, addresser, txn, context):
+        cls.addresser = addresser
         key = txn.header.family_version
         if key not in cls._version_list:
             raise InvalidTransaction("Unhandled version {}".format(key))
@@ -124,6 +125,13 @@ class V020apply(BaseService):
     def reciprocate(self):
         """Version 0.2.0 works with encrypted data blobs
         and leverages the proof/verify capability of zksnark."""
+        try:
+            self.state.get_state_data(self.payload.ukey)
+            raise InvalidTransaction(
+                "UTXQ {} already matched".format(self.payload.ukey))
+        except StateDataNotFound:
+            pass
+
         vres = zksnark_verify(
             KEYS_PATH,
             self.payload.proof.decode(),

@@ -84,13 +84,6 @@ def __get_and_validate_utxq(address):
             'Attempt to match on already matched transaction')
     try:
         utxq = get_utxq_obj_json(address)
-        try:
-            alias = _utxq_addrs.set_utxq_matched(address)
-            get_utxq_obj_json(alias)
-            raise DataException(
-                'Initiating (utxq) transaction already matched')
-        except RestException:
-            pass
         return utxq
     except RestException:
         raise DataException('Invalid initiate (utxq) address')
@@ -193,9 +186,8 @@ def __create_mtxq(ingest):
     operation, qassets, data = ingest
     utxq, uaddr, quantity, numerator, denominator, prf_pair = qassets
     # mtxq = MTXQ()
-    maddr = _mtxq_addrs.set_utxq_matched(uaddr)
     utxq.matched = True
-    return (operation, utxq, maddr, prf_pair, data, MTXQ(
+    return (operation, utxq, uaddr, prf_pair, data, MTXQ(
         plus=valid_signer(data['plus']).encode(),
         minus=valid_signer(data['minus']).encode(),
         quantity=__create_quantity(data['quantity']['value'], quantity),
@@ -204,16 +196,16 @@ def __create_mtxq(ingest):
                 data['ratio']['numerator']['value'], numerator),
             denominator=__create_quantity(
                 data['ratio']['denominator']['value'], denominator)),
-        utxq_addr=maddr.encode()))
+        utxq_addr=_mtxq_addrs.set_utxq_matched(uaddr).encode()))
 
 
 def __create_reciprocate_payload(ingest):
     """Create the mtxq payload"""
-    operation, utxq, maddr, prf_pair, request, payload = ingest
+    operation, utxq, uaddr, prf_pair, request, payload = ingest
     proof, pairing = prf_pair
-    return (operation, request['plus'], MatchEvent(
+    return (operation, uaddr, request['plus'], MatchEvent(
         action=_ACTION_MAP[operation],
-        ukey=maddr,
+        ukey=_mtxq_addrs.set_utxq_matched(uaddr),
         mkey=_mtxq_addrs.txq_item(
             _mtxq_addrs.dimension, operation, str(uuid.uuid4)),
         mdata=STATE_CRYPTO.encrypt(payload.SerializeToString()),
@@ -224,8 +216,8 @@ def __create_reciprocate_payload(ingest):
 
 def __create_reciprocate_inputs_outputs(ingest):
     """Create mtxq address (state) authorizations"""
-    operation, signer, payload = ingest
-    inputs = []
+    operation, uaddr, signer, payload = ingest
+    inputs = [uaddr, payload.ukey]
     outputs = [payload.ukey, payload.mkey]
     return (
         signer, _mtxq_addrs, {"inputs": inputs, "outputs": outputs}, payload)

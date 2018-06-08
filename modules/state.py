@@ -27,6 +27,10 @@ LOGGER = logging.getLogger(__name__)
 load_hashblock_config()
 
 
+class StateDataNotFound(BaseException):
+    pass
+
+
 class State():
     def __init__(self, context=None):
         self._context = context
@@ -40,7 +44,7 @@ class State():
     def encrypter(self):
         return self._encrypter
 
-    def _get_state_data(self, address):
+    def get_state_data(self, address):
         """Standard merkle trie get_state using address"""
         try:
             exchange_list = self.context.get_state(
@@ -49,7 +53,7 @@ class State():
             raise InternalError(
                 'Timeout on getting {}'.format(address))
         if len(exchange_list) != 1:
-            raise InternalError(
+            raise StateDataNotFound(
                 'Data does not exists for {}'.format(address))
         return exchange_list
 
@@ -68,7 +72,7 @@ class State():
             raise InternalError(
                 'Unable to set {}'.format(address))
         if len(addresses) != 1:
-            raise InternalError(
+            raise StateDataNotFound(
                 'Unable to save exchange for address {}'.
                 format(address))
 

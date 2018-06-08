@@ -52,5 +52,6 @@ class MatchTransactionHandler(TransactionHandler):
     def apply(self, transaction, context):
         """match-tp transaction handling entry point"""
         Service.factory(
+            self.addresser,
             transaction,
             context).apply()

@@ -106,9 +106,6 @@ def __unit_asset_cache(prime):
     for entry in res['data']:
         eu = Unit()
         eu.ParseFromString(entry['data'])
-        print(
-            "Checking for {} in {}".
-            format(prime, eu))
         if prime == eu.value:
             unit = eu
             break
@@ -117,21 +114,18 @@ def __unit_asset_cache(prime):
 
 def __resource_key_lookup(prime_value):
     """Get key string of asset for type resource"""
-    print("RKL for {}".format(prime_value))
     return __resource_asset_cache(
         str(int.from_bytes(prime_value, byteorder='little'))).key
 
 
 def __unit_key_lookup(prime_value):
     """Get key string of asset for type unit-of-measure"""
-    print("UKL for {}".format(prime_value))
     return __unit_asset_cache(
         str(int.from_bytes(prime_value, byteorder='little'))).key
 
 
 def __format_quantity(quantity):
     """Replaces primes with asset information"""
-    print("Parsing quantity with {}".format(quantity))
     value_magnitude = int.from_bytes(quantity.value, byteorder='little')
     value_unit = __unit_key_lookup(quantity.valueUnit)
     resource_unit = __resource_key_lookup(quantity.resourceUnit)
