@@ -294,7 +294,8 @@ def decode_match_initiate_list(address):
             {
                 "plus": key_owner(utxq.plus.decode("utf-8")),
                 "minus": key_owner(utxq.minus.decode("utf-8")),
-                "text": __format_quantity(utxq.quantity)
+                "text": __format_quantity(utxq.quantity),
+                "matched": asset_addresser.is_utxq_matched(ladd)
             },
             ladd))
     return {
