@@ -1,6 +1,6 @@
 #https://github.com/ludbb/secp256k1-py
 #https://pypi.org/project/eciespy/
- 
+
 import binascii
 import secp256k1
 
@@ -42,8 +42,8 @@ else:
 secret_c = sk_turing.pubkey.ecdh(sk_church.private_key)
 secret_t = sk_church.pubkey.ecdh(sk_turing.private_key)
 
-print(secret_c)
-print(secret_t)
+print("Church secret {}".format(secret_c))
+print("Turing secret {}".format(secret_t))
 
 if secret_c == secret_t:
     print('match')
@@ -51,7 +51,7 @@ else:
     print('no match')
 
 data = b'this is a test'
-print(aes_decrypt(secret_c, aes_encrypt(secret_c, data)))
-
-
-
+encdata = aes_encrypt(secret_c, data)   # Encrypt with church
+redata = aes_decrypt(secret_t, encdata) # Decrypt with turing
+print("Encrypted {}".format(encdata))
+print("{}".format(redata))
