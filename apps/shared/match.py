@@ -32,8 +32,8 @@ from modules.decode import (
     decode_from_leaf,
     STATE_CRYPTO,
     get_utxq_obj_json)
-from modules.exceptions import RestException, DataException
-from modules.exceptions import AssetNotExistException
+from modules.exceptions import (
+    RestException, DataException, AssetNotExistException)
 from protobuf.match_pb2 import (
     MatchEvent, UTXQ, MTXQ, Quantity, Ratio)
 

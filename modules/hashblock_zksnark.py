@@ -17,6 +17,25 @@
 import subprocess
 from sawtooth_sdk.processor.exceptions import InternalError
 
+# x = subprocess.run(
+#   ['openssl', 'prime', '-generate', '-bits', '172', '-hex'],
+#   stdout=subprocess.PIPE)
+# y = x.stdout[:-1]
+# len(y)
+
+# x = subprocess.run(
+#   ['openssl', 'prime', '-generate', '-bits', '1024', '-hex'],
+#   stdout=subprocess.PIPE)
+# y = x.stdout[:-1]
+# len(y)
+
+
+def prime_gen():
+    x = subprocess.run(
+        ['openssl', 'prime', '-generate', '-bits', '1024', '-hex'],
+        stdout=subprocess.PIPE)
+    return x.stdout[:-1]
+
 
 def zksnark_genkeys(file_path, secret_str):
     """Generates the proover and verifyer 'keys'"""
