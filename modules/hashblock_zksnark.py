@@ -17,22 +17,11 @@
 import subprocess
 from sawtooth_sdk.processor.exceptions import InternalError
 
-# x = subprocess.run(
-#   ['openssl', 'prime', '-generate', '-bits', '172', '-hex'],
-#   stdout=subprocess.PIPE)
-# y = x.stdout[:-1]
-# len(y)
-
-# x = subprocess.run(
-#   ['openssl', 'prime', '-generate', '-bits', '1024', '-hex'],
-#   stdout=subprocess.PIPE)
-# y = x.stdout[:-1]
-# len(y)
-
 
 def prime_gen():
+    """Returns prime based on 172 bit range. Results is 44 char"""
     x = subprocess.run(
-        ['openssl', 'prime', '-generate', '-bits', '1024', '-hex'],
+        ['openssl', 'prime', '-generate', '-bits', '172', '-hex'],
         stdout=subprocess.PIPE)
     return x.stdout[:-1]
 

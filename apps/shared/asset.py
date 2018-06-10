@@ -26,7 +26,7 @@ from itertools import count, islice
 from shared.transactions import (
     create_batch, submit_batch,
     submit_single_txn, create_transaction, compose_builder)
-from hashblock_zksnark import prime_gen
+from modules.hashblock_zksnark import prime_gen
 from modules.address import Address
 from modules.config import valid_signer
 from modules.decode import decode_asset_unit_list, decode_proposals

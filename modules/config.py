@@ -18,6 +18,7 @@ import sys
 import os
 from yaml import load
 
+from modules.state import State
 from modules.exceptions import CliException, AuthException
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
@@ -65,6 +66,62 @@ def valid_submitter(submitter_name):
     return result
 
 
+def public_key(name):
+    """Attempts to resolve a public key by name"""
+    result = None
+    for key, value in REST_CONFIG['rest']['public_keys'].items():
+        if key == name:
+            result = value
+            break
+    if not result:
+        raise AuthException
+    return result
+
+
+def private_key(name):
+    """Attempts to resolve a private key by name"""
+    result = None
+    for key, value in REST_CONFIG['rest']['private_keys'].items():
+        if key == name:
+            result = value
+            break
+    if not result:
+        raise AuthException
+    return result
+
+
+def valid_partnership(part1, part2):
+    result = False
+    for key, value in REST_CONFIG['rest']['partners'].items():
+        if part1 in value and part2 in value:
+            result = True
+            break
+    return result
+
+
+def partnership_secret(part1, part2):
+    result = None
+    for key, value in REST_CONFIG['rest']['partners'].items():
+        if part1 in value and part2 in value:
+            result = value[2]
+            break
+    if not result:
+        raise AuthException
+    return result
+
+
+def agreement_secret(agreement_name):
+    result = None
+    for key, value in REST_CONFIG['rest']['partners'].items():
+        print("Key {} Values {}".format(key, value))
+        if key == agreement_name:
+            result = value[2]
+            break
+    if not result:
+        raise AuthException
+    return result
+
+
 def key_owner(key_value):
     """Reverse lookup by key_value"""
     result = UNKNOWN_OWNER
@@ -85,44 +142,9 @@ def zksnark_verifier_key():
     return REST_CONFIG['rest']['zksnark_keys']['verifier']
 
 
-def encrypt_key():
-    """Returns the fernet key for encryption"""
-    return REST_CONFIG['rest']['encrypt_keys']['lock']
-
-
 def valid_key(key_value):
     """Tests key against known keys"""
     return False if key_owner(key_value) == UNKNOWN_OWNER else True
-
-
-def __read_signer(key_filename):
-    """Reads the given file as a hex key.
-
-    Args:
-        key_filename: The filename where the key is stored. If None,
-            defaults to the default key for the current user.
-
-    Returns:
-        Signer: the signer
-
-    Raises:
-        CliException: If unable to read the file.
-    """
-
-    try:
-        with open(key_filename, 'r') as key_file:
-            signing_key = key_file.read().strip()
-    except IOError as e:
-        raise CliException('Unable to read key file: {}'.format(str(e)))
-
-    try:
-        private_key = Secp256k1PrivateKey.from_hex(signing_key)
-    except ParseError as e:
-        raise CliException('Unable to read key in file: {}'.format(str(e)))
-
-    context = create_context('secp256k1')
-    crypto_factory = CryptoFactory(context)
-    return crypto_factory.new_signer(private_key)
 
 
 def __read_keyfile(key_filename):
@@ -132,6 +154,37 @@ def __read_keyfile(key_filename):
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))
     return key_file_key
+
+
+def __read_keys(key_file_prefix):
+    """Reads in the public and private keys"""
+    return (
+        __read_keyfile(key_file_prefix + ".pub"),
+        __read_keyfile(key_file_prefix + ".priv"))
+
+
+def __read_signer(signing_key):
+    """Reads the given file as a hex key.
+
+    Args:
+        private_key: The private key from file
+
+    Returns:
+        Signer: the signer
+
+    Raises:
+        CliException: If unable to create Secp256k1PrivateKey
+    """
+
+    try:
+        private_key = Secp256k1PrivateKey.from_hex(signing_key)
+    except ParseError as e:
+        raise CliException(
+            'Unable to create Secp256k1PrivateKey: {}'.format(str(e)))
+
+    context = create_context('secp256k1')
+    crypto_factory = CryptoFactory(context)
+    return crypto_factory.new_signer(private_key)
 
 
 def __load_cfg_and_keys(configfile):
@@ -145,27 +198,42 @@ def __load_cfg_and_keys(configfile):
         raise
 
     signer_keys = {}
+    private_keys = {}
+    public_keys = {}
     submitter_keys = {}
-    # iterate through keys to load public keys
+    # iterate through signers for keys
     for key, value in doc['rest']['signers'].items():
-        signer = __read_signer(os.path.join(DEFAULT_KEYS_PATH, value))
-        submitter_keys[key] = signer
-        signer_keys[key] = signer.get_public_key().as_hex()
+        public, private = __read_keys(os.path.join(DEFAULT_KEYS_PATH, value))
+        public_keys[key] = public
+        private_keys[key] = private
+        signer_keys[key] = public
+        submitter_keys[key] = __read_signer(private)
 
+    doc['rest']['public_keys'] = public_keys
+    doc['rest']['private_keys'] = private_keys
     doc['rest']['signer_keys'] = signer_keys
     doc['rest']['submitters'] = submitter_keys
 
+    # iterate through zksnark keys
     zksnark_keys = {}
     for key, value in doc['rest']['zksnark'].items():
         zksnarkkey = __read_keyfile(os.path.join(DEFAULT_KEYS_PATH, value))
         zksnark_keys[key] = zksnarkkey
     doc['rest']['zksnark_keys'] = submitter_keys
 
-    encrypt_keys = {}
-    for key, value in doc['rest']['encrypt'].items():
-        encrypt_key = __read_keyfile(os.path.join(DEFAULT_KEYS_PATH, value))
-        encrypt_keys[key] = encrypt_key
-    doc['rest']['encrypt_keys'] = encrypt_keys
+    # iterate through agreements
+    # for each agreement get the pair and append a secret
+    agreements = {}
+    for key, value in doc['rest']['agreements'].items():
+        if len(value) == 2:
+            value.append(
+                State.get_secret(
+                    doc['rest']['private_keys'][value[0]],
+                    doc['rest']['public_keys'][value[1]]))
+            agreements[key] = value
+        else:
+            raise AuthException
+    doc['rest']['partners'] = agreements
     return doc
 
 

@@ -3,4 +3,3 @@ flask-restplus
 gunicorn
 requests
 sawtooth-sdk
-cryptography

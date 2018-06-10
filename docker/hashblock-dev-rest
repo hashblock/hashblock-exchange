@@ -22,7 +22,12 @@ RUN apt-get update \
  && apt-get install -y -q \
     apt-transport-https \
     python3-dev \
-    python3-pip
+    python3-pip \
+    build-essential \
+    automake \
+    pkg-config \
+    libtool \
+    libffi-dev
 
 RUN pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
     rm -r /root/.cache
@@ -34,7 +39,12 @@ COPY apps/shared apps/shared
 COPY apps/protobuf apps/protobuf
 COPY apps/hashblock_rest apps/hashblock_rest
 
-RUN pip3 install --trusted-host pypi.python.org -r apps/hashblock_rest/requirements.txt
+RUN pip3 install eciespy cryptography && \
+	SECP_BUNDLED_EXPERIMENTAL=1 pip3 --no-cache-dir install --no-binary secp256k1 secp256k1 && \
+	pip3 install --trusted-host pypi.python.org -r apps/hashblock_rest/requirements.txt
+
+RUN apt-get remove -y build-essential automake && \
+	apt-get autoremove -y
 
 ENV PYTHONPATH /project/hashblock-exchange/apps/hashblock_rest:/project/hashblock-exchange/apps:/project/hashblock-exchange
 

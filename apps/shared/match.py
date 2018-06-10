@@ -20,20 +20,23 @@ This module is referenced when posting utxq and mtxq exchanges
 """
 import os
 import uuid
+import binascii
 
 from shared.transactions import (
     submit_single_txn, create_transaction, compose_builder)
 
 from modules.address import Address
 from modules.hashblock_zksnark import zksnark_genproof
-from modules.config import valid_signer
+from modules.config import (
+    valid_signer, public_key, private_key,
+    valid_partnership, partnership_secret)
 from modules.decode import (
     asset_addresser,
     decode_from_leaf,
     STATE_CRYPTO,
     get_utxq_obj_json)
 from modules.exceptions import (
-    RestException, DataException, AssetNotExistException)
+    AuthException, RestException, DataException, AssetNotExistException)
 from protobuf.match_pb2 import (
     MatchEvent, UTXQ, MTXQ, Quantity, Ratio)
 
@@ -55,8 +58,11 @@ _ACTION_MAP = {
 
 def __validate_partners(plus, minus):
     """Validate the plus and minus are reachable keys"""
-    valid_signer(plus)
-    valid_signer(minus)
+    if valid_partnership(plus, minus):
+        pass
+    else:
+        AuthException(
+            "No partnership for {} and {}".format(plus, minus))
 
 
 def __validate_assets(value, unit, resource):
@@ -76,14 +82,14 @@ def __validate_assets(value, unit, resource):
     return (unit_res['data'], resource_res['data'])
 
 
-def __get_and_validate_utxq(address):
+def __get_and_validate_utxq(address, secret):
     """Check that the utxq exists to recipricate on"""
     print("Address to check utxq {}".format(address[24]))
     if address[24] == '1':
         raise DataException(
             'Attempt to match on already matched transaction')
     try:
-        utxq = get_utxq_obj_json(address)
+        utxq = get_utxq_obj_json(address, secret)
         return utxq
     except RestException:
         raise DataException('Invalid initiate (utxq) address')
@@ -101,7 +107,10 @@ def __validate_utxq(request):
 
 def __validate_mtxq(request):
     """Validate the content for mtxq"""
-    utxq, json = __get_and_validate_utxq(request["utxq_address"])
+    __validate_partners(request["plus"], request["minus"])
+    utxq, json = __get_and_validate_utxq(
+        request["utxq_address"],
+        partnership_secret(request["plus"], request["minus"]))
     utxq_qblock = json['data']['quantity']
     quantity_assets = __validate_assets(
         request['quantity']['value'],
@@ -152,21 +161,25 @@ def __create_quantity(value, quantity):
 
 def __create_utxq(ingest):
     """Create a utxq object"""
-    operation, quantity, data = ingest
-    return (operation, data['plus'], UTXQ(
+    operation, quantity, request = ingest
+    return (operation, request, UTXQ(
         matched=False,
-        plus=valid_signer(data['plus']).encode(),
-        minus=valid_signer(data['minus']).encode(),
-        quantity=__create_quantity(data['quantity']['value'], quantity)))
+        plus=public_key(request['plus']).encode(),
+        minus=public_key(request['minus']).encode(),
+        quantity=__create_quantity(request['quantity']['value'], quantity)))
 
 
 def __create_initiate_payload(ingest):
     """Create the utxq payload"""
-    operation, signer, data = ingest
+    operation, request, data = ingest
     utxq_addr = _utxq_addrs.match2_initiate_unmatched(
         _utxq_addrs.dimension, operation, str(uuid.uuid4))
-    encrypted = STATE_CRYPTO.encrypt(data.SerializeToString())
-    return (operation, signer, MatchEvent(
+    encrypted = binascii.hexlify(
+        STATE_CRYPTO.encrypt_from(
+            data.SerializeToString(),
+            private_key(request['plus']),
+            public_key(request['minus'])))
+    return (operation, request['plus'], MatchEvent(
         udata=encrypted,
         ukey=utxq_addr,
         action=_ACTION_MAP[operation]))
@@ -188,8 +201,8 @@ def __create_mtxq(ingest):
     # mtxq = MTXQ()
     utxq.matched = True
     return (operation, utxq, uaddr, prf_pair, data, MTXQ(
-        plus=valid_signer(data['plus']).encode(),
-        minus=valid_signer(data['minus']).encode(),
+        plus=public_key(data['plus']).encode(),
+        minus=public_key(data['minus']).encode(),
         quantity=__create_quantity(data['quantity']['value'], quantity),
         ratio=Ratio(
             numerator=__create_quantity(
@@ -203,13 +216,23 @@ def __create_reciprocate_payload(ingest):
     """Create the mtxq payload"""
     operation, utxq, uaddr, prf_pair, request, payload = ingest
     proof, pairing = prf_pair
+    e_utxq = binascii.hexlify(
+        STATE_CRYPTO.encrypt_from(
+            utxq.SerializeToString(),
+            private_key(request['plus']),
+            public_key(request['minus'])))
+    e_mtxq = binascii.hexlify(
+        STATE_CRYPTO.encrypt_from(
+            payload.SerializeToString(),
+            private_key(request['plus']),
+            public_key(request['minus'])))
     return (operation, uaddr, request['plus'], MatchEvent(
         action=_ACTION_MAP[operation],
         ukey=_mtxq_addrs.set_utxq_matched(uaddr),
         mkey=_mtxq_addrs.txq_item(
             _mtxq_addrs.dimension, operation, str(uuid.uuid4)),
-        mdata=STATE_CRYPTO.encrypt(payload.SerializeToString()),
-        udata=STATE_CRYPTO.encrypt(utxq.SerializeToString()),
+        mdata=e_mtxq,
+        udata=e_utxq,
         pairings=pairing.encode(),
         proof=proof.encode()))
 

@@ -23,7 +23,7 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from modules.exceptions import DataException, AuthException, NotPrimeException
-from modules.config import load_hashblock_config
+from modules.config import load_hashblock_config, agreement_secret
 from modules.address import Address
 from modules.decode import decode_from_leaf
 from modules.decode import decode_asset_list
@@ -294,44 +294,52 @@ class AU_Decode(Resource):
                 "data": ""}, 400
 
 
-@ns.route('/utxqs')
+@ns.route('/utxqs/<string:agreement>')
+@ns.param('agreement', 'The trading agreement')
 class UTXQDecode(Resource):
-    def get(self):
+    def get(self, agreement):
         """Returns all match request transactions"""
         result = decode_match_dimension(
-            _match_address.txq_dimension(Address.DIMENSION_UTXQ))
-        new_data = matchlinks(result['data'], 'operation', 'utxq_')
-        result['data'] = new_data
+            _match_address.txq_dimension(Address.DIMENSION_UTXQ),
+            agreement)
+        # new_data = matchlinks(result['data'], 'operation', 'utxq_')
+        # result['data'] = new_data
         return result, 200
 
 
-@ns.route('/asks', endpoint='utxq_asks')
-@ns.route('/offers', endpoint='utxq_offers')
-@ns.route('/commitments', endpoint='utxq_commitments')
-@ns.route('/gives', endpoint='utxq_gives')
+@ns.route('/asks/<string:agreement>', endpoint='utxq_asks')
+@ns.route('/offers/<string:agreement>', endpoint='utxq_offers')
+@ns.route('/commitments/<string:agreement>', endpoint='utxq_commitments')
+@ns.route('/gives/<string:agreement>', endpoint='utxq_gives')
+@ns.param('agreement', 'The trading agreement')
 class UTXQS_Decode(Resource):
-    def get(self):
+    def get(self, agreement):
         """Returns all match requests by type"""
-        tail = request.path.split('/')[-1]
+        tail = request.path.split('/')[-2]
         ref = tail[:-1]
         indr = 'utxq_' + ref
         result = decode_match_initiate_list(
-            _match_address.txq_list(Address.DIMENSION_UTXQ, ref))
-        new_data = matchtermlinks(result['data'], indr)
-        result['data'] = new_data
+            _match_address.txq_list(Address.DIMENSION_UTXQ, ref),
+            agreement)
+        # new_data = matchtermlinks(result['data'], indr)
+        # result['data'] = new_data
         return result, 200
 
 
-@ns.route('/ask/<string:address>', endpoint='utxq_ask')
-@ns.route('/offer/<string:address>', endpoint='utxq_offer')
-@ns.route('/commitment/<string:address>', endpoint='utxq_commitment')
-@ns.route('/give/<string:address>', endpoint='utxq_give')
+@ns.route('/ask/<string:agreement>/<string:address>', endpoint='utxq_ask')
+@ns.route('/offer/<string:agreement>/<string:address>', endpoint='utxq_offer')
+@ns.route('/commitment/<string:agreement>/<string:address>', endpoint='utxq_commitment')
+@ns.route('/give/<string:agreement>/<string:address>', endpoint='utxq_give')
+@ns.param('agreement', 'The trading agreement')
 @ns.param('address', 'The address to decode')
 class UTXQ_Decode(Resource):
-    def get(self, address):
+    def get(self, agreement, address):
         """Return match request detail"""
+
         if Address.valid_leaf_address(address):
-            return decode_from_leaf(address), 200
+            return decode_from_leaf(
+                address,
+                agreement_secret(agreement)), 200
         else:
             return {
                 "address": "not a valid address",
@@ -379,44 +387,51 @@ class UTXQ_Ingest(Resource):
         return {"status": "OK"}, 200
 
 
-@ns.route('/mtxqs')
+@ns.route('/mtxqs/<string:agreement>')
+@ns.param('agreement', 'The trading agreement')
 class MTXQDecode(Resource):
-    def get(self):
+    def get(self, agreement):
         """Returns all match response transactions"""
         result = decode_match_dimension(
-            _match_address.txq_dimension(Address.DIMENSION_MTXQ))
-        new_data = matchlinks(result['data'], 'operation', 'mtxq_')
-        result['data'] = new_data
+            _match_address.txq_dimension(Address.DIMENSION_MTXQ),
+            agreement)
+        # new_data = matchlinks(result['data'], 'operation', 'mtxq_')
+        # result['data'] = new_data
         return result, 200
 
 
-@ns.route('/tells', endpoint='mtxq_tells')
-@ns.route('/accepts', endpoint='mtxq_accepts')
-@ns.route('/obligations', endpoint='mtxq_obligations')
-@ns.route('/takes', endpoint='mtxq_takes')
+@ns.route('/tells/<string:agreement>', endpoint='mtxq_tells')
+@ns.route('/accepts/<string:agreement>', endpoint='mtxq_accepts')
+@ns.route('/obligations/<string:agreement>', endpoint='mtxq_obligations')
+@ns.route('/takes/<string:agreement>', endpoint='mtxq_takes')
+@ns.param('agreement', 'The trading agreement')
 class MTXQS_Decode(Resource):
-    def get(self):
+    def get(self, agreement):
         """Returns all match response by type"""
-        tail = request.path.split('/')[-1]
+        tail = request.path.split('/')[-2]
         ref = tail[:-1]
         indr = 'mtxq_' + ref
         result = decode_match_reciprocate_list(
-            _match_address.txq_list(Address.DIMENSION_MTXQ, ref))
+            _match_address.txq_list(Address.DIMENSION_MTXQ, ref),
+            agreement)
         new_data = matchtermlinks(result['data'], indr)
         result['data'] = new_data
         return result, 200
 
 
-@ns.route('/tell/<string:address>', endpoint='mtxq_tell')
-@ns.route('/accept/<string:address>', endpoint='mtxq_accept')
-@ns.route('/obligation/<string:address>', endpoint='mtxq_obligation')
-@ns.route('/take/<string:address>', endpoint='mtxq_take')
+@ns.route('/tell/<string:agreement>/<string:address>', endpoint='mtxq_tell')
+@ns.route('/accept/<string:agreement>/<string:address>', endpoint='mtxq_accept')
+@ns.route('/obligation/<string:agreement>/<string:address>', endpoint='mtxq_obligation')
+@ns.route('/take/<string:agreement>/<string:address>', endpoint='mtxq_take')
+@ns.param('agreement', 'The trading agreement')
 @ns.param('address', 'The address to decode')
 class MTXQ_Decode(Resource):
-    def get(self, address):
+    def get(self, agreement, address):
         """Return match response detail"""
         if Address.valid_leaf_address(address):
-            return decode_from_leaf(address), 200
+            return decode_from_leaf(
+                address,
+                agreement_secret(agreement)), 200
         else:
             return {
                 "address": "not a valid address",

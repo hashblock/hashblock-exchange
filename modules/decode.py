@@ -19,17 +19,19 @@
 This module is referenced when fetching an address to
 decode into it's type data structure
 """
+import binascii
 from functools import lru_cache
 from base64 import b64decode
 
 from google.protobuf.json_format import MessageToDict
+from shared.rest_client import RestClient
 
 from modules.config import sawtooth_rest_host
-from modules.config import key_owner
+from modules.config import key_owner, agreement_secret
 from modules.state import State
-
-from shared.rest_client import RestClient
+from modules.exceptions import AuthException
 from modules.address import Address
+
 from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ
 from protobuf.setting_pb2 import Settings
@@ -52,21 +54,24 @@ __revmachadd = {
 }
 
 
-def __get_leaf_data(address):
+def __get_leaf_data(address, partner_secret=None):
     """Fetch leaf data from chain"""
     ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
     ddict['data'] = b64decode(ddict['data'])
     return ddict
 
 
-def __get_encrypted_leaf(address):
+def __get_encrypted_leaf(address, partner_secret=None):
     """Fetch encrypted leaf data from chain"""
+    if partner_secret is None:
+        raise AuthException
     ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
-    ddict['data'] = STATE_CRYPTO.decrypt(b64decode(ddict['data']))
+    data = binascii.unhexlify(b64decode(ddict['data']).decode())
+    ddict['data'] = STATE_CRYPTO.decrypt_object_with(data, partner_secret)
     return ddict
 
 
-def __get_list_data(address):
+def __get_list_data(address, partner_secret=None):
     """Fetch list data from chain"""
     ddict = RestClient(sawtooth_rest_host()).list_state(address)
     for entry in ddict['data']:
@@ -74,11 +79,14 @@ def __get_list_data(address):
     return ddict
 
 
-def __get_encrypted_list_data(address):
+def __get_encrypted_list_data(address, partner_secret=None):
     """Fetch encrypted list data from chain"""
+    if partner_secret is None:
+        raise AuthException
     ddict = RestClient(sawtooth_rest_host()).list_state(address)
     for entry in ddict['data']:
-        entry['data'] = STATE_CRYPTO.decrypt(b64decode(entry['data']))
+        s1 = binascii.unhexlify(b64decode(entry['data']).decode())
+        entry['data'] = STATE_CRYPTO.decrypt_object_with(s1, partner_secret)
     return ddict
 
 
@@ -244,11 +252,6 @@ def __decode_match(address, data):
         quantity_to_prime(
             match['ratio']['denominator'],
             item.ratio.denominator)
-        # quantity_to_prime(
-        #     match['unmatched']['quantity'],
-        #     item.unmatched.quantity)
-        # match['unmatched']["plus"] = key_owner(item.unmatched.plus.decode())
-        # match['unmatched']["minus"] = key_owner(item.unmatched.minus.decode())
     return {
         'family': 'match',
         'dimension': dim,
@@ -257,15 +260,16 @@ def __decode_match(address, data):
     }
 
 
-def get_utxq_obj_json(address):
-    utxq_obj = __get_encrypted_leaf(address)['data']
+def get_utxq_obj_json(address, secret):
+    utxq_obj = __get_encrypted_leaf(address, secret)['data']
     utxq = UTXQ()
     utxq.ParseFromString(utxq_obj)
     return (utxq, __decode_match(address, utxq_obj))
 
 
-def decode_match_dimension(address):
-    results = __get_encrypted_list_data(address)['data']
+def decode_match_dimension(address, agreement):
+    sec = agreement_secret(agreement)
+    results = __get_encrypted_list_data(address, sec)['data']
     dim = 'utxq' if address[12:18] == Address._utxq_hash else 'mtxq'
     data = []
     for element in results:
@@ -280,16 +284,17 @@ def decode_match_dimension(address):
     }
 
 
-def decode_match_initiate_list(address):
+def decode_match_initiate_list(address, agreement):
     """Decorate initiates with text conversions"""
-    results = __get_encrypted_list_data(address)['data']
+    sec = agreement_secret(agreement)
+    results = __get_encrypted_list_data(address, sec)['data']
     ops = __revmachadd[address[18:24]]
 
     data = []
     for element in results:
         ladd = element['address']
         utxq = UTXQ()
-        utxq.ParseFromString(__get_encrypted_leaf(ladd)['data'])
+        utxq.ParseFromString(__get_encrypted_leaf(ladd, sec)['data'])
         data.append((
             {
                 "plus": key_owner(utxq.plus.decode("utf-8")),
@@ -306,16 +311,17 @@ def decode_match_initiate_list(address):
     }
 
 
-def decode_match_reciprocate_list(address):
+def decode_match_reciprocate_list(address, agreement):
     """Decorate reciprocates with text conversions"""
-    results = __get_encrypted_list_data(address)['data']
+    sec = agreement_secret(agreement)
+    results = __get_encrypted_list_data(address, sec)['data']
     ops = __revmachadd[address[18:24]]
 
     data = []
     for element in results:
         ladd = element['address']
         mtxq = MTXQ()
-        mtxq.ParseFromString(__get_encrypted_leaf(ladd)['data'])
+        mtxq.ParseFromString(__get_encrypted_leaf(ladd, sec)['data'])
         data.append(({
             "plus": key_owner(mtxq.plus.decode("utf-8")),
             "minus": key_owner(mtxq.minus.decode("utf-8")),
@@ -413,6 +419,6 @@ _hash_map = {
 }
 
 
-def decode_from_leaf(address):
+def decode_from_leaf(address, partner_secret=None):
     f, y = _hash_map[address[:6]][address[6:12]][address[12:18]]
-    return y(address, f(address)['data'])
+    return y(address, f(address, partner_secret)['data'])
