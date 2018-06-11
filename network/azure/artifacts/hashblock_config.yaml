@@ -23,14 +23,16 @@ rest:
 
   # Signing keys for batch/transaction submissions
   signers:
-    church: church.priv
-    turing: turing.priv
+    church: church
+    turing: turing
 
   # zksnark prover and verifier keys based on #B balancing equation constraints
   zksnark:
     prover: hashblock_zkSNARK.pk
     verifier: hashblock_zkSNARK.vk
 
-  # Fernet key used for encryption
-  encrypt:
-    lock: fernet.key
+  # Trade agreements between partners
+  agreements:
+    "standard":
+      - church
+      - turing
