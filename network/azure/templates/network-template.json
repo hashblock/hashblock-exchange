@@ -86,16 +86,22 @@
           "description": "Enigma public key."
         }
       },
-      "fernetKey": {
+      "churchPubKey": {
         "type": "securestring",
         "metadata": {
-          "description": "Fernet key."
+          "description": "Church public key."
         }
       },
       "churchPrivKey": {
         "type": "securestring",
         "metadata": {
           "description": "Church private key."
+        }
+      },
+      "turingPubKey": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Turing public key."
         }
       },
       "turingPrivKey": {
@@ -317,7 +323,7 @@
             ]
           },
           "protectedSettings": {
-            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"', ' \"', parameters('networkPrivKey'), '\"', ' \"', parameters('networkPubKey'), '\"', ' \"', parameters('enigmaPrivKey'), '\"', ' \"', parameters('enigmaPubKey'), '\"', ' \"', parameters('fernetKey'), '\"', ' \"', parameters('churchPrivKey'), '\"', ' \"', parameters('turingPrivKey'), '\"', ' \"', parameters('zksnarkLambda'), '\"')]"
+            "commandToExecute": "[concat('./configure.sh \"', parameters('adminUsername'), '\" ',copyIndex(), ' \"', variables('dnsName'), '\"', ' \"', parameters(concat('validatorPrivKey',copyIndex())), '\"', ' \"', parameters(concat('validatorPubKey',copyIndex())), '\"', ' \"', parameters('networkPrivKey'), '\"', ' \"', parameters('networkPubKey'), '\"', ' \"', parameters('enigmaPrivKey'), '\"', ' \"', parameters('enigmaPubKey'), '\"', ' \"', parameters('churchPubKey'), '\"', ' \"', parameters('churchPrivKey'), '\"', ' \"', parameters('turingPubKey'), '\"', ' \"', parameters('turingPrivKey'), '\"', ' \"', parameters('zksnarkLambda'), '\"')]"
           }
         },
         "copy": {

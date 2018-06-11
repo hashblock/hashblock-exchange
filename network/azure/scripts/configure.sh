@@ -12,9 +12,11 @@ NETWORKPUBKEY=$7;
 ENIGMAPRIVKEY=$8;
 ENIGMAPUBKEY=$9;
 shift;
-FERNETKEY=$9;
+CHURCHPUBKEY=$9;
 shift;
 CHURCHPRIVKEY=$9;
+shift;
+TURINGPUBKEY=$9;
 shift;
 TURINGPRIVKEY=$9;
 shift;
@@ -25,9 +27,6 @@ HOMEDIR="/home/$USER";
 CONFIG_LOG_FILE_PATH="$HOMEDIR/config.log";
 
 echo "Configure node index: $NODEINDEX with user: $USER" >> $CONFIG_LOG_FILE_PATH;
-echo "Fernet key: $FERNETKEY" >> $CONFIG_LOG_FILE_PATH;
-echo "Church key: $CHURCHPRIVKEY" >> $CONFIG_LOG_FILE_PATH;
-echo "Turing key: $TURINGPRIVKEY" >> $CONFIG_LOG_FILE_PATH;
 
 if [[ -z "${SAWTOOTH_HOME}" ]]; then
   sudo echo "Adding SAWTOOTH_HOME to /etc/environment file" >> $CONFIG_LOG_FILE_PATH;
@@ -87,11 +86,6 @@ if [ ! -e "/sawtooth/keys/enigma.pub" ]; then
   sudo echo $ENIGMAPUBKEY >> /sawtooth/keys/enigma.pub;
 fi
 
-if [ ! -e "/sawtooth/keys/fernet.key" ]; then
-  sudo echo "Adding /sawtooth/keys/fernet.key key" >> $CONFIG_LOG_FILE_PATH;
-  sudo echo $FERNETKEY >> /sawtooth/keys/fernet.key;
-fi
-
 if [ ! -e "/sawtooth/keys/hashblock_zkSNARK.pk" ]; then
   sudo echo "Generating /sawtooth/keys/hashblock_zkSNARK.pk and /sawtooth/keys/hashblock_zkSNARK.vk" >> $CONFIG_LOG_FILE_PATH;
   sudo cd "$SAWTOOTH_HOME/lib"
@@ -106,9 +100,19 @@ if [ ! -e "/sawtooth/etc/validator.toml" ]; then
   sudo echo "network_public_key = '$NETWORKPUBKEY'" >> /sawtooth/etc/validator.toml;
 fi
 
+if [ ! -e "/sawtooth/keys/church.pub" ]; then
+  sudo echo "Adding /sawtooth/keys/church.pub key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $CHURCHPRIVKEY >> /sawtooth/keys/church.pub;
+fi
+
 if [ ! -e "/sawtooth/keys/church.priv" ]; then
   sudo echo "Adding /sawtooth/keys/church.priv key" >> $CONFIG_LOG_FILE_PATH;
   sudo echo $CHURCHPRIVKEY >> /sawtooth/keys/church.priv;
+fi
+
+if [ ! -e "/sawtooth/keys/turing.pub" ]; then
+  sudo echo "Adding /sawtooth/keys/turing.pub key" >> $CONFIG_LOG_FILE_PATH;
+  sudo echo $TURINGPRIVKEY >> /sawtooth/keys/turing.pub;
 fi
 
 if [ ! -e "/sawtooth/keys/turing.priv" ]; then

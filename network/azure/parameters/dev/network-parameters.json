@@ -114,12 +114,12 @@
           "secretName": "enigma-pub"
         }
       },
-      "fernetKey": {
+      "churchPubKey": {
         "reference": {
           "keyVault": {
             "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
           },
-          "secretName": "fernet-key"
+          "secretName": "church-pub"
         }
       },
       "churchPrivKey": {
@@ -128,6 +128,14 @@
             "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
           },
           "secretName": "church-priv"
+        }
+      },
+      "turingPubKey": {
+        "reference": {
+          "keyVault": {
+            "id": "/subscriptions/1d8573de-6262-4e30-b665-a2ce4f6c9adf/resourceGroups/secrets/providers/Microsoft.KeyVault/vaults/hashblock"
+          },
+          "secretName": "turing-pub"
         }
       },
       "turingPrivKey": {
