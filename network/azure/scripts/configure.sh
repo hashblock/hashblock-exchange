@@ -102,7 +102,7 @@ fi
 
 if [ ! -e "/sawtooth/keys/church.pub" ]; then
   sudo echo "Adding /sawtooth/keys/church.pub key" >> $CONFIG_LOG_FILE_PATH;
-  sudo echo $CHURCHPRIVKEY >> /sawtooth/keys/church.pub;
+  sudo echo $CHURCHPUBKEY >> /sawtooth/keys/church.pub;
 fi
 
 if [ ! -e "/sawtooth/keys/church.priv" ]; then
@@ -112,7 +112,7 @@ fi
 
 if [ ! -e "/sawtooth/keys/turing.pub" ]; then
   sudo echo "Adding /sawtooth/keys/turing.pub key" >> $CONFIG_LOG_FILE_PATH;
-  sudo echo $TURINGPRIVKEY >> /sawtooth/keys/turing.pub;
+  sudo echo $TURINGPUBKEY >> /sawtooth/keys/turing.pub;
 fi
 
 if [ ! -e "/sawtooth/keys/turing.priv" ]; then
