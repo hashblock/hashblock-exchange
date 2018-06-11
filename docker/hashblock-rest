@@ -25,6 +25,7 @@ RUN apt-get update && \
     python3-dev \
     python3-pip
 
+
 RUN mkdir -p /builder && \
  	pip3 install \
  		grpcio-tools \
@@ -34,8 +35,8 @@ RUN mkdir -p /builder && \
 WORKDIR /builder
 
 COPY bin bin
-COPY libs libs
 COPY apps apps
+COPY libs libs
 COPY protos protos
 COPY families families
 
@@ -53,16 +54,14 @@ RUN apt-get update \
 	libssl-dev \
 	libffi-dev  \
     python3-dev \
-    python3-pip
+    python3-pip \
+    build-essential \
+    automake \
+    pkg-config \
+    libtool \
+    libffi-dev
 
-RUN pip3 install --upgrade pip setuptools && \
-	# pip3 install wheel && \
-    rm -r /root/.cache
-
-RUN pip3 install cryptography --no-binary cryptography
-
-RUN pip3 install sawtooth-sdk --upgrade && \
-    mkdir -p /project/hashblock-exchange && \
+RUN mkdir -p /project/hashblock-exchange && \
     mkdir -p /project/hashblock-exchange/apps && \
     mkdir -p /project/hashblock-exchange/bin && \
     mkdir -p /project/hashblock-exchange/modules
@@ -70,15 +69,19 @@ RUN pip3 install sawtooth-sdk --upgrade && \
 WORKDIR /project/hashblock-exchange
 RUN touch __init__.py
 COPY modules modules
-COPY --from=base /builder/libs/hbzksnark /project/hashblock-exchange/bin/hbzksnark
+COPY libs/hbzksnark /project/hashblock-exchange/bin/hbzksnark
 COPY apps/shared apps/shared
 COPY --from=base /builder/apps/protobuf apps/protobuf
 COPY apps/hashblock_rest apps/hashblock_rest
 
-RUN pip3 install --trusted-host pypi.python.org -r apps/hashblock_rest/requirements.txt
+RUN pip3 install eciespy cryptography && \
+    SECP_BUNDLED_EXPERIMENTAL=1 pip3 --no-cache-dir install --no-binary secp256k1 secp256k1 && \
+    pip3 install -r apps/hashblock_rest/requirements.txt && \
+    rm -r /root/.cache && \
+    apt-get remove -y build-essential automake && apt-get autoremove -y
 
 ENV PYTHONPATH /project/hashblock-exchange/apps/hashblock_rest:/project/hashblock-exchange/apps:/project/hashblock-exchange
 
-ENV PATH $PATH:/project/hashblock-exchange/bin:/project/hashblock-exchange/libs
+ENV PATH $PATH:/project/hashblock-exchange/bin
 
 CMD gunicorn -b 0.0.0.0:8000 --access-logfile - "hashblock_rest.app:application"

@@ -46,7 +46,6 @@ RUN mkdir -p /builder && \
 WORKDIR /builder
 
 COPY bin bin
-COPY libs libs
 COPY apps apps
 COPY modules modules
 COPY protos protos
@@ -63,22 +62,29 @@ LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 RUN apt-get update \
  && apt-get install -y -q \
     apt-transport-https \
-	libssl-dev \
-	libffi-dev  \
+    libssl-dev \
+    libffi-dev  \
     python3-dev \
-    python3-pip
+    python3-pip \
+    build-essential \
+    automake \
+    pkg-config \
+    libtool \
+    libffi-dev
 
-RUN pip3 install cryptography --no-binary cryptography
+RUN pip3 install eciespy cryptography && \
+    SECP_BUNDLED_EXPERIMENTAL=1 pip3 --no-cache-dir install --no-binary secp256k1 secp256k1 && \
+    pip3 install sawtooth-sdk && \
+    rm -r /root/.cache && \
+    apt-get remove -y build-essential automake && apt-get autoremove -y
 
-RUN	pip3 install sawtooth-sdk --upgrade && \
-	mkdir -p /project/hashblock-exchange && \
+RUN	mkdir -p /project/hashblock-exchange && \
   	mkdir -p /project/hashblock-exchange/bin && \
   	mkdir -p /project/hashblock-exchange/modules && \
   	mkdir -p /project/hashblock-exchange/families/asset && \
   	mkdir -p /var/log/sawtooth
 
 COPY --from=base /builder/bin/asset-tp /project/hashblock-exchange/bin
-COPY --from=base /builder/libs/hbzksnark /project/hashblock-exchange/bin
 COPY --from=base /builder/modules /project/hashblock-exchange/modules
 COPY --from=base /builder/families/asset/hashblock_asset /project/hashblock-exchange/families/asset/hashblock_asset
 
