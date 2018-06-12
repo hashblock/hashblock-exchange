@@ -32,6 +32,7 @@ message Resource {
     string system = 1;
     string key = 2;
     string value = 3;
+    // Deprecated in 0.2.0
     string sku = 4;
 }
 

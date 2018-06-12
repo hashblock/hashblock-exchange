@@ -131,7 +131,8 @@ class BaseAssetType(AssetType):
         return self.addresser.asset_item(
             self.dimension,
             self.asset.system,
-            self.asset.key)
+            self.asset.key,
+            self.asset.value)
 
 
 class TypeUnit(BaseAssetType):

@@ -25,32 +25,30 @@ from werkzeug.utils import secure_filename
 from modules.exceptions import DataException, AuthException, NotPrimeException
 from modules.config import load_hashblock_config, agreement_secret
 from modules.address import Address
-from modules.decode import decode_from_leaf
-from modules.decode import decode_asset_list
-from modules.decode import decode_asset_unit_list
-from modules.decode import decode_proposals
-from modules.decode import decode_settings
-from modules.decode import decode_match_dimension
-from modules.decode import decode_match_initiate_list
-from modules.decode import decode_match_reciprocate_list
-
+from modules.decode import (
+    decode_from_leaf, decode_asset_list, decode_asset_unit_list,
+    decode_proposals, decode_settings, decode_match_dimension,
+    decode_match_initiate_list, decode_match_reciprocate_list)
 import shared.asset as asset
 import shared.match as match
 
-UPLOAD_FOLDER = '/uploads/files/'
-ALLOWED_EXTENSIONS = set(['json'])
 LOGGER = logging.getLogger(__name__)
-
-application = Flask(__name__)
-application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
 
 # Load up our configuration for URLs and keys
 
 load_hashblock_config()
 print("Succesfully loaded hasblock-rest configuration")
+
+# Setup upload location for batch submissions
+UPLOAD_FOLDER = '/uploads/files/'
+ALLOWED_EXTENSIONS = set(['json'])
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# Setup application
+application = Flask(__name__)
+application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 api = Api(
     application,
@@ -115,7 +113,6 @@ asset_fields = ns.model('asset', {
         required=True, description='The asset classification'),
     'key': fields.String(
         required=True, description='The asset key',),
-    'value': fields.String(required=True, description='The asset value'),
     'signer': fields.String(
         required=True, description='The authorized proposer')})
 
@@ -152,8 +149,8 @@ class ABFIngest(Resource):
             args['file'].save(filename)
             args['file'].close()
             asset.create_asset_batch(filename)
-        except (DataException, ValueError, NotPrimeException):
-            return {"DataException": "invalid payload"}, 400
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
         return {"data": "TBD"}, 200
 
 
@@ -182,8 +179,8 @@ class RAPIngest(Resource):
             proposal_id = asset.create_proposal(
                 Address.DIMENSION_RESOURCE, request.json)
             return {"proposal_id": proposal_id, "status": "OK"}, 200
-        except (DataException, ValueError, NotPrimeException):
-            return {"DataException": "invalid payload"}, 400
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
         except AuthException:
             return {
                 "AuthException": "not authorized to make proposals"}, 405
@@ -414,8 +411,8 @@ class MTXQS_Decode(Resource):
         result = decode_match_reciprocate_list(
             _match_address.txq_list(Address.DIMENSION_MTXQ, ref),
             agreement)
-        new_data = matchtermlinks(result['data'], indr)
-        result['data'] = new_data
+        # new_data = matchtermlinks(result['data'], indr)
+        # result['data'] = new_data
         return result, 200
 
 

@@ -17,6 +17,8 @@
 import hashlib
 import re
 
+from modules.exceptions import AssetIdRange
+
 
 class Address():
 
@@ -58,10 +60,14 @@ class Address():
 
     _candidates_hash = hashlib.sha512(
         ASSET_CANDIDATES.encode("utf-8")).hexdigest()[0:6]
+
     _unit_hash = hashlib.sha512(
         DIMENSION_UNIT.encode("utf-8")).hexdigest()[0:6]
     _resource_hash = hashlib.sha512(
         DIMENSION_RESOURCE.encode("utf-8")).hexdigest()[0:6]
+    _unit_asset_hash = '00'
+    _resource_asset_hash = '01'
+
     _utxq_hash = hashlib.sha512(
         DIMENSION_UTXQ.encode("utf-8")).hexdigest()[0:6]
     _mtxq_hash = hashlib.sha512(
@@ -175,24 +181,39 @@ class Address():
     # E.g. hashblock.asset.unit or hashblock.asset.resource
     # 0-2  namespace
     # 3-5  family
-    # 6-8  dimension
+    # 6    dimension
     def asset_prefix(self, dimension):
-        return self.ns_family \
-            + self.hashup(dimension)[0:6]
+        _dim_hash = self._unit_asset_hash \
+            if dimension == self.DIMENSION_UNIT else self._resource_asset_hash
+        return self.ns_family + _dim_hash
 
     # E.g. hashblock.asset.unit.imperial.foot
-    # 0-2  namespace
-    # 3-5  family
-    # 6-8  dimension
-    # 9-11 system
-    # 12-34 item
-    def asset_item(self, dimension, system, item):
+    # 0-2  namespace    6 +
+    # 3-5  family       6 (12) +
+    # 6    dimension    2 (14) +
+    # 7-9  system       6 (20) +
+    def asset_item_syskey(self, dimension, system, key):
+        """Create a asset dimension, system, key prefix
+        """
+        return self.asset_prefix(dimension) \
+            + self.hashup(system)[0:6] \
+            + self.hashup(key)[0:6]
+
+    # E.g. hashblock.asset.unit.imperial.foot
+    # 0-2  namespace    6 +
+    # 3-5  family       6 (12) +
+    # 6    dimension    2 (14) +
+    # 7-9  system       6 (20) +
+    # 10-12 key         6 (26) +
+    # 13-34 id         44 (70)
+    def asset_item(self, dimension, system, key, ident):
         """Create a specific asset address based on dimension, system and id
         """
-        return self.ns_family \
-            + self.hashup(dimension)[0:6] \
-            + self.hashup(system)[0:6] \
-            + self.hashup(item)[0:46]
+        if ident is None or len(ident) != 44:
+            raise AssetIdRange(
+                "Id != 44 for {} {} {} {}"
+                .format(dimension, system, key, ident))
+        return self.asset_item_syskey(dimension, system, key) + ident
 
     # E.g. hashblock.match.utxq.ask
     # 0-2 namespace

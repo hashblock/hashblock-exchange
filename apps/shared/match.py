@@ -32,7 +32,7 @@ from modules.config import (
     valid_partnership, partnership_secret)
 from modules.decode import (
     asset_addresser,
-    decode_from_leaf,
+    decode_asset_list,
     STATE_CRYPTO,
     get_utxq_obj_json)
 from modules.exceptions import (
@@ -67,19 +67,32 @@ def __validate_partners(plus, minus):
 
 def __validate_assets(value, unit, resource):
     """Validate and return asset addresses that are reachable"""
+    unit_result = None
+    resource_result = None
     int(value)
-    unit_add = asset_addresser.asset_item(
+    unit_add = asset_addresser.asset_item_syskey(
         Address.DIMENSION_UNIT,
         unit['system'], unit['key'])
-    resource_add = asset_addresser.asset_item(
+    resource_add = asset_addresser.asset_item_syskey(
         Address.DIMENSION_RESOURCE,
         resource['system'], resource['key'])
 
-    unit_res = decode_from_leaf(unit_add)
-    resource_res = decode_from_leaf(resource_add)
-    if not unit_res['data'] or not resource_res['data']:
+    def in_list(ent, elist):
+        result = None
+        for el in elist['data']:
+            if el['system'] == ent['system'] and el['name'] == ent['key']:
+                el['value'] = str(int(el['value'], 16))
+                result = el
+                break
+        return result
+
+    unit_result = in_list(unit, decode_asset_list(unit_add))
+    resource_result = in_list(resource, decode_asset_list(resource_add))
+
+    if not unit_result or not resource_result:
         raise AssetNotExistException("Asset does not exist")
-    return (unit_res['data'], resource_res['data'])
+
+    return (unit_result, resource_result)
 
 
 def __get_and_validate_utxq(address, secret):
@@ -125,14 +138,17 @@ def __validate_mtxq(request):
         request['ratio']['denominator']['unit'],
         request['ratio']['denominator']['resource'])
     data_tuple = []
+
     data_tuple.append(str(utxq_qblock['value']))
     data_tuple.append(request['ratio']['numerator']['value'])
     data_tuple.append(request['ratio']['denominator']['value'])
     data_tuple.append(request['quantity']['value'])
+
     data_tuple.append(str(utxq_qblock['unit']))
     data_tuple.append(numerator_assets[0]['value'])
     data_tuple.append(denominator_assets[0]['value'])
     data_tuple.append(quantity_assets[0]['value'])
+
     data_tuple.append(str(utxq_qblock['resource']))
     data_tuple.append(numerator_assets[1]['value'])
     data_tuple.append(denominator_assets[1]['value'])
@@ -152,11 +168,11 @@ def __create_quantity(value, quantity):
     """Converts a quantity type into byte string from prime number"""
     unit_data, resource_data = quantity
     return Quantity(
-        value=int(value).to_bytes(2, byteorder='little'),
+        value=int(value).to_bytes(len(value), byteorder='little'),
         unit=int(unit_data['value']).to_bytes(
-            2, byteorder='little'),
+            len(unit_data['value']), byteorder='little'),
         resource=int(resource_data['value']).to_bytes(
-            2, byteorder='little'))
+            len(resource_data['value']), byteorder='little'))
 
 
 def __create_utxq(ingest):

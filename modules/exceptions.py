@@ -19,6 +19,10 @@ class CliException(Exception):
     pass
 
 
+class AssetIdRange(Exception):
+    pass
+
+
 class NotPrimeException(Exception):
     pass
 

@@ -54,7 +54,7 @@ class AssetTransactionHandler(TransactionHandler):
 
     @property
     def family_versions(self):
-        return ['0.1.0']
+        return ['0.2.0']
 
     @property
     def namespaces(self):
@@ -80,7 +80,6 @@ class AssetTransactionHandler(TransactionHandler):
         asset_payload = AssetPayload()
         asset_payload.ParseFromString(transaction.payload)
         self.dimension = asset_payload.dimension
-        LOGGER.debug("Received transaction for {}".format(self.dimension))
 
         auth_keys = self._get_auth_keys(context, self.asset_type)
 
@@ -112,8 +111,6 @@ class AssetTransactionHandler(TransactionHandler):
     def _apply_proposal(self, public_key, proposal_data, context):
         asset_proposal = AssetProposal()
         asset_proposal.ParseFromString(proposal_data)
-        LOGGER.debug(
-            "Processing proposal for type {}".format(asset_proposal.type))
         self.asset_type.asset_from_proposal(asset_proposal)
         proposal_id = (self.asset_type.asset_address)
 
@@ -144,7 +141,7 @@ class AssetTransactionHandler(TransactionHandler):
                          .format(asset_proposal.asset))
             self._set_candidates(context, asset_candidates)
         else:
-            _set_asset(context, self.asset_type)
+            _set_asset(context, proposal_id, self.asset_type.asset)
             LOGGER.debug('Set asset {}'.format(self.asset_type.asset))
 
     def _apply_unset_vote(
@@ -234,11 +231,10 @@ class AssetTransactionHandler(TransactionHandler):
         LOGGER.debug(
             "Vote tally accepted {} rejected {}"
             .format(accepted_count, rejected_count))
-
         self.asset_type.asset_from_proposal(candidate.proposal)
 
         if accepted_count >= approval_threshold:
-            _set_asset(context, self.asset_type)
+            _set_asset(context, proposal_id, self.asset_type.asset)
             del asset_candidates.candidates[candidate_index]
             self._set_candidates(context, asset_candidates)
         elif rejected_count >= approval_threshold or \
@@ -333,15 +329,14 @@ def _set_candidates(context, address, candidates):
             'Unable to save candidate block value {}'.format(candidates))
 
 
-def _set_asset(context, asset_type):
+def _set_asset(context, address, asset):
     # Use address to see if entry type exists
     # If exists, update with current type entry
     # set entry
 
     # Get an empty from the type
     # Get the address and pass to _get_asset_entry
-    address = asset_type.asset_address
-    addresses = list(_set_state(context, address, asset_type.asset))
+    addresses = _set_state(context, address, asset)
 
     if len(addresses) != 1:
         LOGGER.warning(
@@ -361,13 +356,13 @@ def _get_state(context, address):
     return results
 
 
-def _set_state(context, address, object):
+def _set_state(context, address, entity):
     try:
         addresses = list(context.set_state(
-            {address: object.SerializeToString()},
+            {address: entity.SerializeToString()},
             timeout=STATE_TIMEOUT_SEC))
     except FutureTimeoutError:
-        raise InternalError('State timeout: Unable to set {}'.format(object))
+        raise InternalError('State timeout: Unable to set {}'.format(entity))
 
     return addresses
 

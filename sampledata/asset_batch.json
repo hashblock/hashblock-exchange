@@ -5,56 +5,49 @@
 			"id": "1",
 			"dimension":"unit",
 			"system": "imperial",
-			"key": "unity",
-			"value": "1"
+			"key": "unity"
 		},
 		{
 			"signer": "turing",
 			"id": "2",
 			"dimension":"unit",
 			"system": "purchasing",
-			"key": "bag",
-			"value": "2"
+			"key": "bag"
 		},
 		{
 			"signer": "turing",
 			"id": "3",
 			"dimension":"resource",
 			"system": "food",
-			"key": "peanuts",
-			"value": "3"
+			"key": "peanuts"
 		},
 		{
 			"signer": "turing",
 			"id": "4",
 			"dimension":"unit",
 			"system": "imperial",
-			"key": "$",
-			"value": "5"
+			"key": "$"
 		},
 		{
 			"signer": "turing",
 			"id": "5",
 			"dimension":"resource",
 			"system": "currency",
-			"key": "USD",
-			"value": "7"
+			"key": "USD"
 		},
 		{
 			"signer": "turing",
 			"id": "6",
 			"dimension":"unit",
 			"system": "purchasing",
-			"key": "bale",
-			"value": "11"
+			"key": "bale"
 		},
 		{
 			"signer": "turing",
 			"id": "7",
 			"dimension":"resource",
 			"system": "food",
-			"key": "hay",
-			"value": "13"
+			"key": "hay"
 		}
 	],
 	"votes": [

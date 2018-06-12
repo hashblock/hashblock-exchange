@@ -123,13 +123,15 @@ def __unit_asset_cache(prime):
 def __resource_key_lookup(prime_value):
     """Get key string of asset for type resource"""
     return __resource_asset_cache(
-        str(int.from_bytes(prime_value, byteorder='little'))).key
+        '0' + '{:x}'.
+        format(int.from_bytes(prime_value, byteorder='little'))).key
 
 
 def __unit_key_lookup(prime_value):
     """Get key string of asset for type unit-of-measure"""
     return __unit_asset_cache(
-        str(int.from_bytes(prime_value, byteorder='little'))).key
+        '0' + '{:x}'.
+        format(int.from_bytes(prime_value, byteorder='little'))).key
 
 
 def __format_quantity(quantity):
@@ -205,7 +207,7 @@ def decode_proposals(address, data=None):
 
 def __decode_asset(address, data):
     """Decode a unit or resource asset address"""
-    if address[12:18] == Address._unit_hash:
+    if address[12:14] == Address._unit_asset_hash:
         asset = Unit()
         dim = Address.DIMENSION_UNIT
     else:
@@ -348,7 +350,7 @@ def decode_asset_list(address):
     results = __decode_asset_listing(address)
     data = []
     for element in results:
-        if element['address'][12:18] == Address._unit_hash:
+        if element['address'][12:14] == Address._unit_asset_hash:
             asset = Unit()
             atype = 'unit'
         else:
@@ -371,7 +373,7 @@ def decode_asset_list(address):
 def decode_asset_unit_list(address):
     """List of assets not including proposals"""
     results = __decode_asset_listing(address)
-    if address[12:18] == Address._unit_hash:
+    if address[12:14] == Address._unit_asset_hash:
         asset = Unit()
         atype = 'unit'
     else:
@@ -420,5 +422,10 @@ _hash_map = {
 
 
 def decode_from_leaf(address, partner_secret=None):
-    f, y = _hash_map[address[:6]][address[6:12]][address[12:18]]
+    if address[6:12] == Address._asset_hash and \
+            address[12:18] != Address._candidates_hash:
+                f = __get_leaf_data
+                y = __decode_asset
+    else:
+        f, y = _hash_map[address[:6]][address[6:12]][address[12:18]]
     return y(address, f(address, partner_secret)['data'])
