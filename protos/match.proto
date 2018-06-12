@@ -24,11 +24,11 @@ message Quantity {
     //  Quantity amount? - Fixed width integer
 	bytes value = 1;
 
-    //  Big number
-	bytes valueUnit = 2;
+    //  Prime # associated to unit
+	bytes unit = 2;
 
-    //  Big number
-	bytes resourceUnit = 3;
+    //  Prime # associated to resource
+	bytes resource = 3;
 }
 
 // Quantity ratio data for matching equation

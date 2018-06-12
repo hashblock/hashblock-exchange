@@ -134,13 +134,13 @@ def __unit_key_lookup(prime_value):
 
 def __format_quantity(quantity):
     """Replaces primes with asset information"""
-    value_magnitude = int.from_bytes(quantity.value, byteorder='little')
-    value_unit = __unit_key_lookup(quantity.valueUnit)
-    resource_unit = __resource_key_lookup(quantity.resourceUnit)
+    magnitude = int.from_bytes(quantity.value, byteorder='little')
+    unit = __unit_key_lookup(quantity.unit)
+    resource = __resource_key_lookup(quantity.resource)
     return '{} {} of {}'.format(
-        value_magnitude,
-        value_unit,
-        resource_unit)
+        magnitude,
+        unit,
+        resource)
 
 
 def __decode_settings(address, data):
@@ -224,10 +224,10 @@ def __decode_match(address, data):
     def quantity_to_prime(quantity, rquant):
         quantity['value'] = \
             int.from_bytes(rquant.value, byteorder='little')
-        quantity['valueUnit'] = int.from_bytes(
-            rquant.valueUnit, byteorder='little')
-        quantity['resourceUnit'] = int.from_bytes(
-            rquant.resourceUnit, byteorder='little')
+        quantity['unit'] = int.from_bytes(
+            rquant.unit, byteorder='little')
+        quantity['resource'] = int.from_bytes(
+            rquant.resource, byteorder='little')
     operation = __revmachadd[address[18:24]]
     if address[12:18] == Address._utxq_hash:
         item = UTXQ()

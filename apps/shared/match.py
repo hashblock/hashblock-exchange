@@ -28,7 +28,7 @@ from shared.transactions import (
 from modules.address import Address
 from modules.hashblock_zksnark import zksnark_genproof
 from modules.config import (
-    valid_signer, public_key, private_key,
+    public_key, private_key,
     valid_partnership, partnership_secret)
 from modules.decode import (
     asset_addresser,
@@ -129,11 +129,11 @@ def __validate_mtxq(request):
     data_tuple.append(request['ratio']['numerator']['value'])
     data_tuple.append(request['ratio']['denominator']['value'])
     data_tuple.append(request['quantity']['value'])
-    data_tuple.append(str(utxq_qblock['valueUnit']))
+    data_tuple.append(str(utxq_qblock['unit']))
     data_tuple.append(numerator_assets[0]['value'])
     data_tuple.append(denominator_assets[0]['value'])
     data_tuple.append(quantity_assets[0]['value'])
-    data_tuple.append(str(utxq_qblock['resourceUnit']))
+    data_tuple.append(str(utxq_qblock['resource']))
     data_tuple.append(numerator_assets[1]['value'])
     data_tuple.append(denominator_assets[1]['value'])
     data_tuple.append(quantity_assets[1]['value'])
@@ -153,9 +153,9 @@ def __create_quantity(value, quantity):
     unit_data, resource_data = quantity
     return Quantity(
         value=int(value).to_bytes(2, byteorder='little'),
-        valueUnit=int(unit_data['value']).to_bytes(
+        unit=int(unit_data['value']).to_bytes(
             2, byteorder='little'),
-        resourceUnit=int(resource_data['value']).to_bytes(
+        resource=int(resource_data['value']).to_bytes(
             2, byteorder='little'))
 
 
