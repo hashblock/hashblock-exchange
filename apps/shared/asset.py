@@ -114,8 +114,7 @@ def __create_resource_asset(ingest):
     return (signatore, proposal_id, address, Resource(
         system=data['system'],
         key=data['key'],
-        value=proposal_id[-44:],
-        sku=''))
+        value=proposal_id[-44:]))
 
 
 def __create_unit_asset(ingest):
@@ -155,6 +154,24 @@ def __create_vote_txn(ingest):
         data=vote.SerializeToString(),
         dimension=address.dimension,
         action=action))
+
+
+def __create_asset_payload(ingest):
+    signatore, proposal_id, address, asset = ingest
+    return (signatore, proposal_id, address, AssetPayload(
+        data=asset.SerializeToString(),
+        dimension=address.dimension,
+        action=AssetPayload.ACTION_GENESIS))
+
+
+def __create_asset_inputs_outputs(ingest):
+    signatore, proposal_id, address, payload = ingest
+    inputs = [
+        proposal_id,
+        Address(Address.FAMILY_SETTING).settings(address.dimension)]
+    outputs = [proposal_id]
+    return (
+        signatore, address, {"inputs": inputs, "outputs": outputs}, payload)
 
 
 def __create_proposal_inputs_outputs(ingest):
@@ -224,6 +241,28 @@ def create_vote(dimension, data):
         data['signer'],
         Address(Address.FAMILY_ASSET, "0.2.0", dimension),
         data))
+
+
+def create_asset_genesis(signer):
+    """Generate the transaction batch for genesis block univeral assets
+
+    Currently it is for 'univeral unity' that has a fixed, not random,
+    value of '1'"""
+    data = {
+        "dimension": "unit",
+        "system": "universal",
+        "key": "unity"}
+
+    proposal_id = _addresser.asset_item(
+        "unit", "universal", "unity", ("0" * 43) + "1")
+    genesis = compose_builder(
+        create_transaction, __create_asset_inputs_outputs,
+        __create_asset_payload, __create_unit_asset)
+    return genesis((
+        signer,
+        proposal_id,
+        Address(Address.FAMILY_ASSET, "0.2.0", "unit"),
+        data))[1]
 
 
 def create_asset_batch(json_file):

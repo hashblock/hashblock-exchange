@@ -110,8 +110,7 @@ services:
       - "4004:4004"
     entrypoint: "bash -c \"\
         sawadm keygen && \
-        sawset genesis -k /project/kandc/turing.priv -o /etc/config-settings.batch && \
-        sawadm genesis /etc/config-settings.batch /project/kandc/hbgenesis.batch && \
+        sawadm genesis /project/kandc/config-settings.batch /project/kandc/hashblock.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \

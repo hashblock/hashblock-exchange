@@ -17,7 +17,9 @@
 from __future__ import print_function
 
 from modules.exceptions import CliException
-from shared.setting import create_settings_batch, create_settings_submit
+from shared.setting import create_settings_genesis
+from shared.asset import create_asset_genesis
+from shared.transactions import create_batch, create_batch_list
 
 
 def add_genesis_parser(subparsers, parent_parser):
@@ -25,7 +27,8 @@ def add_genesis_parser(subparsers, parent_parser):
         'genesis',
         help='Creates hashblock-exchange genesis block',
         description='Generates the file genesis.batch used '
-        'in the genesis block with initial hashblock-settings transactions.',
+        'in the genesis block with initial hashblock-settings '
+        'and hashblock-assets.',
         epilog='The file will be saved in the configuration path '
         'as set in the HASHBLOCK_CONFIG environment variable or passed in '
         'by the -o argument. '
@@ -82,17 +85,20 @@ def do_genesis(args, config):
     if not args.output:
         raise CliException('genesis creation requires output file')
 
-    results = create_settings_batch(
+    txns = create_settings_genesis(
         args.signer, args.resource_keys, args.resource_threshold,
         args.unit_keys, args.unit_threshold)
+    txns.append(create_asset_genesis(args.signer))
+
+    batch = create_batch_list([create_batch((args.signer, txns))])
+
+    # # Combine setting txns with assets txns in batchlist
 
     if args.output:
         try:
             with open(args.output, 'wb') as batch_file:
-                batch_file.write(results.SerializeToString())
+                batch_file.write(batch.SerializeToString())
             print('Generated {}'.format(args.output))
         except IOError as e:
             raise CliException(
                 'Unable to write to batch file: {}'.format(str(e)))
-    else:
-        print('Submitted {}'.format(results))

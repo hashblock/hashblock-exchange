@@ -87,7 +87,13 @@ class AssetTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 '{} is not authorized to change asset'.format(public_key))
 
-        if asset_payload.action == AssetPayload.ACTION_PROPOSE:
+        if asset_payload.action == AssetPayload.ACTION_GENESIS:
+            self.asset_type.asset_from_payload(asset_payload)
+            _set_asset(
+                context,
+                self.asset_type.asset_address,
+                self.asset_type.asset)
+        elif asset_payload.action == AssetPayload.ACTION_PROPOSE:
             return self._apply_proposal(
                 public_key,
                 asset_payload.data,
@@ -106,7 +112,8 @@ class AssetTransactionHandler(TransactionHandler):
                 context)
         else:
             raise InvalidTransaction(
-                "'action' must be one of {ACTION_UNSET, PROPOSE, VOTE}")
+                "'Payload action not recognized {}".
+                format(asset_payload.action))
 
     def _apply_proposal(self, public_key, proposal_data, context):
         asset_proposal = AssetProposal()

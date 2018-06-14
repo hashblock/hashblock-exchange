@@ -57,8 +57,7 @@ RUN apt-get update \
     build-essential \
     automake \
     pkg-config \
-    libtool \
-    libffi-dev
+    libtool
 
 WORKDIR /project/hashblock-exchange
 

@@ -121,6 +121,11 @@ class BaseAssetType(AssetType):
     def setting_address(self):
         return self._sett_addr
 
+    def asset_from_payload(self, payload):
+        x = self.empty_asset()
+        x.ParseFromString(payload.data)
+        self.asset = x
+
     def asset_from_proposal(self, proposal):
         x = self.empty_asset()
         x.ParseFromString(proposal.asset)

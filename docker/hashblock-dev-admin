@@ -22,30 +22,25 @@ LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 RUN apt-get update \
  && apt-get install -y -q \
     apt-transport-https \
+    libssl-dev \
+    libffi-dev  \
     python3-dev \
     python3-pip \
     build-essential \
     automake \
     pkg-config \
-    libtool \
-    libffi-dev
-
-RUN pip3 install --upgrade pip setuptools && \
-    rm -r /root/.cache && \
-    pip3 install eciespy cryptography && \
-    SECP_BUNDLED_EXPERIMENTAL=1 pip3 --no-cache-dir install --no-binary secp256k1 secp256k1 && \
-    pip3 install --trusted-host pypi.python.org -r apps/hashblock_cli/requirements.txt
-    apt-get remove -y build-essential automake && apt-get autoremove -y
+    libtool
 
 WORKDIR /project/hashblock-exchange
-RUN touch __init__.py
-COPY modules modules
-COPY libs/hbzksnark bin/hbzksnark
-COPY apps/shared apps/shared
-COPY apps/protobuf apps/protobuf
-COPY apps/hashblock_cli apps/hashblock_cli
+COPY apps/hashblock_cli/requirements.txt /project/hashblock-exchange/apps/hashblock_cli/requirements.txt
+
+RUN pip3 install eciespy cryptography && \
+    SECP_BUNDLED_EXPERIMENTAL=1 pip3 --no-cache-dir install --no-binary secp256k1 secp256k1 && \
+    pip3 install --trusted-host pypi.python.org -r apps/hashblock_cli/requirements.txt && \
+    rm -r /root/.cache && \
+    apt-get remove -y build-essential automake && apt-get autoremove -y
 
 ENV PYTHONPATH /project/hashblock-exchange/apps/hashblock_cli:/project/hashblock-exchange/apps:/project/hashblock-exchange
-ENV PATH $PATH:/project/hashblock-exchange/apps/hashblock_cli
+ENV PATH $PATH:/project/hashblock-exchange/apps/hashblock_cli:/project/hashblock-exchange/libs
 WORKDIR apps/hashblock_cli
 

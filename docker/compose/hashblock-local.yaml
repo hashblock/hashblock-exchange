@@ -120,7 +120,7 @@ services:
     container_name: sawtooth-validator-local
     volumes:
       - ../../localkeys/:/project/keys
-      - ../../sampledata/:/project/genbatch
+      - ../../samplegenesis/:/project/genbatch
     expose:
       - 4004
     ports:
@@ -128,7 +128,7 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawset genesis -k /project/keys/signer1.priv -o /etc/config-settings.batch && \
-        sawadm genesis /etc/config-settings.batch /project/genbatch/hbgenesis.batch && \
+        sawadm genesis /etc/config-settings.batch /project/genbatch/hashblock.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \

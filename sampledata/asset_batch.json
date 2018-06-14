@@ -4,47 +4,40 @@
 			"signer": "turing",
 			"id": "1",
 			"dimension":"unit",
-			"system": "imperial",
-			"key": "unity"
-		},
-		{
-			"signer": "turing",
-			"id": "2",
-			"dimension":"unit",
 			"system": "purchasing",
 			"key": "bag"
 		},
 		{
 			"signer": "turing",
-			"id": "3",
+			"id": "2",
 			"dimension":"resource",
 			"system": "food",
 			"key": "peanuts"
 		},
 		{
 			"signer": "turing",
-			"id": "4",
+			"id": "3",
 			"dimension":"unit",
 			"system": "imperial",
 			"key": "$"
 		},
 		{
 			"signer": "turing",
-			"id": "5",
+			"id": "4",
 			"dimension":"resource",
 			"system": "currency",
 			"key": "USD"
 		},
 		{
 			"signer": "turing",
-			"id": "6",
+			"id": "5",
 			"dimension":"unit",
 			"system": "purchasing",
 			"key": "bale"
 		},
 		{
 			"signer": "turing",
-			"id": "7",
+			"id": "6",
 			"dimension":"resource",
 			"system": "food",
 			"key": "hay"
@@ -56,8 +49,6 @@
 		{"signer": "church", "proposal_id": "3", "vote": "accept"},
 		{"signer": "church", "proposal_id": "4", "vote": "accept"},
 		{"signer": "church", "proposal_id": "5", "vote": "accept"},
-		{"signer": "church", "proposal_id": "6", "vote": "accept"},
-		{"signer": "church", "proposal_id": "7", "vote": "accept"}
-
+		{"signer": "church", "proposal_id": "6", "vote": "accept"}
 	]
 }

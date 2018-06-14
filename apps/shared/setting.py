@@ -21,9 +21,7 @@ This module is referenced when posting hashblock-setting transactions
 
 from modules.config import valid_signer
 from protobuf.setting_pb2 import Settings, SettingPayload
-from shared.transactions import (
-    submit_single_txn, create_batch_list,
-    create_batch, create_transaction, compose_builder)
+from shared.transactions import (create_transaction, compose_builder)
 from modules.address import Address
 from modules.exceptions import DataException
 
@@ -93,24 +91,13 @@ def _create_settings(signer, resauths, resthresh, uomauths, uomthresh):
         create_transaction,
         _create_inputs_outputs,
         _create_setting)
-    res_setting = setting_txn_build(
+    res_setting_txn = setting_txn_build(
         (signer, _resource_addrs, res_auth_keys, resthresh))[1]
-    uom_setting = setting_txn_build(
+    uom_setting_txn = setting_txn_build(
         (signer, _unit_addrs, uom_auth_keys, uomthresh))[1]
-    return create_batch((signer, [res_setting, uom_setting]))
+    return [res_setting_txn, uom_setting_txn]
 
 
-def create_settings_submit(signer, resauths, resthresh, uomauths, uomthresh):
-    """Submits setting transactions interactivley"""
-    batch = _create_settings(signer, resauths, resthresh, uomauths, uomthresh)
-    if not batch:
-        raise DataException
-    pass
-
-
-def create_settings_batch(signer, resauths, resthresh, uomauths, uomthresh):
-    """Creates the setting batch and returns for later submission"""
-    batch = _create_settings(signer, resauths, resthresh, uomauths, uomthresh)
-    if not batch:
-        raise DataException
-    return create_batch_list([batch])
+def create_settings_genesis(signer, resauths, resthresh, uomauths, uomthresh):
+    """Creates the setting transactions returns for later submission"""
+    return _create_settings(signer, resauths, resthresh, uomauths, uomthresh)
