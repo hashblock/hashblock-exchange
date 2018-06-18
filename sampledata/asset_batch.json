@@ -24,20 +24,13 @@
 		{
 			"signer": "turing",
 			"id": "4",
-			"dimension":"resource",
-			"system": "currency",
-			"key": "USD"
-		},
-		{
-			"signer": "turing",
-			"id": "5",
 			"dimension":"unit",
 			"system": "purchasing",
 			"key": "bale"
 		},
 		{
 			"signer": "turing",
-			"id": "6",
+			"id": "5",
 			"dimension":"resource",
 			"system": "food",
 			"key": "hay"
@@ -48,7 +41,6 @@
 		{"signer": "church", "proposal_id": "2", "vote": "accept"},
 		{"signer": "church", "proposal_id": "3", "vote": "accept"},
 		{"signer": "church", "proposal_id": "4", "vote": "accept"},
-		{"signer": "church", "proposal_id": "5", "vote": "accept"},
-		{"signer": "church", "proposal_id": "6", "vote": "accept"}
+		{"signer": "church", "proposal_id": "5", "vote": "accept"}
 	]
 }
