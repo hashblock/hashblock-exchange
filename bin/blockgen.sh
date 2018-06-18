@@ -28,6 +28,8 @@ info 'Generating hashblock.batch genesis transaction file'
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
+mkdir $top_dir/samplegenesis
+
 docker run -it --rm \
 	-v $top_dir/:/project/hashblock-exchange \
 	-e "PYTHONPATH=/project/hashblock-exchange:/project/hashblock-exchange/apps" \

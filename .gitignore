@@ -117,7 +117,7 @@ protobuf/
 #Visual Studio code
 .vscode/
 
-
+# Genesis batch
+.samplegenesis/
 
 temp/libsnark
-samplegenesis/hashblock.batch
