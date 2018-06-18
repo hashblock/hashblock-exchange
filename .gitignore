@@ -118,6 +118,6 @@ protobuf/
 .vscode/
 
 # Genesis batch
-.samplegenesis/
+samplegenesis/
 
 temp/libsnark
