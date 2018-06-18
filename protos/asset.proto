@@ -20,11 +20,48 @@ option java_package = "hashblock.asset.protobuf";
 
 // On chain unit of measure
 
+// The numerator * denominator takes the 44 chars in the tail of the address
 message Unit {
-    string system = 1;
-    string key = 2;
-    string value = 3;
+    string system = 1;      // "ucum"
+    string key = 2;         // "code from ucum unit" [g]
+    string value = 3;       // 0.1.0 Prime 0.2.5 ucum value "9.80665" (move by 20 decimal)
+    string numerator = 4;   // Positive base unit = (abs(base unit prime for m) ^ 1)
+    string denominator = 5; // Negative base unit = (abs(base unit prime for s) ^ 2) * (abs(f) ^ 4)
+    string exponent = 6;    // 0 (no e on value sig use sign)
+    string precision = 7;   // 5 by the data example or specific to a source indicator (ucum 'value', iso4215 minor number)
+    string accuracy = 8;    // 1 (incremental, for now)
+    string url = 9;         // Optional
+    bool   base = 10;       // True if a base unit, False or empty otherwise
 }
+
+// message BaseUnit {
+//     string system = 1;      // "ucum"
+//     string key = 2;         // "code from ucum unit" s (seconds)
+//     string value = 3;       // 1
+//     string numerator = 4;   // prime (2, 3, 5 , 7 , etc)
+//     string denominator = 5; // 1
+//     string exponent = 6;    // 0 (no e on value sig use sign)
+//     string precision = 7;   // 20
+//     string accuracy = 8;    // 1
+//     string url = 9;         // Optional
+//     bool   base=10;         // True
+// }
+
+// <UCUMWebServiceResponse ServerDateTime="2018-06-16T17:00:21">
+// <WebServiceRequest>
+// http://ucum.nlm.nih.gov/ucum-service/v1/toBaseUnits/%5Bg%5D
+// </WebServiceRequest>
+// <Response>
+//  <SourceUnit>[g]</SourceUnit>
+//  <ResultBaseUnits>s-2.m</ResultBaseUnits>
+//  <ResultQuantity>9.80665</ResultQuantity>
+//  <ResultBaseUnitsList>
+//      <BaseUnit Name="s" Exponent="-2"/>
+//      <BaseUnit Name="f" Exponent="-4"/>
+//      <BaseUnit Name="m" Exponent="1"/>
+//  </ResultBaseUnitsList>
+// </Response>
+// </UCUMWebServiceResponse>
 
 // On chain resource
 

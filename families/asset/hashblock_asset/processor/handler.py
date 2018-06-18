@@ -76,7 +76,6 @@ class AssetTransactionHandler(TransactionHandler):
     def apply(self, transaction, context):
         txn_header = transaction.header
         public_key = txn_header.signer_public_key
-
         asset_payload = AssetPayload()
         asset_payload.ParseFromString(transaction.payload)
         self.dimension = asset_payload.dimension
@@ -119,8 +118,7 @@ class AssetTransactionHandler(TransactionHandler):
         asset_proposal = AssetProposal()
         asset_proposal.ParseFromString(proposal_data)
         self.asset_type.asset_from_proposal(asset_proposal)
-        proposal_id = (self.asset_type.asset_address)
-
+        proposal_id = self.asset_type.asset_address
         approval_threshold = self._get_approval_threshold(
             context,
             self.asset_type)
@@ -141,11 +139,7 @@ class AssetTransactionHandler(TransactionHandler):
             asset_candidates.candidates.add(
                 proposal_id=proposal_id,
                 proposal=asset_proposal,
-                votes=[record]
-            )
-
-            LOGGER.debug('Proposal made to create {}'
-                         .format(asset_proposal.asset))
+                votes=[record])
             self._set_candidates(context, asset_candidates)
         else:
             _set_asset(context, proposal_id, self.asset_type.asset)
@@ -155,7 +149,6 @@ class AssetTransactionHandler(TransactionHandler):
             self, public_key, authorized_keys, vote_data, context):
         """Apply an UNSET vote on a proposal
         """
-        LOGGER.debug("Request to rescind vote")
         asset_vote = AssetVote()
         asset_vote.ParseFromString(vote_data)
         proposal_id = asset_vote.proposal_id
@@ -242,6 +235,7 @@ class AssetTransactionHandler(TransactionHandler):
 
         if accepted_count >= approval_threshold:
             _set_asset(context, proposal_id, self.asset_type.asset)
+            LOGGER.debug("Consensus to create {}".format(proposal_id))
             del asset_candidates.candidates[candidate_index]
             self._set_candidates(context, asset_candidates)
         elif rejected_count >= approval_threshold or \
@@ -328,6 +322,7 @@ def _get_candidates(context, address, default_value=None):
 
 
 def _set_candidates(context, address, candidates):
+
     addresses = _set_state(context, address, candidates)
     if len(addresses) != 1:
         LOGGER.warning(
@@ -365,12 +360,12 @@ def _get_state(context, address):
 
 def _set_state(context, address, entity):
     try:
-        addresses = list(context.set_state(
+        result = context.set_state(
             {address: entity.SerializeToString()},
-            timeout=STATE_TIMEOUT_SEC))
+            timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
         raise InternalError('State timeout: Unable to set {}'.format(entity))
-
+    addresses = list(result)
     return addresses
 
 

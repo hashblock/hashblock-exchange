@@ -16,6 +16,8 @@
 
 from __future__ import print_function
 
+from scripts.ucum_to_assets import genucum
+from scripts.iso4217_to_assets import geniso4217
 from modules.exceptions import CliException
 from shared.setting import create_settings_genesis
 from shared.asset import create_asset_genesis
@@ -39,29 +41,33 @@ def add_genesis_parser(subparsers, parent_parser):
         '-k',
         help='Signing key for genesis transactions',
         dest='signer',
-        required=True)
+        default='turing')
 
     parser.add_argument(
         '-rk',
         help='specify the keys for proposing/voting on resources',
         dest='resource_keys',
+        default=['turing', 'church'],
         nargs='+')
 
     parser.add_argument(
         '-rt',
         dest='resource_threshold',
-        help='specify the resource voting threshold')
+        help='specify the resource voting threshold',
+        default="2")
 
     parser.add_argument(
         '-uk',
         help='specify the keys for proposing/voting on units-of-measure',
         dest='unit_keys',
+        default=['turing', 'church'],
         nargs='+')
 
     parser.add_argument(
         '-ut',
         dest='unit_threshold',
-        help='specify the units-of-measure voting threshold')
+        help='specify the units-of-measure voting threshold',
+        default="2")
 
     parser.add_argument(
         '-o',
@@ -85,10 +91,17 @@ def do_genesis(args, config):
     if not args.output:
         raise CliException('genesis creation requires output file')
 
+    std_units = genucum()
+    iso4217_units = geniso4217()
+    std_units.extend(iso4217_units)
+    print("Standard units count {}".format(len(std_units)))
+
     txns = create_settings_genesis(
         args.signer, args.resource_keys, args.resource_threshold,
         args.unit_keys, args.unit_threshold)
-    txns.append(create_asset_genesis(args.signer))
+
+    txns.extend(create_asset_genesis(args.signer, std_units))
+    # txns.append(create_asset_genesis(args.signer))
 
     batch = create_batch_list([create_batch((args.signer, txns))])
 

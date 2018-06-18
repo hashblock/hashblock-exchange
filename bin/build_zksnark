@@ -69,15 +69,17 @@ main () {
 	docker_build $top_dir/docker/hashblock-zksnark $top_dir hashblock-zksnark
     check_cmnd
 
-	info 'Removing libsnark image'
-    # docker_clean libsnark
-    # check_cmnd
 	info 'Copying hashblock_zksnark executables out of image'
     docker run --rm -v $top_dir/libs:/hbsnark_libs hashblock-zksnark bash -c "cp -r hbzksnark /hbsnark_libs/."
-    # check_cmnd
+    check_cmnd
+
 	info 'Remvoing hashblock-zksnark image'
-    # docker_clean libsnark hashblock-zksnark
-    # check_cmnd
+    docker_clean libsnark hashblock-zksnark
+    check_cmnd
+
+    info 'Removing libsnark image'
+    docker_clean libsnark
+    check_cmnd
 
     info 'Removing temp directory'
     rm -R $temp_files

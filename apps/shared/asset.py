@@ -43,6 +43,10 @@ VOTE_ITEMS = ['rescind', 'accept', 'reject']
 _addresser = Address(Address.FAMILY_ASSET, "0.2.0")
 
 
+def __get_prime():
+    return prime_gen().decode().lower()
+
+
 def __validate_asset(address, alist, data):
     """Exception if asset already exists"""
     if alist:
@@ -60,7 +64,7 @@ def __validate_proposal(dimension, data):
     if not data['signer']:
         raise DataException("Missing signer for proposal")
     valid_signer(data['signer'])
-    prime_id = prime_gen().decode().lower()
+    prime_id = __get_prime()
     target_address = _addresser.asset_item(
         dimension, data['system'], data['key'], prime_id)
     __validate_asset(
@@ -243,26 +247,25 @@ def create_vote(dimension, data):
         data))
 
 
-def create_asset_genesis(signer):
-    """Generate the transaction batch for genesis block univeral assets
-
-    Currently it is for 'univeral unity' that has a fixed, not random,
-    value of '1'"""
-    data = {
-        "dimension": "unit",
-        "system": "universal",
-        "key": "unity"}
-
-    proposal_id = _addresser.asset_item(
-        "unit", "universal", "unity", ("0" * 43) + "1")
+def create_asset_genesis(signer, unit_list):
+    """Generate the transaction batch for genesis block unit assets"""
+    txns = []
     genesis = compose_builder(
         create_transaction, __create_asset_inputs_outputs,
         __create_asset_payload, __create_unit_asset)
-    return genesis((
-        signer,
-        proposal_id,
-        Address(Address.FAMILY_ASSET, "0.2.0", "unit"),
-        data))[1]
+    for data in unit_list:
+        if data["prime"]:
+            proposal_id = data.pop("prime")
+        else:
+            proposal_id = __get_prime()
+        txns.append(
+            genesis((
+                signer,
+                _addresser.asset_item(
+                    "unit", data['system'], data['key'], proposal_id),
+                Address(Address.FAMILY_ASSET, "0.2.0", "unit"),
+                data))[1])
+    return txns
 
 
 def create_asset_batch(json_file):
