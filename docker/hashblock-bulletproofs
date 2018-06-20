@@ -1,0 +1,15 @@
+FROM ubuntu:xenial
+
+WORKDIR /root
+
+# install prerequisite
+RUN apt-get update && \
+    apt-get install -y \
+    wget unzip curl \
+    build-essential git nano autoconf automake libtool pkg-config && \
+    git clone -b bulletproofs  https://github.com/apoelstra/secp256k1-mw.git
+
+WORKDIR /root/secp256k1-mw
+
+RUN ./autogen.sh && ./configure && make && make install
+
