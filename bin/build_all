@@ -1,6 +1,7 @@
 #!/bin/bash
-#
-# Copyright 2017 Frank V. Castellucci and Arthur Greef
+
+# ------------------------------------------------------------------------------
+# Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,29 +16,36 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# Exit on non-zero exit code from subcommand
-set -e
-
-# Default args
-TARGETS="python"
-EXCLUDE=""
-
-MOUNTED="mounted"
-INSTALLED="installed"
-
 usage() {
     echo "Usage:"
-    echo "  $0 {$MOUNTED,$INSTALLED,$DEBS}"
-    echo
-    echo "Options:"
-    echo "  -h                 print usage and exit"
-    echo "  -t Target          only build the specified target(s)"
+    echo "  $0 [build options] [args]"
     echo ""
-    echo "Build type options: {$MOUNTED,$INSTALLED,$DEBS}"
-    echo "  $MOUNTED - build development docker images that mount hashblock"
-    echo "      from your file system"
-    echo "  $INSTALLED - build production docker images with the hashblock "
-    echo "      modules installed in them."
+    echo "Caution: If called without arguments everything will build"
+    echo ""
+    echo "Build options:"
+    echo "  -h                  print usage and exit"
+    echo "  -D                  build ALL development images"
+    echo "  -d  [targets]       builds specific development images"
+    echo "  -P                  build ALL production images"
+    echo "  -p  [targets]       builds specific production images"
+    echo "  -b                  produces genesis block (hashblock.batch)"
+    echo "  -z                  produces zero-knowledge libraries/executables"
+    echo ""
+    echo "Optional build targets:"
+    echo "  -d     tps,rest,admin"
+    echo "  -p     asset,match,setting,rest,admin"
+    echo ""
+    echo "Examples:"
+    echo "  build_all                   "
+    echo "  build_all -D                "
+    echo "  build_all -d rest           "
+    echo "  build_all -p                "
+    echo "  build_all -p admin          "
+    echo "  build_all -b                "
+    echo "  build_all -z                "
+    echo "  build_all -D -z -b          "
+    echo "  build_all -d adm,rest -b    "
+    echo ""
 }
 
 info() {
@@ -48,18 +56,139 @@ warn() {
     echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
 }
 
-while getopts :x:t:l:h opt
-do
-    case $opt in
-        h)
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+bin_dir=$top_dir/bin
+
+PREFIX_KEYS="HASHBLOCK_KEYS="
+PREFIX_CFGS="HASHBLOCK_CONFIG="
+PREFIX_GENS="GENESIS_BATCH="
+
+keyroot="HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys"
+cfgroot="HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig"
+fqnbtch="GENESIS_BATCH=/project/hashblock-exchange/samplegenesis/hashblock.batch"
+
+DEV_CHOICES=$(echo "hashblock-dev-generic-tp;
+hashblock-dev-rest;
+hashblock-dev-admin;"|tr -d '\n')
+DEV_LOOKUP="tps;rest;admin"
+
+PRD_CHOICES=$(echo "hashblock-asset-tp;
+hashblock-match-tp;
+hashblock-setting-tp;
+hashblock-rest;
+hashblock-admin;"|tr -d '\n')
+PRD_LOOKUP="asset;match;setting;rest;admin"
+
+
+BLD_DEV_INDEX=0
+BLD_PRD_INDEX=1
+BLD_ALL_INDEX=2
+BLD_HBZ_INDEX=3
+BLD_GEN_INDEX=4
+
+NONE="none"
+BLD_PLAN[BLD_DEV_INDEX]=$NONE
+BLD_PLAN[BLD_PRD_INDEX]=$NONE
+BLD_PLAN[BLD_ALL_INDEX]=false
+BLD_PLAN[BLD_HBZ_INDEX]=false
+BLD_PLAN[BLD_GEN_INDEX]=false
+
+# No argument case
+if [ $# -eq 0 ]; then
+    BLD_PLAN[BLD_GEN_INDEX]=true
+    BLD_PLAN[BLD_HBZ_INDEX]=true
+    BLD_PLAN[BLD_ALL_INDEX]=true
+    BLD_PLAN[BLD_DEV_INDEX]=$DEV_CHOICES
+    BLD_PLAN[BLD_PRD_INDEX]=$PRD_CHOICES
+fi
+
+convert_target_to_plan() {
+    IFS=',; ' read -r -a cmd_array <<< $1
+    IFS=',; ' read -r -a lookup_array <<< $2
+    IFS=',; ' read -r -a build_array <<< $3
+    local result=""
+
+    # Iterate through command string
+    for cindex in "${!cmd_array[@]}"
+    do
+        hit=false
+        # Iterate through loopup to get index of fully qualified info
+        for lindex in "${!lookup_array[@]}"
+        do
+            if [ ${cmd_array[cindex]} = ${lookup_array[lindex]} ]; then
+                result="$result ${build_array[lindex]};"
+                hit=true
+                break
+            fi
+        done
+        # If not a hit we need to boogie
+        if [ $hit = false ]; then
+            echo "No hit on ${cmd_array[cindex]}"
+            result=none
+            break
+        fi
+    done
+    echo $result|tr -d ' '
+}
+
+# Check for args
+
+while getopts ":hDd:Pp:bz" opt; do
+    # echo "Processing: ${@:$OPTIND}"
+	case $opt in
+		h)
+			usage
+			exit 0
+			;;
+        b)
+            BLD_PLAN[BLD_GEN_INDEX]=true
+            ;;
+        z)
+            BLD_PLAN[BLD_HBZ_INDEX]=true
+            ;;
+        D)
+            # Check for all being set
+            if [ "${BLD_PLAN[BLD_ALL_INDEX]}" = false ]; then
+                BLD_PLAN[BLD_DEV_INDEX]=$DEV_CHOICES
+            else
+                warn "Build option -a conflics with -d"
+                exit 1
+            fi
+            ;;
+		d)
+			# Check for all being set
+            if [ "${BLD_PLAN[BLD_ALL_INDEX]}" = false ]; then
+                BLD_PLAN[BLD_DEV_INDEX]=$(convert_target_to_plan $OPTARG $DEV_LOOKUP $DEV_CHOICES)
+            else
+                warn "Build option -a conflics with -d"
+                exit 1
+            fi
+			;;
+        P)
+            # Check for all being set
+            if [ "${BLD_PLAN[BLD_ALL_INDEX]}" = false ]; then
+                BLD_PLAN[BLD_PRD_INDEX]=$PRD_CHOICES
+            else
+                warn "Build option -a conflics with -p"
+                exit 1
+            fi
+            ;;
+		p)
+			# Check for all being set
+            if [ "${BLD_PLAN[BLD_ALL_INDEX]}" = false ]; then
+                BLD_PLAN[BLD_PRD_INDEX]=$(convert_target_to_plan $OPTARG $PRD_LOOKUP $PRD_CHOICES)
+            else
+                warn "Build option -a conflics with -p"
+                exit 1
+            fi
+			;;
+        *)
+            warn "'-$OPTARG' expects to have additional parameters "
             usage
-            exit 0
+            exit 1
             ;;
-        t)
-            TARGETS="$TARGETS $OPTARG"
-            ;;
-        \?)
-            echo "Invalid option: -$OPTARG" >&2
+        ?)
+            warn "Invalid option: -$OPTARG" >&2
             usage
             exit 1
             ;;
@@ -67,101 +196,60 @@ do
 done
 shift $(($OPTIND-1))
 
-if [[ -z $1 ]]
-then
-    BUILD_MODE=$MOUNTED
-else
-    if [[ $1 == $MOUNTED || $1 == $INSTALLED ]]
-    then
-        BUILD_MODE=$1
-    else
-        echo "Invalid positional argument: $1"
-        usage
-        exit 1
-    fi
-fi
+docker_build() {
+    info "Building $1"
+    docker build -f docker/$1 $2 -t $3
+}
 
-protos() {
-    echo -e "\033[0;32m--- Running protogen ---\n\033[0m"
-    $top_dir/bin/protogen
+genesis_build() {
+    info "Building hasblock genesis batch file"
+    $bin_dir/blockgen
+}
+
+zero_knowledge_build() {
+    info "Building zero-knowledge stuff"
+    $bin_dir/build_zksnark
+}
+
+protogen_build() {
+    info "Building protobuffs for dev images"
+    $bin_dir/protogen
+}
+
+build_items() {
+    IFS=',; ' read -r -a cmd_array <<< $1
+    # Iterate through command string
+    for cindex in "${!cmd_array[@]}"
+    do
+        fname=${cmd_array[cindex]}
+        docker_build $fname $top_dir $fname
+    done
 }
 
 main() {
 
-    info "Build mode: $BUILD_MODE"
-
-    # Set sawtooth-core project directory relative to this file
-    top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-    protos
-    # Start in project directory
-    cd $top_dir
-
-    for language in $TARGETS
-    do
-
-        # Check if we are skipping this module
-        skip=0
-        for exclude in $EXCLUDE
-        do
-            if [[ $language == $exclude ]]
-            then
-                skip=1
-                break
-            fi
-        done
-
-        if [[ $skip == 1 ]]
-        then
-            info "Skipping $language"
-        else
-            info "Building $language"
-            case $language in
-                python)
-                    build_python
-                    ;;
-                *)
-                    warn "Module '$language' not found."
-                    ;;
-            esac
+    if [ "${BLD_PLAN[BLD_ALL_INDEX]}" = true ]; then
+        zero_knowledge_build
+        protogen_build
+        build_items "${BLD_PLAN[BLD_DEV_INDEX]}"
+        genesis_build
+        build_items "${BLD_PLAN[BLD_PRD_INDEX]}"
+    else
+        if [ "${BLD_PLAN[BLD_HBZ_INDEX]}" = true ]; then
+            zero_knowledge_build
         fi
-    done
-}
-
-docker_build() {
-    image=$1
-    context=$2
-    tag=$3
-
-    if [ ! -z $ISOLATION_ID ]
-    then
-        tag=$tag:$ISOLATION_ID
+        if [ "${BLD_PLAN[BLD_DEV_INDEX]}" != none ]; then
+            protogen_build
+            build_items "${BLD_PLAN[BLD_DEV_INDEX]}"
+        fi
+        if [ "${BLD_PLAN[BLD_GEN_INDEX]}" = true ]; then
+            genesis_build
+        fi
+        if [ "${BLD_PLAN[BLD_PRD_INDEX]}" != none ]; then
+            build_items "${BLD_PLAN[BLD_PRD_INDEX]}"
+        fi
     fi
 
-    info "Building $tag from $image in context $context"
-
-    # Build the image and pass in any proxy information if set
-    docker build -f $image -t $tag $context \
-        --build-arg https_proxy=$https_proxy \
-        --build-arg http_proxy=$http_proxy \
-        --build-arg HTTPS_PROXY=$HTTPS_PROXY \
-        --build-arg HTTP_PROXY=$HTTP_PROXY
 }
-
-if [[ $BUILD_MODE == $MOUNTED ]]
-then
-    build_python() {
-        docker_build $top_dir/docker/hashblock-python-testing $top_dir hashblock-python-testing
-        docker_build $top_dir/docker/hashblock-dev-generic-tp $top_dir hashblock-dev-generic-tp
-        docker_build $top_dir/docker/hashblock-dev-rest $top_dir hashblock-dev-rest
-        docker_build $top_dir/docker/hashblock-dev-admin $top_dir hashblock-dev-admin
-    }
-fi
-
-if [[ $BUILD_MODE == $INSTALLED ]]
-then
-    build_python() {
-        echo "Please using 'bin/build_distro' for time being"
-    }
-fi
 
 main
