@@ -12,5 +12,6 @@ RUN apt-get update && \
 
 WORKDIR /root/secp256k1-zkp
 
-RUN ./autogen.sh && ./configure && make && make install
+RUN ./autogen.sh && ./configure --enable-module-generator --enable-experimental --enable-module-ecdh --enable-module_rangeproof && make && make install
 
+WORKDIR /project/hashblock_exchange
