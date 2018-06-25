@@ -6,7 +6,7 @@ WORKDIR /root
 RUN apt-get update && \
     apt-get install -y \
     wget unzip curl \
-    build-essential git nano autoconf automake libtool pkg-config && \
+    build-essential cmake git nano autoconf automake libtool pkg-config && \
     git clone https://github.com/ElementsProject/secp256k1-zkp.git
 
 

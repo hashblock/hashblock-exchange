@@ -6,10 +6,11 @@ WORKDIR /root
 RUN apt-get update && \
     apt-get install -y \
     wget unzip curl \
-    build-essential git nano autoconf automake libtool pkg-config && \
+    build-essential cmake git nano autoconf automake libtool pkg-config && \
     git clone -b bulletproofs  https://github.com/apoelstra/secp256k1-mw.git
 
 WORKDIR /root/secp256k1-mw
 
-RUN ./autogen.sh && ./configure && make && make install
+RUN ./autogen.sh && ./configure --enable-module-generator --enable-experimental --enable-module-ecdh --enable-module-commitment --enable-module-rangeproof && make && make install
 
+WORKDIR /project/hashblock_exchange
