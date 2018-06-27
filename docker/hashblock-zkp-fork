@@ -1,0 +1,17 @@
+FROM ubuntu:xenial
+
+WORKDIR /root
+
+# install prerequisite
+RUN apt-get update && \
+    apt-get install -y \
+    wget unzip curl \
+    build-essential cmake git nano autoconf automake libtool pkg-config && \
+    git clone https://github.com/hashblock/secp256k1-zkp.git
+
+
+WORKDIR /root/secp256k1-zkp
+
+RUN ./autogen.sh && ./configure --enable-module-generator --enable-experimental --enable-module-ecdh --enable-module-rangeproof && make && make install
+
+WORKDIR /project/hashblock_exchange
