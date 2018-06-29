@@ -40,76 +40,112 @@
 static void counting_illegal_callback_fn(const char* str, void* data) {
     /* Dummy callback function that just counts. */
     int32_t *p;
-    // printf("%s\n", str );
-    (void)str;
+    printf("CICFN: %s\n", str );
+    //(void)str;
     p = data;
     (*p)++;
 }
 
-void check_serialize(const secp256k1_context *ctx, const secp256k1_pedersen_commitment *commitment) {
-    unsigned char serialized_commit_out[33];
-	printf("Succesful commitment creation\n");
-	printf("RAW: %s\n",commitment->data);
-	CHECK(secp256k1_pedersen_commitment_serialize(ctx, serialized_commit_out, commitment) !=0);
-	printf("SERIALIZED: %s\n",serialized_commit_out);
+typedef struct {
+
+	//	Penderson commit vars and outcomes
+	secp256k1_context 				*sign_ctx;
+	secp256k1_context 				*verify_ctx;
+	secp256k1_context 				*both_ctx;
+	uint64_t 						value;
+	unsigned char 					*blind_ptr;
+	secp256k1_pedersen_commitment	commitment;
+
+	//	Range proof vars and outcomes
+	unsigned char 					*message_ptr;
+	uint64_t 						message_len;
+	uint64_t 						min_value;
+	unsigned char 					*nonce;
+	int 							exponent; // fixed 0 for most private
+	int 							min_bits; // fixed 0 for auto
+	unsigned char 					*extra_commit; // Fixed NULL for now
+	size_t 							extra_commit_len; // fixed 0 for no extra
+	int 							proof_len; // In buffer size, out length in buffer proof
+	unsigned char 					proof[5134+1];
+} zkproof;
+
+int create_commitment(zkproof *zkp) {
+	int commit_res = secp256k1_pedersen_commit(zkp->sign_ctx, &zkp->commitment,
+		zkp->blind_ptr, zkp->value, secp256k1_generator_h);
+	return commit_res;
 }
 
+int create_proof(zkproof *zkp) {
+	int proof_res = secp256k1_rangeproof_sign(
+		zkp->both_ctx,
+		zkp->proof,
+		&zkp->proof_len,
+		zkp->min_value,
+		&zkp->commitment,
+		zkp->blind_ptr,
+		zkp->nonce,
+		zkp->exponent,
+		zkp->min_bits,
+		zkp->value,
+		zkp->message_ptr,
+		zkp->message_len,
+		zkp->extra_commit,
+		zkp->extra_commit_len,
+		secp256k1_generator_h);
+	return proof_res;
+}
+
+int verify_proof(zkproof *zkp) {
+	int verify_res = 0;
+	return verify_res;
+}
 
 int main( int c , char *argv[]) {
-    secp256k1_context *none = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
- 	secp256k1_context *sign = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-    secp256k1_context *vrfy = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
-    secp256k1_context *both = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+	(void)c;
+	(void)argv;
+	zkproof 	test;
+	test.sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+	test.verify_ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+    test.both_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 	int32_t ecount=0;
 
-	secp256k1_context_set_error_callback(none, counting_illegal_callback_fn, &ecount);
-	secp256k1_context_set_error_callback(sign, counting_illegal_callback_fn, &ecount);
-	secp256k1_context_set_error_callback(vrfy, counting_illegal_callback_fn, &ecount);
-	secp256k1_context_set_error_callback(both, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(none, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(sign, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(vrfy, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(both, counting_illegal_callback_fn, &ecount);
+	secp256k1_context_set_error_callback(test.sign_ctx, counting_illegal_callback_fn, &ecount);
+	secp256k1_context_set_error_callback(test.verify_ctx, counting_illegal_callback_fn, &ecount);
+	secp256k1_context_set_error_callback(test.both_ctx, counting_illegal_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(test.sign_ctx, counting_illegal_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(test.verify_ctx, counting_illegal_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(test.both_ctx, counting_illegal_callback_fn, &ecount);
 
-	secp256k1_pedersen_commitment commit;
-    const secp256k1_pedersen_commitment *commit_ptr = &commit;
     const unsigned char blind[32] = "   i am not a blinding factor   ";
-    const unsigned char *blind_ptr = blind;
-    size_t blindlen = sizeof(blind);
-    uint64_t val = 256;
-    secp256k1_generator value_gen;
+    test.blind_ptr = blind;
+    test.value = 80;
 
-    // secp256k1-zkp examples
-    CHECK(secp256k1_pedersen_commit(none, &commit, blind, val, secp256k1_generator_h) == 0);
-    if( ecount == 1) {
-    	printf("Penderson commit with ctx = none success\n");
-    }
-    else {
-    	printf("Not so good %i\n", ecount);
-    	printf("%s\n",commit.data);
-    }
-    CHECK(secp256k1_pedersen_commit(vrfy, &commit, blind, val, secp256k1_generator_h) == 0);
-    if( ecount == 2) {
-    	printf("Penderson commit with ctx = verify success\n");
-    }
-    else {
-    	printf("Not so good %i\n", ecount);
-    	printf("%s\n",commit.data);
-    }
-    CHECK(secp256k1_pedersen_commit(sign, &commit, blind, val, secp256k1_generator_h) != 0);
-    if( ecount == 2) {
-    	printf("Penderson commit with ctx = sign success\n");
-    	check_serialize(sign, &commit);
-    }
-    else {
-    	printf("Not so good %i\n", ecount);
-    	printf("%s\n",commit.data);
-    }
+    // Create a signed commitment for value N
+    int cresult = create_commitment(&test);
+    printf("Commitment result = %i\n", cresult);
+    printf("Commitment buffer = %s\n", test.commitment.data);
+    printf("Commitment ecount = %i\n", ecount);
 
-    secp256k1_context_destroy(none);
-    secp256k1_context_destroy(sign);
-    secp256k1_context_destroy(vrfy);
-    secp256k1_context_destroy(both);
+    unsigned char message[120] = "When I see my own likeness in the depths of someone else's consciousness,  I always experience a moment of panic.";
+    test.message_ptr = message;
+    test.message_len = sizeof(message);
+    test.nonce = test.commitment.data;
+    test.min_value = 40;
+    test.min_bits = test.exponent = 0;
+    test.extra_commit = NULL;
+    test.extra_commit_len = 0;
+    test.proof_len = sizeof(test.proof);
+
+    // Create a signed proof
+    int presult = create_proof(&test);
+    printf("Proof result = %i\n", presult);
+    printf("Proof buffer size = %i\n", test.proof_len);
+    printf("Proof ecount = %i\n", ecount);
+
+
+    secp256k1_context_destroy(test.sign_ctx);
+    secp256k1_context_destroy(test.verify_ctx);
+    secp256k1_context_destroy(test.both_ctx);
 
 	return 0;
 }
