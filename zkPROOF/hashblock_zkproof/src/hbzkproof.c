@@ -78,7 +78,7 @@ typedef struct {
 
 int create_commitment(zkproof *zkp) {
 	int commit_res = secp256k1_pedersen_commit(
-		zkp->sign_ctx,
+		zkp->both_ctx,
 		&zkp->commitment,
 		zkp->blind_ptr,
 		zkp->value,
@@ -123,7 +123,6 @@ int verify_proof(zkproof *zkp) {
 int range_info(zkproof *zkp) {
 	int info_res = secp256k1_rangeproof_info(
 		zkp->none_ctx,
-		//		zkp->both_ctx,
 		&zkp->exponent,
 		&zkp->mantissa,
 		&zkp->verify_min,
@@ -152,10 +151,10 @@ int main( int c , char *argv[]) {
     secp256k1_context_set_illegal_callback(test.verify_ctx, counting_illegal_callback_fn, &ecount);
     secp256k1_context_set_illegal_callback(test.both_ctx, counting_illegal_callback_fn, &ecount);
 
-    //const unsigned char blind[32] = "   i am not a blinding factor   ";
+
     const unsigned char blind[32] = "1c9f957deb830979bc414864bbf20c5e";
     test.blind_ptr = blind;
-    test.value = 80;
+    test.value = 65;
 
     // Create a signed commitment for value N
     int cresult = create_commitment(&test);
@@ -186,8 +185,8 @@ int main( int c , char *argv[]) {
 
     //	Verify signed proof
     //test.value = 50;
-    test.verify_min = 60;
-    test.verify_max = 100;
+    // test.verify_min = 60;
+    // test.verify_max = 100;
 
     int vresult = verify_proof(&test);
     printf("Verify result = %i\n", vresult);
@@ -198,11 +197,13 @@ int main( int c , char *argv[]) {
 
 
     //	Some information
-    test.verify_min = 60;
-    test.verify_max = 100;
+    // test.verify_min = 60;
+    // test.verify_max = 100;
     int iresult = range_info(&test);
     printf("Info result = %i\n", iresult);
     printf("Info value = %i\n", test.value);
+    printf("Info exponent = %i\n", test.exponent);
+    printf("Info mantissa = %i\n", test.mantissa);
     printf("Info min value = %i\n", test.verify_min);
     printf("Info max value = %i\n", test.verify_max);
     printf("Info ecount = %i\n\n", ecount);
