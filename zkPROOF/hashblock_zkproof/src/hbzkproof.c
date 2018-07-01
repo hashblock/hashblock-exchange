@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <secp256k1_generator.h>
 #include <secp256k1_rangeproof.h>
 
 
@@ -66,7 +67,7 @@ typedef struct {
 	int 							min_bits; // fixed 0 for auto
 	unsigned char 					*extra_commit; // Fixed NULL for now
 	size_t 							extra_commit_len; // fixed 0 for no extra
-	int 							proof_len; // In buffer size, out length in buffer proof
+	size_t 							proof_len; // In buffer size, out length in buffer proof
 	unsigned char 					proof[5134+1];
 
 	//	Range proof verifies
@@ -82,7 +83,8 @@ int create_commitment(zkproof *zkp) {
 		&zkp->commitment,
 		zkp->blind_ptr,
 		zkp->value,
-		secp256k1_generator_h);
+		&secp256k1_generator_const_g,
+		&secp256k1_generator_const_h);
 	return commit_res;
 }
 
@@ -102,7 +104,7 @@ int create_proof(zkproof *zkp) {
 		zkp->message_len,
 		zkp->extra_commit,
 		zkp->extra_commit_len,
-		secp256k1_generator_h);
+		&secp256k1_generator_const_h);
 	return proof_res;
 }
 
@@ -116,7 +118,7 @@ int verify_proof(zkproof *zkp) {
 		zkp->proof_len,
 		zkp->extra_commit,
 		zkp->extra_commit_len,
-		secp256k1_generator_h);
+		&secp256k1_generator_const_h);
 	return verify_res;
 }
 
@@ -154,12 +156,12 @@ int main( int c , char *argv[]) {
 
     const unsigned char blind[32] = "1c9f957deb830979bc414864bbf20c5e";
     test.blind_ptr = blind;
-    test.value = 65;
+    test.value = 55;
 
     // Create a signed commitment for value N
     int cresult = create_commitment(&test);
     printf("Commitment result = %i\nCommitment = ", cresult);
-    for(int i=0; i < sizeof(test.commitment.data); i++)
+    for(uint64_t i=0; i < sizeof(test.commitment.data); i++)
     	printf("%x", test.commitment.data[i]);
     //printf("Commitment buffer = %s\n", test.commitment.data);
     printf("\nCommitment ecount = %i\n\n", ecount);
@@ -168,9 +170,9 @@ int main( int c , char *argv[]) {
     test.message_ptr = message;
     test.message_len = sizeof(message);
     test.nonce = test.commitment.data;
-    test.min_value = 40;
+    test.min_value = 30;
     test.min_bits = 0;
-    test.exponent = 1;
+    test.exponent = 0;
     test.extra_commit = NULL;
     test.extra_commit_len = 0;
     test.proof_len = sizeof(test.proof);
@@ -178,8 +180,8 @@ int main( int c , char *argv[]) {
     // Create a signed proof
     int presult = create_proof(&test);
     printf("Proof result = %i\n", presult);
-    printf("Proof buffer size = %i\nProof = ", test.proof_len);
-    for(int i=0; i < test.proof_len; i++)
+    printf("Proof buffer size = %u\nProof = ", test.proof_len);
+    for(uint64_t i=0; i < test.proof_len; i++)
     	printf("%x", test.proof[i]);
     printf("\nProof ecount = %i\n\n", ecount);
 

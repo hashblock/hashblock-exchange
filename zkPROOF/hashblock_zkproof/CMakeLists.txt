@@ -6,7 +6,7 @@ project (hbzkproof)
 
 # Pathing information
 
-include_directories(/usr/local/include /root/secp256k1-mw/include/ -isystem /usr/include/x86_64-linux-gnu)
+include_directories(/usr/local/include -isystem /usr/include/x86_64-linux-gnu)
 
 set(SOURCES src/hbzkproof.c)
 
