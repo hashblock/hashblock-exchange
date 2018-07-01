@@ -153,10 +153,9 @@ int main( int c , char *argv[]) {
     secp256k1_context_set_illegal_callback(test.verify_ctx, counting_illegal_callback_fn, &ecount);
     secp256k1_context_set_illegal_callback(test.both_ctx, counting_illegal_callback_fn, &ecount);
 
-
-    const unsigned char blind[32] = "1c9f957deb830979bc414864bbf20c5e";
+    const unsigned char blind[32];
     test.blind_ptr = blind;
-    test.value = 55;
+    test.value = 65;
 
     // Create a signed commitment for value N
     int cresult = create_commitment(&test);
@@ -171,7 +170,7 @@ int main( int c , char *argv[]) {
     test.message_len = sizeof(message);
     test.nonce = test.commitment.data;
     test.min_value = 30;
-    test.min_bits = 0;
+    test.min_bits = 8;
     test.exponent = 0;
     test.extra_commit = NULL;
     test.extra_commit_len = 0;
@@ -186,9 +185,7 @@ int main( int c , char *argv[]) {
     printf("\nProof ecount = %i\n\n", ecount);
 
     //	Verify signed proof
-    //test.value = 50;
-    // test.verify_min = 60;
-    // test.verify_max = 100;
+    test.verify_min = test.verify_max = 0;
 
     int vresult = verify_proof(&test);
     printf("Verify result = %i\n", vresult);
@@ -199,8 +196,7 @@ int main( int c , char *argv[]) {
 
 
     //	Some information
-    // test.verify_min = 60;
-    // test.verify_max = 100;
+    test.verify_min = test.verify_max = 0;
     int iresult = range_info(&test);
     printf("Info result = %i\n", iresult);
     printf("Info value = %i\n", test.value);
@@ -210,8 +206,8 @@ int main( int c , char *argv[]) {
     printf("Info max value = %i\n", test.verify_max);
     printf("Info ecount = %i\n\n", ecount);
 
-
-
+    // Destroy these contexts
+   	secp256k1_context_destroy(test.none_ctx);
     secp256k1_context_destroy(test.sign_ctx);
     secp256k1_context_destroy(test.verify_ctx);
     secp256k1_context_destroy(test.both_ctx);
