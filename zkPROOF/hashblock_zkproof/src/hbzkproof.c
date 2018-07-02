@@ -68,7 +68,13 @@ typedef struct {
 	unsigned char 					*extra_commit; // Fixed NULL for now
 	size_t 							extra_commit_len; // fixed 0 for no extra
 	size_t 							proof_len; // In buffer size, out length in buffer proof
-	unsigned char 					proof[5134+1];
+	unsigned char 					proof[5134];
+
+	//  Range proof rewinds
+	unsigned char 					*blind_out_ptr;
+	uint64_t 						value_out;		// value
+	unsigned char 					*message_out_ptr;
+	uint64_t 						message_out_len; // len of above
 
 	//	Range proof verifies
 	int 							mantissa;
@@ -108,6 +114,24 @@ int create_proof(zkproof *zkp) {
 	return proof_res;
 }
 
+int rewind_proof(zkproof *zkp) {
+	int rewind_res = secp256k1_rangeproof_rewind(
+		zkp->both_ctx,
+		zkp->blind_out_ptr,
+		&zkp->value_out,
+		zkp->message_out_ptr,
+		&zkp->message_out_len,
+		zkp->nonce,
+		&zkp->verify_min,
+		&zkp->verify_max,
+		&zkp->commitment,
+		zkp->proof,
+		zkp->proof_len,
+		zkp->extra_commit,
+		zkp->extra_commit_len,
+		&secp256k1_generator_const_h);
+	return rewind_res;
+}
 int verify_proof(zkproof *zkp) {
 	int verify_res = secp256k1_rangeproof_verify(
 		zkp->both_ctx,
@@ -153,19 +177,24 @@ int main( int c , char *argv[]) {
     secp256k1_context_set_illegal_callback(test.verify_ctx, counting_illegal_callback_fn, &ecount);
     secp256k1_context_set_illegal_callback(test.both_ctx, counting_illegal_callback_fn, &ecount);
 
-    const unsigned char blind[32];
+    //const unsigned char blind[32];
+    const unsigned char blind[32]="01234567890123456789012345678901";
     test.blind_ptr = blind;
     test.value = 65;
 
     // Create a signed commitment for value N
     int cresult = create_commitment(&test);
-    printf("Commitment result = %i\nCommitment = ", cresult);
+    printf("Blind value = ");
+    for(int i=0; i<32;i++)
+    	printf("%x", blind[i]);
+    printf("\nCommitment result = %i\nCommitment = ", cresult);
     for(uint64_t i=0; i < sizeof(test.commitment.data); i++)
     	printf("%x", test.commitment.data[i]);
     //printf("Commitment buffer = %s\n", test.commitment.data);
     printf("\nCommitment ecount = %i\n\n", ecount);
 
     unsigned char message[120] = "When I see my own likeness in the depths of someone else's consciousness,  I always experience a moment of panic.";
+
     test.message_ptr = message;
     test.message_len = sizeof(message);
     test.nonce = test.commitment.data;
@@ -183,6 +212,24 @@ int main( int c , char *argv[]) {
     for(uint64_t i=0; i < test.proof_len; i++)
     	printf("%x", test.proof[i]);
     printf("\nProof ecount = %i\n\n", ecount);
+
+    //	Rewind proof
+
+    unsigned char blind_out[32];
+    unsigned char message_out[120];
+    test.blind_out_ptr = blind_out;
+    test.message_out_ptr = message_out;
+    int rresult = rewind_proof(&test);
+    printf("Rewind result = %i\n", rresult);
+    printf("Rewind min value = %i\n", test.verify_min);
+    printf("Rewind max value = %i\n", test.verify_max);
+    printf("Rewind blind out value = ");
+    for(int i=0; i<32;i++)
+    	printf("%x", blind_out[i]);
+
+    printf("\nRewind msg_out = %s\n", test.message_out_ptr);
+    printf("Rewind ecount = %i\n\n", ecount);
+
 
     //	Verify signed proof
     test.verify_min = test.verify_max = 0;
