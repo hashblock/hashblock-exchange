@@ -47,217 +47,132 @@ static void counting_illegal_callback_fn(const char* str, void* data) {
     (*p)++;
 }
 
-typedef struct {
 
-	//	Penderson commit vars and outcomes
-	secp256k1_context 				*none_ctx;
-	secp256k1_context 				*sign_ctx;
-	secp256k1_context 				*verify_ctx;
-	secp256k1_context 				*both_ctx;
-	uint64_t 						value;
-	unsigned char 					*blind_ptr;
-	secp256k1_pedersen_commitment	commitment;
+void test_rangeproof(secp256k1_context *sign, secp256k1_context *verify, secp256k1_context *both) {
 
-	//	Range proof vars and outcomes
-	unsigned char 					*message_ptr;
-	uint64_t 						message_len;
-	uint64_t 						min_value;
-	unsigned char 					*nonce;
-	int 							exponent; // fixed 0 for most private
-	int 							min_bits; // fixed 0 for auto
-	unsigned char 					*extra_commit; // Fixed NULL for now
-	size_t 							extra_commit_len; // fixed 0 for no extra
-	size_t 							proof_len; // In buffer size, out length in buffer proof
-	unsigned char 					proof[5134];
+	//	Setup commitment
 
-	//  Range proof rewinds
-	unsigned char 					*blind_out_ptr;
-	uint64_t 						value_out;		// value
-	unsigned char 					*message_out_ptr;
-	uint64_t 						message_out_len; // len of above
+    secp256k1_pedersen_commitment	commitment;
+    //const unsigned char 			blind[32]="01234567890123456789012345678901";
+    const unsigned char blind[32]={0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+    	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+    	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+    	0x00, 0x01};
+    uint64_t 						value = 65;
 
-	//	Range proof verifies
-	int 							mantissa;
-	uint64_t 						verify_min;
-	uint64_t 						verify_max;
-
-} zkproof;
-
-int create_commitment(zkproof *zkp) {
 	int commit_res = secp256k1_pedersen_commit(
-		zkp->both_ctx,
-		&zkp->commitment,
-		zkp->blind_ptr,
-		zkp->value,
+		sign,
+		&commitment,
+		blind,
+		value,
 		&secp256k1_generator_const_g,
 		&secp256k1_generator_const_h);
-	return commit_res;
-}
 
-int create_proof(zkproof *zkp) {
+	printf("Commitment RC = %i\n", commit_res);
+    printf("Commitment = ");
+    for(uint64_t i=0; i < sizeof(commitment.data); i++)
+    	printf("%x", commitment.data[i]);
+
+    //	Setup proof
+
+    const unsigned char message[120] = "When I see my own likeness in the depths of someone else's consciousness,  I always experience a moment of panic.";
+    size_t 				message_len = sizeof(message);
+    unsigned char 		proof[5134];
+    uint64_t 			proof_len = sizeof(proof);
+    uint64_t 			min_value = 35;
+    int   				min_bits = 32;
+    int 				exponent = 0;
+    int 				mantissa = 0;
+
 	int proof_res = secp256k1_rangeproof_sign(
-		zkp->both_ctx, 		//	Needs to be context that has both signing and verifying
-		zkp->proof,
-		&zkp->proof_len,
-		zkp->min_value,
-		&zkp->commitment,
-		zkp->blind_ptr,
-		zkp->nonce,
-		zkp->exponent,
-		zkp->min_bits,
-		zkp->value,
-		zkp->message_ptr,
-		zkp->message_len,
-		zkp->extra_commit,
-		zkp->extra_commit_len,
+		both,
+		proof,
+		&proof_len,
+		min_value,
+		&commitment,
+		blind,
+		commitment.data,
+		exponent,
+		min_bits,
+		value,
+		message,
+		message_len,
+		NULL,
+		0,
 		&secp256k1_generator_const_h);
-	return proof_res;
-}
 
-int rewind_proof(zkproof *zkp) {
-	int rewind_res = secp256k1_rangeproof_rewind(
-		zkp->both_ctx,
-		zkp->blind_out_ptr,
-		&zkp->value_out,
-		zkp->message_out_ptr,
-		&zkp->message_out_len,
-		zkp->nonce,
-		&zkp->verify_min,
-		&zkp->verify_max,
-		&zkp->commitment,
-		zkp->proof,
-		zkp->proof_len,
-		zkp->extra_commit,
-		zkp->extra_commit_len,
-		&secp256k1_generator_const_h);
-	return rewind_res;
-}
-int verify_proof(zkproof *zkp) {
+	printf("Proof RC = %i\n", proof_res);
+	printf("Proof len = %lu\n", proof_len);
+    for(uint64_t i=0; i < proof_len; i++)
+    	printf("%x", proof[i]);
+    printf("\n");
+
+    //	Setup verify
+	uint64_t 			verify_min=0;
+	uint64_t 			verify_max=0;
+
 	int verify_res = secp256k1_rangeproof_verify(
-		zkp->both_ctx,
-		&zkp->verify_min,
-		&zkp->verify_max,
-		&zkp->commitment,
-		zkp->proof,
-		zkp->proof_len,
-		zkp->extra_commit,
-		zkp->extra_commit_len,
+		verify,
+		&verify_min,
+		&verify_max,
+		&commitment,
+		proof,
+		proof_len,
+		NULL,
+		0,
 		&secp256k1_generator_const_h);
-	return verify_res;
+
+	printf("Verify RC = %i\n", verify_res);
+    printf("Verify min value = %lu\n", verify_min);
+    printf("Verify max value = %lu\n", verify_max);
+
+    //	Setup info
+
+	int info_res = secp256k1_rangeproof_info(
+		both,
+		&exponent,
+		&mantissa,
+		&verify_min,
+		&verify_max,
+		proof,
+		proof_len);
+
+	printf("Info RC = %i\n", info_res);
+    printf("Info min value = %lu\n", verify_min);
+    printf("Info max value = %lu\n", verify_max);
+
 }
 
-int range_info(zkproof *zkp) {
-	int info_res = secp256k1_rangeproof_info(
-		zkp->none_ctx,
-		&zkp->exponent,
-		&zkp->mantissa,
-		&zkp->verify_min,
-		&zkp->verify_max,
-		zkp->proof,
-		zkp->proof_len);
-	return info_res;
+/*
+	ARTHUR... PUT YOUR STUFF HERE
+*/
+
+void test_bulletproof(secp256k1_context *sign, secp256k1_context *verify, secp256k1_context *both) {
 }
 
 int main( int c , char *argv[]) {
 	(void)c;
 	(void)argv;
-	zkproof 	test;
-	test.none_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
-	test.sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-	test.verify_ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
-    test.both_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+	secp256k1_context *sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+	secp256k1_context *verify_ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+    secp256k1_context *both_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 	int32_t ecount=0;
 
-	secp256k1_context_set_error_callback(test.none_ctx, counting_illegal_callback_fn, &ecount);
-	secp256k1_context_set_error_callback(test.sign_ctx, counting_illegal_callback_fn, &ecount);
-	secp256k1_context_set_error_callback(test.verify_ctx, counting_illegal_callback_fn, &ecount);
-	secp256k1_context_set_error_callback(test.both_ctx, counting_illegal_callback_fn, &ecount);
-	secp256k1_context_set_illegal_callback(test.none_ctx, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(test.sign_ctx, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(test.verify_ctx, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(test.both_ctx, counting_illegal_callback_fn, &ecount);
+	secp256k1_context_set_error_callback(sign_ctx, counting_illegal_callback_fn, &ecount);
+	secp256k1_context_set_error_callback(verify_ctx, counting_illegal_callback_fn, &ecount);
+	secp256k1_context_set_error_callback(both_ctx, counting_illegal_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(sign_ctx, counting_illegal_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(verify_ctx, counting_illegal_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(both_ctx, counting_illegal_callback_fn, &ecount);
 
-    //const unsigned char blind[32];
-    const unsigned char blind[32]="01234567890123456789012345678901";
-    test.blind_ptr = blind;
-    test.value = 65;
+    test_rangeproof(sign_ctx, verify_ctx, both_ctx);
+    test_bulletproof(sign_ctx, verify_ctx, both_ctx);
 
-    // Create a signed commitment for value N
-    int cresult = create_commitment(&test);
-    printf("Blind value = ");
-    for(int i=0; i<32;i++)
-    	printf("%x", blind[i]);
-    printf("\nCommitment result = %i\nCommitment = ", cresult);
-    for(uint64_t i=0; i < sizeof(test.commitment.data); i++)
-    	printf("%x", test.commitment.data[i]);
-    //printf("Commitment buffer = %s\n", test.commitment.data);
-    printf("\nCommitment ecount = %i\n\n", ecount);
-
-    unsigned char message[120] = "When I see my own likeness in the depths of someone else's consciousness,  I always experience a moment of panic.";
-
-    test.message_ptr = message;
-    test.message_len = sizeof(message);
-    test.nonce = test.commitment.data;
-    test.min_value = 30;
-    test.min_bits = 8;
-    test.exponent = 0;
-    test.extra_commit = NULL;
-    test.extra_commit_len = 0;
-    test.proof_len = sizeof(test.proof);
-
-    // Create a signed proof
-    int presult = create_proof(&test);
-    printf("Proof result = %i\n", presult);
-    printf("Proof buffer size = %u\nProof = ", test.proof_len);
-    for(uint64_t i=0; i < test.proof_len; i++)
-    	printf("%x", test.proof[i]);
-    printf("\nProof ecount = %i\n\n", ecount);
-
-    //	Rewind proof
-
-    unsigned char blind_out[32];
-    unsigned char message_out[120];
-    test.blind_out_ptr = blind_out;
-    test.message_out_ptr = message_out;
-    int rresult = rewind_proof(&test);
-    printf("Rewind result = %i\n", rresult);
-    printf("Rewind min value = %i\n", test.verify_min);
-    printf("Rewind max value = %i\n", test.verify_max);
-    printf("Rewind blind out value = ");
-    for(int i=0; i<32;i++)
-    	printf("%x", blind_out[i]);
-
-    printf("\nRewind msg_out = %s\n", test.message_out_ptr);
-    printf("Rewind ecount = %i\n\n", ecount);
-
-
-    //	Verify signed proof
-    test.verify_min = test.verify_max = 0;
-
-    int vresult = verify_proof(&test);
-    printf("Verify result = %i\n", vresult);
-    printf("Verify value = %i\n", test.value);
-    printf("Verify min value = %i\n", test.verify_min);
-    printf("Verify max value = %i\n", test.verify_max);
-    printf("Verify ecount = %i\n\n", ecount);
-
-
-    //	Some information
-    test.verify_min = test.verify_max = 0;
-    int iresult = range_info(&test);
-    printf("Info result = %i\n", iresult);
-    printf("Info value = %i\n", test.value);
-    printf("Info exponent = %i\n", test.exponent);
-    printf("Info mantissa = %i\n", test.mantissa);
-    printf("Info min value = %i\n", test.verify_min);
-    printf("Info max value = %i\n", test.verify_max);
-    printf("Info ecount = %i\n\n", ecount);
 
     // Destroy these contexts
-   	secp256k1_context_destroy(test.none_ctx);
-    secp256k1_context_destroy(test.sign_ctx);
-    secp256k1_context_destroy(test.verify_ctx);
-    secp256k1_context_destroy(test.both_ctx);
+    secp256k1_context_destroy(sign_ctx);
+    secp256k1_context_destroy(verify_ctx);
+    secp256k1_context_destroy(both_ctx);
 
 	return 0;
 }
