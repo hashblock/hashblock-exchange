@@ -63,8 +63,8 @@ void test_rangeproof(secp256k1_context *sign, secp256k1_context *verify, secp256
 		&commitment,
 		blind,
 		value,
-		&secp256k1_generator_const_g,
-		&secp256k1_generator_const_h);
+		&secp256k1_generator_const_h,
+		&secp256k1_generator_const_g);
 
 	printf("Commitment RC = %i\n", commit_res);
     printf("Commitment = ");
@@ -298,7 +298,7 @@ int main( int c , char *argv[]) {
     secp256k1_context_set_illegal_callback(verify_ctx, counting_illegal_callback_fn, &ecount);
     secp256k1_context_set_illegal_callback(both_ctx, counting_illegal_callback_fn, &ecount);
 
-    //test_rangeproof(sign_ctx, verify_ctx, both_ctx);
+    test_rangeproof(sign_ctx, verify_ctx, both_ctx);
     test_bulletproof(none_ctx, sign_ctx, verify_ctx, both_ctx);
 
 
