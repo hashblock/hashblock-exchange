@@ -1,7 +1,7 @@
+
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <secp256k1_generator.h>
-#include <secp256k1_rangeproof.h>
 #include <secp256k1_bulletproofs.h>
 
 
@@ -52,7 +52,6 @@ void test_rangeproof(secp256k1_context *sign, secp256k1_context *verify, secp256
 	//	Setup commitment
 
     secp256k1_pedersen_commitment	commitment;
-    //const unsigned char 			blind[32]="01234567890123456789012345678901";
     const unsigned char blind[32]={0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
     	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
     	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
@@ -152,7 +151,6 @@ void test_bulletproof(secp256k1_context *none, secp256k1_context *sign, secp256k
 	//	Setup commitment
 
     secp256k1_pedersen_commitment	commitment;
-    //const unsigned char 			blind[32]="01234567890123456789012345678901";
     const unsigned char blind[32]={0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
     	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
     	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
@@ -163,12 +161,13 @@ void test_bulletproof(secp256k1_context *none, secp256k1_context *sign, secp256k
     blind_ptr[1] = blind;
     blind_ptr[2] = blind;
     blind_ptr[3] = blind;
-	
+
     uint64_t  	value = 65;
 
 	secp256k1_generator value_gen;
 	int rgenerate = secp256k1_generator_generate(both, &value_gen, blind);
 	printf("Generate result: %i\n", rgenerate);
+    printf("\n");
 
 	int commit_res = secp256k1_pedersen_commit(
 		sign,
@@ -203,12 +202,13 @@ void test_bulletproof(secp256k1_context *none, secp256k1_context *sign, secp256k
 		&min_value,
 		blind_ptr,
 		1,
-		&value_gen, 
-		64, 
+		&value_gen,
+		64,
 		blind,
-		NULL, 
+		NULL,
 		0);
 
+    printf("\n");
 	printf("Proof RC = %i\n", proof_res);
 	printf("Proof len = %lu\n", proof_len);
     for(uint64_t i=0; i < proof_len; i++)
@@ -230,30 +230,42 @@ void test_bulletproof(secp256k1_context *none, secp256k1_context *sign, secp256k
 		NULL,
 		0);
 
+    printf("\n");
 	printf("Verify RC = %i\n", verify_res);
     printf("Verify min value = %lu\n", min_value);
+    printf("\n");
 
     //	Setup info
 
-	size_t rewind_v;
+	uint64_t rewind_v;
 	unsigned char rewind_blind[32];
 
 	int info_res = secp256k1_bulletproof_rangeproof_rewind(
 		none,
-		gens, 
-		&rewind_v, 
-		rewind_blind, 
-		proof, 
-		proof_len, 
-		min_value, 
+		gens,
+		&rewind_v,
+		rewind_blind,
+		proof,
+		proof_len,
+		min_value,
 		&commitment,
-		&value_gen, 
-		blind, 
-		NULL, 
+		&value_gen,
+		blind,
+		NULL,
 		0);
 
 	printf("Rewind RC = %i\n", info_res);
+    printf("Rewind value = %lu\n", rewind_v);
     printf("Rewind min value = %lu\n", min_value);
+    printf("Original blind = ");
+    for(uint64_t i=0; i < sizeof(blind); i++)
+        printf("%x", blind[i]);
+    printf("\n");
+
+    printf("Rewind blind = ");
+    for(uint64_t i=0; i < sizeof(rewind_blind); i++)
+        printf("%x", rewind_blind[i]);
+    printf("\n");
 
 	secp256k1_bulletproof_generators_destroy(none, gens);
 }
