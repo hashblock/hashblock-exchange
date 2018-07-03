@@ -12,6 +12,6 @@ RUN git clone -b bulletproofs-rangeonly  https://github.com/hashblock/secp256k1-
 
 WORKDIR /root/secp256k1-mw
 
-RUN ./autogen.sh && ./configure --enable-module-generator --enable-experimental --enable-module-ecdh --enable-module-commitment --enable-module-rangeproof && make && make install
+RUN ./autogen.sh && ./configure --enable-module-generator --enable-experimental --enable-module-ecdh --enable-module-commitment --enable-module-rangeproof --enable-module-bulletproof && make && make install
 
 WORKDIR /project/hashblock_exchange

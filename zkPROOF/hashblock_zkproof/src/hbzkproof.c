@@ -1,9 +1,8 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <secp256k1_generator.h>
 #include <secp256k1_rangeproof.h>
+#include <secp256k1_bulletproofs.h>
 
 
 #ifdef DETERMINISTIC
@@ -144,15 +143,125 @@ void test_rangeproof(secp256k1_context *sign, secp256k1_context *verify, secp256
 }
 
 /*
-	ARTHUR... PUT YOUR STUFF HERE
+	ARTHUR... START
 */
 
-void test_bulletproof(secp256k1_context *sign, secp256k1_context *verify, secp256k1_context *both) {
+void test_bulletproof(secp256k1_context *none, secp256k1_context *sign, secp256k1_context *verify, secp256k1_context *both) {
+	printf("test_bulletproof\n");
+
+	//	Setup commitment
+
+    secp256k1_pedersen_commitment	commitment;
+    //const unsigned char 			blind[32]="01234567890123456789012345678901";
+    const unsigned char blind[32]={0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+    	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+    	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+    	0x00, 0x01};
+
+	const unsigned char *blind_ptr[4];
+	blind_ptr[0] = blind;
+    blind_ptr[1] = blind;
+    blind_ptr[2] = blind;
+    blind_ptr[3] = blind;
+	
+    uint64_t  	value = 65;
+
+	secp256k1_generator value_gen;
+	int rgenerate = secp256k1_generator_generate(both, &value_gen, blind);
+	printf("Generate result: %i\n", rgenerate);
+
+	int commit_res = secp256k1_pedersen_commit(
+		sign,
+		&commitment,
+		blind,
+		value,
+		&value_gen,
+		&secp256k1_generator_const_h);
+
+	printf("Commitment RC = %i\n", commit_res);
+    printf("Commitment = ");
+    for(uint64_t i=0; i < sizeof(commitment.data); i++)
+    	printf("%x", commitment.data[i]);
+	printf("\n");
+
+    //	Setup proof
+
+	secp256k1_scratch_space *scratch = secp256k1_scratch_space_create(none, 1024 * 1024);
+	secp256k1_bulletproof_generators *gens = secp256k1_bulletproof_generators_create(none, &secp256k1_generator_const_h, 256);
+
+    unsigned char 		proof[2000];
+    uint64_t 			proof_len = sizeof(proof);
+	uint64_t 			min_value = 35 ;
+
+	int proof_res = secp256k1_bulletproof_rangeproof_prove(
+		both,
+		scratch,
+		gens,
+		proof,
+		&proof_len,
+		&value,
+		&min_value,
+		blind_ptr,
+		1,
+		&value_gen, 
+		64, 
+		blind,
+		NULL, 
+		0);
+
+	printf("Proof RC = %i\n", proof_res);
+	printf("Proof len = %lu\n", proof_len);
+    for(uint64_t i=0; i < proof_len; i++)
+    	printf("%x", proof[i]);
+    printf("\n");
+
+    //	Setup verify
+	int verify_res = secp256k1_bulletproof_rangeproof_verify(
+		verify,
+		scratch,
+		gens,
+		proof,
+		proof_len,
+		&min_value,
+		&commitment,
+		1,
+		64,
+		&value_gen,
+		NULL,
+		0);
+
+	printf("Verify RC = %i\n", verify_res);
+    printf("Verify min value = %lu\n", min_value);
+
+    //	Setup info
+
+	size_t rewind_v;
+	unsigned char rewind_blind[32];
+
+	int info_res = secp256k1_bulletproof_rangeproof_rewind(
+		none,
+		gens, 
+		&rewind_v, 
+		rewind_blind, 
+		proof, 
+		proof_len, 
+		min_value, 
+		&commitment,
+		&value_gen, 
+		blind, 
+		NULL, 
+		0);
+
+	printf("Rewind RC = %i\n", info_res);
+    printf("Rewind min value = %lu\n", min_value);
+
+	secp256k1_bulletproof_generators_destroy(none, gens);
 }
 
 int main( int c , char *argv[]) {
 	(void)c;
 	(void)argv;
+	secp256k1_context *none_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
 	secp256k1_context *sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
 	secp256k1_context *verify_ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
     secp256k1_context *both_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
@@ -165,8 +274,8 @@ int main( int c , char *argv[]) {
     secp256k1_context_set_illegal_callback(verify_ctx, counting_illegal_callback_fn, &ecount);
     secp256k1_context_set_illegal_callback(both_ctx, counting_illegal_callback_fn, &ecount);
 
-    test_rangeproof(sign_ctx, verify_ctx, both_ctx);
-    test_bulletproof(sign_ctx, verify_ctx, both_ctx);
+    //test_rangeproof(sign_ctx, verify_ctx, both_ctx);
+    test_bulletproof(none_ctx, sign_ctx, verify_ctx, both_ctx);
 
 
     // Destroy these contexts
