@@ -166,8 +166,20 @@ void test_bulletproof(secp256k1_context *none, secp256k1_context *sign, secp256k
 
 	secp256k1_generator value_gen;
 	int rgenerate = secp256k1_generator_generate(both, &value_gen, blind);
+
 	printf("Generate result: %i\n", rgenerate);
+    printf("Generator = ");
+    for(uint64_t i=0; i < sizeof(value_gen.data); i++)
+        printf("%x", value_gen.data[i]);
     printf("\n");
+
+    unsigned char   value_gen_out[33];
+    rgenerate = secp256k1_generator_serialize(both, value_gen_out, &value_gen);
+    printf("Generate serialize result: %i\n", rgenerate);
+    printf("Generator serialized = ");
+    for(uint64_t i=0; i < sizeof(value_gen_out); i++)
+        printf("%x", value_gen_out[i]);
+    printf("\n\n");
 
 	int commit_res = secp256k1_pedersen_commit(
 		sign,
