@@ -64,24 +64,23 @@ def _create_inputs_outputs(ingest):
     signer, addresser, payload = ingest
     inputs = [
         addresser.setting_address,
-        addresser.proposal.address]
+        addresser.proposal_address]
     outputs = [
         addresser.setting_address,
-        addresser.proposal.address]
+        addresser.proposal_address]
     return (
         signer,
-        addresser,
+        Address.setting_addresser(),
+        # addresser,
         {"inputs": inputs, "outputs": outputs},
         payload)
-
-
-_asset_addrs = Address.asset_addresser()
-_unit_addrs = Address.unit_addresser()
 
 
 def _create_settings(signer, assetauths, assetthresh, unitauths, unitthresh):
     """Creates and returns a batch of setting transactions"""
     valid_signer(signer)
+    _asset_addrs = Address.asset_addresser()
+    _unit_addrs = Address.unit_addresser()
     asset_auth_keys = _validate_settings(assetauths, assetthresh)
     unit_auth_keys = _validate_settings(unitauths, unitthresh)
     setting_txn_build = compose_builder(

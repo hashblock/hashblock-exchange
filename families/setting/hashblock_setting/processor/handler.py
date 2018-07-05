@@ -40,6 +40,8 @@ class SettingTransactionHandler(TransactionHandler):
 
     def __init__(self):
         self._addresser = Address.setting_addresser()
+        self._uaddresser = Address.unit_addresser()
+        self._aaddresser = Address.asset_addresser()
         self._auth_list = None
         self._action = None
 
@@ -82,7 +84,7 @@ class SettingTransactionHandler(TransactionHandler):
 
     @address.setter
     def address(self, dim):
-        self._address = self._addresser.settings(dim)
+        self._address = self.addresser.settings(dim)
 
     @property
     def auth_list(self):
@@ -164,10 +166,12 @@ class SettingTransactionHandler(TransactionHandler):
 
     def _create_candidates(self, context):
         candidates = AssetCandidates(candidates=[])
-        caddr = Address(Address.FAMILY_ASSET).candidates(self.dimension)
+        LOGGER.debug("Dimension for candidates = {}".format(self.dimension))
+        caddr = self._uaddresser if self.dimension == "unit" else self._aaddresser
+        #Address(Address.FAMILY_ASSET).candidates(self.dimension)
         try:
             context.set_state(
-                {caddr: candidates.SerializeToString()},
+                {caddr.proposal_address: candidates.SerializeToString()},
                 timeout=STATE_TIMEOUT_SEC)
         except FutureTimeoutError:
             LOGGER.warning(

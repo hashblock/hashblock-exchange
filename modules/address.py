@@ -354,7 +354,7 @@ class BaseAddress(Address):
 
     @property
     def family_current_version(self):
-        return self.versions[0]
+        return self.family_versions[0]
 
 
 class SettingAddress(BaseAddress):
