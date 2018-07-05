@@ -383,7 +383,7 @@ class VotingAddress(BaseAddress):
     def __init__(self, family, version_list):
         super().__init__(family, version_list)
         self._setting_addy = Address.setting_addresser().settings(family)
-        self._proposal_addy = self._namespace_hash \
+        self._candidate_addy = self._namespace_hash \
             + self._candidates_hash \
             + self.family_hash \
             + self._filler_hash26
@@ -393,8 +393,8 @@ class VotingAddress(BaseAddress):
         return self._setting_addy
 
     @property
-    def proposal_address(self):
-        return self._proposal_addy
+    def candidate_address(self):
+        return self._candidate_addy
 
 
 class UnitAddress(VotingAddress):
@@ -430,6 +430,7 @@ class AssetAddress(VotingAddress):
 
 
 class MatchAddress(BaseAddress):
+    """MatchAddress is base for UTXQ/MTXQ address support"""
     def __init__(self, dimension, version_list):
         super().__init__("match", version_list)
         self._dimension = dimension
@@ -446,10 +447,12 @@ class MatchAddress(BaseAddress):
 
 
 class MatchUTXQAddress(MatchAddress):
+    """MatchUTXQAddress is concrete for UTXQ address support"""
     def __init__(self):
         super().__init__("utxq", ["0.2.0"])
 
 
 class MatchMTXQAddress(MatchAddress):
+    """MatchMTXQAddress is concrete for MTXQ address support"""
     def __init__(self):
         super().__init__("mtxq", ["0.2.0"])

@@ -87,6 +87,10 @@ class AssetTransactionHandler(TransactionHandler):
             asset = Asset()
             asset.ParseFromString(asset_payload.data)
             _set_asset(context, self.asset_address(asset), asset)
+        elif asset_payload.action == AssetPayload.ACTION_DIRECT:
+            asset = Asset()
+            asset.ParseFromString(asset_payload.data)
+            _set_asset(context, self.asset_address(asset), asset)
         elif asset_payload.action == AssetPayload.ACTION_PROPOSE:
             return self._apply_proposal(
                 public_key,
@@ -246,7 +250,7 @@ class AssetTransactionHandler(TransactionHandler):
         """
         candidates = _get_candidates(
             context,
-            self.addresser.proposal_address)
+            self.addresser.candidate_address)
         if not candidates:
             raise InvalidTransaction(
                 'Candidates for {} '
@@ -257,7 +261,7 @@ class AssetTransactionHandler(TransactionHandler):
     def _set_candidates(self, context, candidates):
         _set_candidates(
             context,
-            self.addresser.proposal_address,
+            self.addresser.candidate_address,
             candidates)
 
     def _get_auth_keys(self, context):

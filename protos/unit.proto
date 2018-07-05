@@ -112,6 +112,9 @@ message UnitPayload {
 
         // New 0.2.0: Genesis action - data will be Unit
         ACTION_GENESIS = 3;
+
+        // New 0.3.0: Genesis action - data will be Unit
+        ACTION_DIRECT = 4;
     }
     // The action of this payload
     Action action = 1;

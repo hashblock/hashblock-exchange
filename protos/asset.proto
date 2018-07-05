@@ -40,8 +40,11 @@ message AssetPayload {
         // A vote action - data will be a AssetVote
         ACTION_VOTE = 2;
 
-        // New 0.2.0: Genesis action - data will be Unit or Resource
+        // New 0.2.0: Genesis action - data will be Asset
         ACTION_GENESIS = 3;
+
+        // New 0.2.0: Genesis action - data will be Asset
+        ACTION_DIRECT = 4;
     }
     // The action of this payload
     Action action = 1;

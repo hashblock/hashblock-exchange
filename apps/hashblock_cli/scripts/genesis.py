@@ -20,7 +20,7 @@ from scripts.ucum_to_assets import genucum
 from scripts.iso4217_to_assets import geniso4217
 from modules.exceptions import CliException
 from shared.setting import create_settings_genesis
-from shared.asset import create_asset_genesis
+from shared.asset import create_unit_genesis
 from shared.transactions import create_batch, create_batch_list
 
 
@@ -91,17 +91,16 @@ def do_genesis(args, config):
     if not args.output:
         raise CliException('genesis creation requires output file')
 
-    # std_units = genucum()
-    # iso4217_units = geniso4217()
-    # std_units.extend(iso4217_units)
+    std_units = genucum()
+    iso4217_units = geniso4217()
+    std_units.extend(iso4217_units)
     # print("Standard units count {}".format(len(std_units)))
 
     txns = create_settings_genesis(
         args.signer, args.resource_keys, args.resource_threshold,
         args.unit_keys, args.unit_threshold)
 
-    # txns.extend(create_asset_genesis(args.signer, std_units))
-    # txns.append(create_asset_genesis(args.signer))
+    txns.extend(create_unit_genesis(args.signer, std_units))
 
     batch = create_batch_list([create_batch((args.signer, txns))])
 

@@ -162,6 +162,13 @@ def __create_vote_txn(ingest):
         action=action))
 
 
+def __create_unit_payload(ingest):
+    signatore, proposal_id, address, unit = ingest
+    return (signatore, proposal_id, address, UnitPayload(
+        data=unit.SerializeToString(),
+        action=AssetPayload.ACTION_GENESIS))
+
+
 def __create_asset_payload(ingest):
     signatore, proposal_id, address, asset = ingest
     return (signatore, proposal_id, address, AssetPayload(
@@ -175,6 +182,16 @@ def __create_asset_inputs_outputs(ingest):
     inputs = [
         proposal_id,
         Address(Address.FAMILY_SETTING).settings(address.dimension)]
+    outputs = [proposal_id]
+    return (
+        signatore, address, {"inputs": inputs, "outputs": outputs}, payload)
+
+
+def __create_unit_inputs_outputs(ingest):
+    signatore, proposal_id, address, payload = ingest
+    inputs = [
+        proposal_id,
+        address.setting_address]
     outputs = [proposal_id]
     return (
         signatore, address, {"inputs": inputs, "outputs": outputs}, payload)
@@ -249,12 +266,13 @@ def create_vote(dimension, data):
         data))
 
 
-def create_asset_genesis(signer, unit_list):
-    """Generate the transaction batch for genesis block unit assets"""
+def create_unit_genesis(signer, unit_list):
+    """Generate the transaction batch for genesis block units of measure"""
     txns = []
+    uaddr = Address.unit_addresser()
     genesis = compose_builder(
-        create_transaction, __create_asset_inputs_outputs,
-        __create_asset_payload, __create_unit_asset)
+        create_transaction, __create_unit_inputs_outputs,
+        __create_unit_payload, __create_unit_asset)
     for data in unit_list:
         if data["prime"]:
             proposal_id = data.pop("prime")
@@ -263,9 +281,8 @@ def create_asset_genesis(signer, unit_list):
         txns.append(
             genesis((
                 signer,
-                _addresser.asset_item(
-                    "unit", data['system'], data['key'], proposal_id),
-                Address(Address.FAMILY_ASSET, "0.2.0", "unit"),
+                uaddr.unit_address(data['system'], data['key'], proposal_id),
+                uaddr,
                 data))[1])
     return txns
 

@@ -64,10 +64,10 @@ def _create_inputs_outputs(ingest):
     signer, addresser, payload = ingest
     inputs = [
         addresser.setting_address,
-        addresser.proposal_address]
+        addresser.candidate_address]
     outputs = [
         addresser.setting_address,
-        addresser.proposal_address]
+        addresser.candidate_address]
     return (
         signer,
         Address.setting_addresser(),

@@ -165,13 +165,14 @@ class SettingTransactionHandler(TransactionHandler):
         return result
 
     def _create_candidates(self, context):
-        candidates = AssetCandidates(candidates=[])
+        candidates = UnitCandidates(candidates=[]) \
+            if self.dimension == "unit" else AssetCandidates(candidates=[])
         LOGGER.debug("Dimension for candidates = {}".format(self.dimension))
-        caddr = self._uaddresser if self.dimension == "unit" else self._aaddresser
-        #Address(Address.FAMILY_ASSET).candidates(self.dimension)
+        caddr = self._uaddresser if self.dimension == "unit" \
+            else self._aaddresser
         try:
             context.set_state(
-                {caddr.proposal_address: candidates.SerializeToString()},
+                {caddr.candidate_address: candidates.SerializeToString()},
                 timeout=STATE_TIMEOUT_SEC)
         except FutureTimeoutError:
             LOGGER.warning(

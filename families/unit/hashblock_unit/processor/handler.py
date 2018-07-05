@@ -90,6 +90,13 @@ class UnitTransactionHandler(TransactionHandler):
                 context,
                 self.unit_address(unit),
                 unit)
+        elif unit_payload.action == UnitPayload.ACTION_DIRECT:
+            unit = Unit()
+            unit.ParseFromString(unit_payload.data)
+            _set_unit_data(
+                context,
+                self.unit_address(unit),
+                unit)
         elif unit_payload.action == UnitPayload.ACTION_PROPOSE:
             return self._apply_proposal(
                 public_key,
@@ -256,7 +263,7 @@ class UnitTransactionHandler(TransactionHandler):
         """
         candidates = _get_candidates(
             context,
-            self.addresser.proposal_address)
+            self.addresser.candidate_address)
         if not candidates:
             raise InvalidTransaction(
                 'Candidates for {} '
@@ -267,7 +274,7 @@ class UnitTransactionHandler(TransactionHandler):
     def _set_candidates(self, context, candidates):
         _set_candidates(
             context,
-            self.addresser.proposal_address,
+            self.addresser.candidate_address,
             candidates)
 
     def _get_auth_keys(self, context):
