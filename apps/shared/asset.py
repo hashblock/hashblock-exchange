@@ -31,8 +31,10 @@ from modules.decode import decode_asset_unit_list, decode_proposals
 from modules.exceptions import DataException
 
 from protobuf.asset_pb2 import (
-    AssetPayload, AssetProposal, AssetVote, Unit, Resource)
+    AssetPayload, AssetProposal, AssetVote, Asset)
 
+from protobuf.unit_pb2 import (
+    UnitPayload, UnitProposal, UnitVote, Unit)
 
 ASSET_KEY_SET = {'signer', 'key', 'system'}
 VOTE_KEY_SET = {'signer', 'proposal_id', 'vote'}
@@ -40,7 +42,7 @@ VOTE_SET = {'accept', 'reject', 'rescind'}
 VOTE_ITEMS = ['rescind', 'accept', 'reject']
 
 
-_addresser = Address(Address.FAMILY_ASSET, "0.2.0")
+_addresser = Address.asset_addresser()
 
 
 def __get_prime():
@@ -115,7 +117,7 @@ def __create_asset_vote(ingest):
 def __create_resource_asset(ingest):
     """Create a resource asset unit"""
     signatore, proposal_id, address, data = ingest
-    return (signatore, proposal_id, address, Resource(
+    return (signatore, proposal_id, address, Asset(
         system=data['system'],
         key=data['key'],
         value=proposal_id[-44:]))

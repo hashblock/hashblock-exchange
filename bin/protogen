@@ -48,6 +48,10 @@ def main(args=None):
         "hashblock_asset/protobuf")
     protoc_python(
         proto_dir,
+        "families/unit",
+        "hashblock_unit/protobuf")
+    protoc_python(
+        proto_dir,
         "families/match",
         "hashblock_match/protobuf")
     protoc_python(

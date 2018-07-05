@@ -22,9 +22,8 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
 from protobuf.setting_pb2 import Settings
-from protobuf.asset_pb2 import (
-    Asset, AssetPayload, AssetProposal,
-    AssetVote, AssetCandidate, AssetCandidates)
+from protobuf.unit_pb2 import (
+    Unit, UnitPayload, UnitProposal, UnitVote, UnitCandidate, UnitCandidates)
 
 from modules.address import Address
 
@@ -34,12 +33,13 @@ LOGGER = logging.getLogger(__name__)
 STATE_TIMEOUT_SEC = 10
 
 
-class AssetTransactionHandler(TransactionHandler):
+class UnitTransactionHandler(TransactionHandler):
 
     def __init__(self):
-        self._addresser = Address.asset_addresser()
+        self._addresser = Address.unit_addresser()
         self._auth_list = None
         self._action = None
+        self._settings = None
 
     @property
     def addresser(self):
@@ -65,97 +65,107 @@ class AssetTransactionHandler(TransactionHandler):
     def settings(self, settings):
         self._settings = settings
 
-    def asset_address(self, asset):
-        return self.addresser.asset_address(
-            asset.system,
-            asset.key,
-            asset.value)
+    def unit_address(self, unit):
+        return self.addresser.unit_address(
+            unit.system,
+            unit.key,
+            unit.value)
 
     def apply(self, transaction, context):
         txn_header = transaction.header
         public_key = txn_header.signer_public_key
-        asset_payload = AssetPayload()
-        asset_payload.ParseFromString(transaction.payload)
+        unit_payload = UnitPayload()
+        unit_payload.ParseFromString(transaction.payload)
 
         auth_keys = self._get_auth_keys(context)
 
         if auth_keys and public_key not in auth_keys:
             raise InvalidTransaction(
-                '{} is not authorized to change asset'.format(public_key))
+                '{} is not authorized to operate on units'.format(public_key))
 
-        if asset_payload.action == AssetPayload.ACTION_GENESIS:
-            asset = Asset()
-            asset.ParseFromString(asset_payload.data)
-            _set_asset(context, self.asset_address(asset), asset)
-        elif asset_payload.action == AssetPayload.ACTION_PROPOSE:
+        if unit_payload.action == UnitPayload.ACTION_GENESIS:
+            unit = Unit()
+            unit.ParseFromString(unit_payload.data)
+            _set_unit_data(
+                context,
+                self.unit_address(unit),
+                unit)
+        elif unit_payload.action == UnitPayload.ACTION_PROPOSE:
             return self._apply_proposal(
                 public_key,
-                asset_payload.data,
+                unit_payload.data,
                 context)
-        elif asset_payload.action == AssetPayload.ACTION_VOTE:
+        elif unit_payload.action == UnitPayload.ACTION_VOTE:
             return self._apply_vote(
                 public_key,
                 auth_keys,
-                asset_payload.data,
+                unit_payload.data,
                 context)
-        elif asset_payload.action == AssetPayload.ACTION_UNSET:
+        elif unit_payload.action == UnitPayload.ACTION_UNSET:
             return self._apply_unset_vote(
                 public_key,
                 auth_keys,
-                asset_payload.data,
+                unit_payload.data,
                 context)
         else:
             raise InvalidTransaction(
                 "'Payload action not recognized {}".
-                format(asset_payload.action))
+                format(unit_payload.action))
 
     def _apply_proposal(self, public_key, proposal_data, context):
-        asset_proposal = AssetProposal()
-        asset_proposal.ParseFromString(proposal_data)
-        asset = Asset()
-        asset.ParseFromString(asset_proposal.data)
-        proposal_id = self.asset_address(asset)
+        """Propose a new unit.
 
+        If the threshold requires more than 1 vote then queue the
+        proposal in candidates, otherwise write the unit to the
+        chain
+        """
+        unit_proposal = UnitProposal()
+        unit_proposal.ParseFromString(proposal_data)
+        unit = Unit()
+        unit.ParseFromString(unit_proposal.unit)
+
+        proposal_id = self.unit_address(unit)
         approval_threshold = self._get_approval_threshold(context)
         if approval_threshold > 1:
-            asset_candidates = self._get_candidates(context)
+            unit_candidates = self._get_candidates(context)
             existing_candidate = _first(
-                asset_candidates.candidates,
+                unit_candidates.candidates,
                 lambda candidate: candidate.proposal_id == proposal_id)
 
             if existing_candidate is not None:
                 raise InvalidTransaction(
                     'Duplicate proposal for {}'.format(
-                        asset_proposal.type))
+                        unit_proposal.type))
 
-            record = AssetCandidate.VoteRecord(
+            record = UnitCandidate.VoteRecord(
                 public_key=public_key,
-                vote=AssetCandidate.VoteRecord.VOTE_ACCEPT)
-            asset_candidates.candidates.add(
+                vote=UnitCandidate.VoteRecord.VOTE_ACCEPT)
+            unit_candidates.candidates.add(
                 proposal_id=proposal_id,
-                proposal=asset_proposal,
+                proposal=unit_proposal,
                 votes=[record])
-            self._set_candidates(context, asset_candidates)
+            self._set_candidates(context, unit_candidates)
         else:
-            _set_asset(context, proposal_id, asset)
-            LOGGER.debug('Set asset {}'.format(proposal_id))
+            _set_unit_data(context, proposal_id, unit)
+            LOGGER.debug('Set unit {}'.format(unit))
 
     def _apply_unset_vote(
             self, public_key, authorized_keys, vote_data, context):
-        """Apply an UNSET vote on a proposal"""
-        asset_vote = AssetVote()
-        asset_vote.ParseFromString(vote_data)
-        proposal_id = asset_vote.proposal_id
+        """Apply an UNSET vote on a proposal
+        """
+        unit_vote = UnitVote()
+        unit_vote.ParseFromString(vote_data)
+        proposal_id = unit_vote.proposal_id
 
         # Find the candidate based on proposal_id
-        asset_candidates = self._get_candidates(context)
+        unit_candidates = self._get_candidates(context)
         candidate = _first(
-            asset_candidates.candidates,
+            unit_candidates.candidates,
             lambda candidate: candidate.proposal_id == proposal_id)
 
         if candidate is None:
             raise InvalidTransaction(
-                "Proposal {} does not exist.".format(proposal_id))
+                "Unit proposal for {} does not exist.".format(proposal_id))
 
         vote_record = _first(candidate.votes,
                              lambda record: record.public_key == public_key)
@@ -165,7 +175,7 @@ class AssetTransactionHandler(TransactionHandler):
                 '{} has not voted'.format(public_key))
 
         vote_index = _index_of(candidate.votes, vote_record)
-        candidate_index = _index_of(asset_candidates.candidates, candidate)
+        candidate_index = _index_of(unit_candidates.candidates, candidate)
 
         # Delete the vote from the votes collection
         del candidate.votes[vote_index]
@@ -175,21 +185,21 @@ class AssetTransactionHandler(TransactionHandler):
 
         if len(candidate.votes) == 0:
             LOGGER.debug("No votes remain for proposal... removing")
-            del asset_candidates.candidates[candidate_index]
+            del unit_candidates.candidates[candidate_index]
         else:
             LOGGER.debug("Votes remain for proposal... preserving")
 
-        self._set_candidates(context, asset_candidates)
+        self._set_candidates(context, unit_candidates)
 
     def _apply_vote(self, public_key, authorized_keys, vote_data, context):
         """Apply an ACCEPT or REJECT vote to a proposal"""
-        asset_vote = AssetVote()
-        asset_vote.ParseFromString(vote_data)
-        proposal_id = asset_vote.proposal_id
+        unit_vote = UnitVote()
+        unit_vote.ParseFromString(vote_data)
+        proposal_id = unit_vote.proposal_id
 
-        asset_candidates = self._get_candidates(context)
+        unit_candidates = self._get_candidates(context)
         candidate = _first(
-            asset_candidates.candidates,
+            unit_candidates.candidates,
             lambda candidate: candidate.proposal_id == proposal_id)
 
         if candidate is None:
@@ -205,41 +215,41 @@ class AssetTransactionHandler(TransactionHandler):
             raise InvalidTransaction(
                 '{} has already voted'.format(public_key))
 
-        candidate_index = _index_of(asset_candidates.candidates, candidate)
+        candidate_index = _index_of(unit_candidates.candidates, candidate)
 
         candidate.votes.add(
             public_key=public_key,
-            vote=asset_vote.vote)
+            vote=unit_vote.vote)
 
         accepted_count = 0
         rejected_count = 0
         for vote_record in candidate.votes:
-            if vote_record.vote == AssetVote.VOTE_ACCEPT:
+            if vote_record.vote == UnitVote.VOTE_ACCEPT:
                 accepted_count += 1
-            elif vote_record.vote == AssetVote.VOTE_REJECT:
+            elif vote_record.vote == UnitVote.VOTE_REJECT:
                 rejected_count += 1
 
         LOGGER.debug(
             "Vote tally accepted {} rejected {}"
             .format(accepted_count, rejected_count))
 
-        asset = Asset()
-        asset.ParseFromString(candidate.proposal)
+        unit = Unit()
+        unit.ParseFromString(candidate.proposal)
 
         if accepted_count >= approval_threshold:
-            _set_asset(context, proposal_id, asset)
-            LOGGER.debug("Consensus to create {}".format(proposal_id))
-            del asset_candidates.candidates[candidate_index]
-            self._set_candidates(context, asset_candidates)
+            _set_unit_data(context, proposal_id, unit)
+            LOGGER.debug("Consensus reached to create {}".format(proposal_id))
+            del unit_candidates.candidates[candidate_index]
+            self._set_candidates(context, unit_candidates)
         elif rejected_count >= approval_threshold or \
                 (rejected_count + accepted_count) == len(authorized_keys):
             LOGGER.debug(
                 'Proposal for {} was rejected'.format(proposal_id))
-            del asset_candidates.candidates[candidate_index]
-            self._set_candidates(context, asset_candidates)
+            del unit_candidates.candidates[candidate_index]
+            self._set_candidates(context, unit_candidates)
         else:
             LOGGER.debug('Vote recorded for {}'.format(proposal_id))
-            self._set_candidates(context, asset_candidates)
+            self._set_candidates(context, unit_candidates)
 
     def _get_candidates(self, context):
         """Get the candidate container from state.
@@ -271,7 +281,7 @@ class AssetTransactionHandler(TransactionHandler):
             return _string_tolist(self.settings.auth_list)
         else:
             raise InvalidTransaction(
-                'Asset auth_list settings does not exist')
+                'Unit auth_list settings does not exist')
 
     def _get_approval_threshold(self, context):
         """Retrieve the threshold setting for units"""
@@ -284,7 +294,7 @@ class AssetTransactionHandler(TransactionHandler):
             return int(self.settings.threshold)
         else:
             raise InvalidTransaction(
-                'Asset threshold settings does not exist.')
+                'Unit threshold settings does not exist.')
 
 
 def _get_setting(context, address, default_value=None):
@@ -299,7 +309,7 @@ def _get_setting(context, address, default_value=None):
 
 
 def _get_candidates(context, address, default_value=None):
-    candidates = AssetCandidates()
+    candidates = UnitCandidates()
     results = _get_state(context, address)
     if results:
         candidates.ParseFromString(results[0].data)
@@ -316,22 +326,22 @@ def _set_candidates(context, address, candidates):
             'Unable to save candidate block value {}'.format(candidates))
 
 
-def _set_asset(context, address, asset):
+def _set_unit_data(context, address, unit):
     # Use address to see if entry type exists
     # If exists, update with current type entry
     # set entry
 
     # Get an empty from the type
     # Get the address and pass to _get_asset_entry
-    addresses = _set_state(context, address, asset)
+    addresses = _set_state(context, address, unit)
 
     if len(addresses) != 1:
         LOGGER.warning(
             'Failed to save value on address %s', address)
         raise InternalError(
-            'Unable to save asset {}'.format(address))
+            'Unable to save unit {}'.format(address))
     context.add_event(
-        event_type="hashbloc.asset/update",
+        event_type="hashbloc.unit/update",
         attributes=[("updated", address)])
 
 

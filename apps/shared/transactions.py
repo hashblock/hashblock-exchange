@@ -47,8 +47,8 @@ def create_transaction(ingest):
     header = TransactionHeader(
         nonce=str(datetime.datetime.utcnow().timestamp()),
         signer_public_key=signer,
-        family_name=address.namespace,
-        family_version=address.version,
+        family_name=address.family_ns_name,
+        family_version=address.family_current_version,
         inputs=permissions.get('inputs', []),
         outputs=permissions.get('outputs', []),
         dependencies=permissions.get('dependencies', []),

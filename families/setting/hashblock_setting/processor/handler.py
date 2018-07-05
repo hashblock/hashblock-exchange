@@ -24,6 +24,7 @@ from sawtooth_sdk.processor.exceptions import InternalError
 from protobuf.setting_pb2 import SettingPayload
 from protobuf.setting_pb2 import Settings
 from protobuf.asset_pb2 import AssetCandidates
+from protobuf.unit_pb2 import UnitCandidates
 
 from modules.address import Address
 
@@ -38,7 +39,7 @@ class SettingTransactionHandler(TransactionHandler):
     _actions = [SettingPayload.CREATE, SettingPayload.UPDATE]
 
     def __init__(self):
-        self._addresser = Address(Address.FAMILY_SETTING)
+        self._addresser = Address.setting_addresser()
         self._auth_list = None
         self._action = None
 
@@ -48,15 +49,15 @@ class SettingTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
-        return self.addresser.namespace
+        return self.addresser.family_ns_name
 
     @property
     def family_versions(self):
-        return ['0.1.0']
+        return self.addresser.family_versions
 
     @property
     def namespaces(self):
-        return [self._addresser.ns_family]
+        return [self.addresser.family_ns_hash]
 
     @property
     def action(self):

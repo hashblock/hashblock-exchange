@@ -41,8 +41,8 @@ from protobuf.match_pb2 import (
     MatchEvent, UTXQ, MTXQ, Quantity, Ratio)
 
 KEYS_PATH = os.environ['HASHBLOCK_KEYS'] + '/'
-_utxq_addrs = Address(Address.FAMILY_MATCH, "0.2.0", Address.DIMENSION_UTXQ)
-_mtxq_addrs = Address(Address.FAMILY_MATCH, "0.2.0", Address.DIMENSION_MTXQ)
+_utxq_addrs = Address.match_utxq_addresser()
+_mtxq_addrs = Address.match_utxq_addresser()
 
 
 _ACTION_MAP = {

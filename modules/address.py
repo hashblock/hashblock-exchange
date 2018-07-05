@@ -16,19 +16,22 @@
 
 import hashlib
 import re
+from abc import ABC, abstractmethod
 
 from modules.exceptions import AssetIdRange
 
 
-class Address():
+class Address(ABC):
 
     # Namespace and family strings for TP's
     NAMESPACE = "hashblock"
+    NAMESPACE_UNIT = 'hashblock_unit'
     NAMESPACE_ASSET = 'hashblock_asset'
     NAMESPACE_MATCH = 'hashblock_match'
     NAMESPACE_SETTING = 'hashblock_setting'
 
     # Families
+    FAMILY_UNIT = "unit"
     FAMILY_ASSET = "asset"
     FAMILY_MATCH = "match"
     FAMILY_SETTING = "setting"
@@ -85,6 +88,8 @@ class Address():
     _resource_proposal_hash = _namespace_hash + _asset_hash + \
         _candidates_hash + _resource_hash
 
+    # Will go away with configurable verbs
+
     _ask_hash = hashlib.sha512('ask'.encode("utf-8")).hexdigest()[0:6]
     _tell_hash = hashlib.sha512('tell'.encode("utf-8")).hexdigest()[0:6]
     _offer_hash = hashlib.sha512('offer'.encode("utf-8")).hexdigest()[0:6]
@@ -95,6 +100,26 @@ class Address():
         'obligation'.encode("utf-8")).hexdigest()[0:6]
     _give_hash = hashlib.sha512('give'.encode("utf-8")).hexdigest()[0:6]
     _take_hash = hashlib.sha512('take'.encode("utf-8")).hexdigest()[0:6]
+
+    @classmethod
+    def setting_addresser(cls):
+        return SettingAddress()
+
+    @classmethod
+    def unit_addresser(cls):
+        return UnitAddress()
+
+    @classmethod
+    def asset_addresser(cls):
+        return AssetAddress()
+
+    @classmethod
+    def match_utxq_addresser(cls):
+        return MatchUTXQAddress()
+
+    @classmethod
+    def match_mtxq_addresser(cls):
+        return MatchMTXQAddress()
 
     def __init__(self, family, version=None, dimension=None):
         self._family = family
@@ -130,16 +155,13 @@ class Address():
         return self._version
 
     @property
-    def dimension(self):
-        return self._dimension
-
-    @property
     def ns_family(self):
         """Return the namespace family unique hash id
         """
         return self._namespace_hash + self._family_hash
 
-    def hashup(self, value):
+    @classmethod
+    def hashup(cls, value):
         """Create a suitable hash from value
         """
         return hashlib.sha512(value.encode("utf-8")).hexdigest()
@@ -269,3 +291,165 @@ class Address():
 
     def is_utxq_matched(self, address):
         return True if address[24] == '1' else False
+
+    @property
+    @abstractmethod
+    def family(self):
+        pass
+
+    @property
+    @abstractmethod
+    def family_ns_name(self):
+        pass
+
+    @property
+    @abstractmethod
+    def family_ns_hash(self):
+        pass
+
+    @property
+    @abstractmethod
+    def family_hash(self):
+        pass
+
+    @property
+    @abstractmethod
+    def family_versions(self):
+        pass
+
+    @property
+    @abstractmethod
+    def family_current_version(self):
+        pass
+
+
+class BaseAddress(Address):
+    """BaseAddress provides the fundemental address primatives for TPs"""
+
+    def __init__(self, family, version_list):
+        self._family = family
+        self._versions = version_list
+        self._family_hash = self.hashup(family)[0:6]
+        self._reghash = self._namespace_hash + self._family_hash
+
+    @property
+    def family(self):
+        return self._family
+
+    @property
+    def family_ns_name(self):
+        return self.NAMESPACE + "_" + self.family
+
+    @property
+    def family_ns_hash(self):
+        return self._reghash
+
+    @property
+    def family_hash(self):
+        return self._family_hash
+
+    @property
+    def family_versions(self):
+        return self._versions
+
+    @property
+    def family_current_version(self):
+        return self.versions[0]
+
+
+class SettingAddress(BaseAddress):
+    """SettingAddress provides the setting TP address support
+
+    Both Unit and Asset use internally as they are VotingAddress types
+    """
+    def __init__(self):
+        super().__init__("setting", ["0.2.0"])
+
+    # E.g. hashblock.setting.unit.authorized_keys
+    # 0-2 namespace
+    # 3-5 family
+    # 6-8 stype (currenly 'unit' or 'asset')
+    # 9-34 filler26
+    def settings(self, stype):
+        """Create the dimension settings address using key
+        """
+        return self.family_ns_hash \
+            + self.hashup(stype)[0:6] \
+            + self._filler_hash26
+
+
+class VotingAddress(BaseAddress):
+    """VotingAddress provides the setting and candidate addresses"""
+    def __init__(self, family, version_list):
+        super().__init__(family, version_list)
+        self._setting_addy = Address.setting_addresser().settings(family)
+        self._proposal_addy = self._namespace_hash \
+            + self._candidates_hash \
+            + self.family_hash \
+            + self._filler_hash26
+
+    @property
+    def setting_address(self):
+        return self._setting_addy
+
+    @property
+    def proposal_address(self):
+        return self._proposal_addy
+
+
+class UnitAddress(VotingAddress):
+    """UnitAddress provides the unit-of-measure TP address support"""
+    def __init__(self):
+        super().__init__("unit", ["0.3.0"])
+
+    def unit_address(self, system, key, ident):
+        if ident is None or len(ident) != 44:
+            raise AssetIdRange(
+                "Invalid ident {} for  {} {} {}"
+                .format(ident, self._family, system, key))
+
+        return self.family_ns_hash \
+            + self.hashup(system)[0:8] \
+            + self.hashup(key)[0:6] + ident
+
+
+class AssetAddress(VotingAddress):
+    """AssetAddress provides asset TP address support"""
+    def __init__(self):
+        super().__init__("asset", ["0.3.0"])
+
+    def asset_address(self, system, key, ident):
+        if ident is None or len(ident) != 44:
+            raise AssetIdRange(
+                "Invalid ident {} for  {} {} {}"
+                .format(ident, self._family, system, key))
+
+        return self.family_ns_hash \
+            + self.hashup(system)[0:8] \
+            + self.hashup(key)[0:6] + ident
+
+
+class MatchAddress(BaseAddress):
+    def __init__(self, dimension, version_list):
+        super().__init__("match", version_list)
+        self._dimension = dimension
+        self._dimension_address = self.family_ns_hash + \
+            self.hashup(dimension)[6]
+
+    @property
+    def dimension(self):
+        return self._dimension
+
+    @property
+    def dimension_address(self):
+        return self._dimension_address
+
+
+class MatchUTXQAddress(MatchAddress):
+    def __init__(self):
+        super().__init__("utxq", ["0.2.0"])
+
+
+class MatchMTXQAddress(MatchAddress):
+    def __init__(self):
+        super().__init__("mtxq", ["0.2.0"])

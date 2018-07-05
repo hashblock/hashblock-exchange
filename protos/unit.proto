@@ -1,0 +1,156 @@
+// -----------------------------------------------------------------------------
+// Copyright 2018 Frank V. Castellucci and Arthur Greef
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "hashblock.unit.protobuf";
+
+// On chain unit of measure
+
+// The numerator * denominator takes the 44 chars in the tail of the address
+message Unit {
+    string system = 1;      // "ucum"
+    string key = 2;         // "code from ucum unit" [g]
+    string value = 3;       // 0.1.0 Prime 0.2.5 ucum value "9.80665" (move by 20 decimal)
+    string numerator = 4;   // Positive base unit = (abs(base unit prime for m) ^ 1)
+    string denominator = 5; // Negative base unit = (abs(base unit prime for s) ^ 2) * (abs(f) ^ 4)
+    string exponent = 6;    // 0 (no e on value sig use sign)
+    string precision = 7;   // 5 by the data example or specific to a source indicator (ucum 'value', iso4215 minor number)
+    string accuracy = 8;    // 1 (incremental, for now)
+    string url = 9;         // Optional
+    bool   base = 10;       // True if a base unit, False or empty otherwise
+}
+
+// message BaseUnit {
+//     string system = 1;      // "ucum"
+//     string key = 2;         // "code from ucum unit" s (seconds)
+//     string value = 3;       // 1
+//     string numerator = 4;   // prime (2, 3, 5 , 7 , etc)
+//     string denominator = 5; // 1
+//     string exponent = 6;    // 0 (no e on value sig use sign)
+//     string precision = 7;   // 20
+//     string accuracy = 8;    // 1
+//     string url = 9;         // Optional
+//     bool   base=10;         // True
+// }
+
+// <UCUMWebServiceResponse ServerDateTime="2018-06-16T17:00:21">
+// <WebServiceRequest>
+// http://ucum.nlm.nih.gov/ucum-service/v1/toBaseUnits/%5Bg%5D
+// </WebServiceRequest>
+// <Response>
+//  <SourceUnit>[g]</SourceUnit>
+//  <ResultBaseUnits>s-2.m</ResultBaseUnits>
+//  <ResultQuantity>9.80665</ResultQuantity>
+//  <ResultBaseUnitsList>
+//      <BaseUnit Name="s" Exponent="-2"/>
+//      <BaseUnit Name="f" Exponent="-4"/>
+//      <BaseUnit Name="m" Exponent="1"/>
+//  </ResultBaseUnitsList>
+// </Response>
+// </UCUMWebServiceResponse>
+
+// UnitProposal
+//
+// This message proposes a Unit to be added
+
+message UnitProposal {
+
+    // The Unit being proposed
+    Unit unit = 1;
+
+    // allow duplicate proposals with different hashes
+    // randomly created by the client
+
+    string nonce = 2;
+}
+
+// Unit Vote
+//
+// This message votes on an existing UnitProposal
+
+message UnitVote {
+    enum Vote {
+        VOTE_UNSET = 0;
+        VOTE_ACCEPT = 1;
+        VOTE_REJECT = 2;
+    }
+
+    // The id of the proposal being voted on
+
+    string proposal_id = 1;
+
+    Vote vote = 2;
+}
+
+// Unit Payload
+// Contains either a proposal or a vote.
+
+message UnitPayload {
+    // The action indicates data is contained within this payload
+    enum Action {
+        ACTION_UNSET = 0;
+
+        // A proposal action - data will be a UnitProposal
+        ACTION_PROPOSE = 1;
+
+        // A vote action - data will be a UnitVote
+        ACTION_VOTE = 2;
+
+        // New 0.2.0: Genesis action - data will be Unit
+        ACTION_GENESIS = 3;
+    }
+    // The action of this payload
+    Action action = 1;
+
+    // The content of this payload (UnitProposal or UnitVote)
+    bytes data = 2;
+}
+
+
+// Contains the vote counts for a given proposal.
+
+message UnitCandidate {
+    // An individual vote record
+    message VoteRecord {
+        enum Vote {
+            VOTE_UNSET = 0;
+            VOTE_ACCEPT = 1;
+            VOTE_REJECT = 2;
+        }
+        // The public key of the voter
+        string public_key = 1;
+
+        // The voter's actual vote
+        Vote vote = 2;
+
+    }
+
+    // The proposal id, a hash of the original proposal
+    string proposal_id = 1;
+
+    // The active proposal itself
+    UnitProposal proposal = 2;
+
+    // list of votes
+    repeated VoteRecord votes = 3;
+}
+
+// Contains all the setting candiates up for vote.
+
+message UnitCandidates {
+    repeated UnitCandidate candidates = 1;
+}

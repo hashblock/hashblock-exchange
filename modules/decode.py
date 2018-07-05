@@ -35,11 +35,13 @@ from modules.address import Address
 from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ
 from protobuf.setting_pb2 import Settings
-from protobuf.asset_pb2 import Unit
-from protobuf.asset_pb2 import Resource
+from protobuf.unit_pb2 import Unit
+from protobuf.asset_pb2 import Asset
 from protobuf.asset_pb2 import AssetCandidates
 
-asset_addresser = Address(Address.FAMILY_ASSET, "0.1.0")
+asset_addresser = Address.asset_addresser()
+unit_addresser = Address.unit_addresser()
+
 STATE_CRYPTO = State()
 
 __revmachadd = {
@@ -97,7 +99,7 @@ def __resource_asset_cache(prime):
         asset_addresser.asset_prefix(Address.DIMENSION_RESOURCE))
     resource = None
     for entry in res['data']:
-        er = Resource()
+        er = Asset()
         er.ParseFromString(entry['data'])
         if prime == er.value:
             resource = er
@@ -181,7 +183,7 @@ def __decode_proposals(address, data):
         asset = Unit()
         subfam = 'unit'
     else:
-        asset = Resource()
+        asset = Asset()
         subfam = 'resource'
     data = []
     for candidate in proposals.candidates:
@@ -211,7 +213,7 @@ def __decode_asset(address, data):
         asset = Unit()
         dim = Address.DIMENSION_UNIT
     else:
-        asset = Resource()
+        asset = Asset()
         dim = Address.DIMENSION_RESOURCE
     asset.ParseFromString(data)
     return {
@@ -354,7 +356,7 @@ def decode_asset_list(address):
             asset = Unit()
             atype = 'unit'
         else:
-            asset = Resource()
+            asset = Asset()
             atype = 'resource'
         asset.ParseFromString(element['data'])
         data.append({
@@ -377,7 +379,7 @@ def decode_asset_unit_list(address):
         asset = Unit()
         atype = 'unit'
     else:
-        asset = Resource()
+        asset = Asset()
         atype = 'resource'
     data = []
     for element in results:

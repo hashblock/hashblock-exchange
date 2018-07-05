@@ -59,10 +59,11 @@ api = Api(
 
 ns = api.namespace('hashblock', description='hashblock state operations')
 
-_setting_address = Address(Address.FAMILY_SETTING)
-_asset_address = Address(Address.FAMILY_ASSET)
-_match_address = Address(Address.FAMILY_MATCH)
-
+_setting_address = Address.setting_addresser()
+_asset_address = Address.asset_addresser()
+_unit_address = Address.unit_addresser()
+_utxq_address = Address.match_utxq_addresser()
+_mtxq_address = Address.match_mtxq_addresser()
 
 # Utility functions
 
@@ -297,7 +298,7 @@ class UTXQDecode(Resource):
     def get(self, agreement):
         """Returns all match request transactions"""
         result = decode_match_dimension(
-            _match_address.txq_dimension(Address.DIMENSION_UTXQ),
+            _utxq_address.dimension_address,
             agreement)
         # new_data = matchlinks(result['data'], 'operation', 'utxq_')
         # result['data'] = new_data
@@ -316,7 +317,7 @@ class UTXQS_Decode(Resource):
         ref = tail[:-1]
         indr = 'utxq_' + ref
         result = decode_match_initiate_list(
-            _match_address.txq_list(Address.DIMENSION_UTXQ, ref),
+            _utxq_address.txq_list(_utxq_address.dimension, ref),
             agreement)
         # new_data = matchtermlinks(result['data'], indr)
         # result['data'] = new_data
@@ -390,7 +391,7 @@ class MTXQDecode(Resource):
     def get(self, agreement):
         """Returns all match response transactions"""
         result = decode_match_dimension(
-            _match_address.txq_dimension(Address.DIMENSION_MTXQ),
+            _mtxq_address.dimension_address,
             agreement)
         # new_data = matchlinks(result['data'], 'operation', 'mtxq_')
         # result['data'] = new_data
@@ -409,7 +410,7 @@ class MTXQS_Decode(Resource):
         ref = tail[:-1]
         indr = 'mtxq_' + ref
         result = decode_match_reciprocate_list(
-            _match_address.txq_list(Address.DIMENSION_MTXQ, ref),
+            _mtxq_address.txq_list(_mtxq_address.dimension, ref),
             agreement)
         # new_data = matchtermlinks(result['data'], indr)
         # result['data'] = new_data

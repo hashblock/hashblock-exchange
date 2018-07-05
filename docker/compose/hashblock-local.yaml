@@ -89,6 +89,23 @@ services:
       \""
     stop_signal: SIGKILL
 
+  unit-processor:
+    image: hashblock-dev-generic-tp
+    container_name: hashblock-dev-unit-tp
+    volumes:
+      - ../..:/project/hashblock-exchange
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
+    # Expose 5679 for remote debugging
+    depends_on:
+      - setting-processor
+    command: "bash -c \"\
+        sleep 1 &&
+        unit-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
   match-processor:
     image: hashblock-dev-generic-tp
     container_name: hashblock-dev-match-tp

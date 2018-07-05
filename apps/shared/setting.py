@@ -45,7 +45,7 @@ def _validate_settings(authorizations, threshold):
 
 
 def _create_setting(ingest):
-    """Creates the setting for a particular dimension"""
+    """Creates the setting for a particular family"""
     signer, addresser, auth_keys, threshold = ingest
     settings = Settings(
         auth_list=','.join(auth_keys),
@@ -55,20 +55,19 @@ def _create_setting(ingest):
         addresser,
         SettingPayload(
             action=SettingPayload.CREATE,
-            dimension=addresser.dimension,
+            dimension=addresser.family,
             data=settings.SerializeToString()))
 
 
 def _create_inputs_outputs(ingest):
     """Creates the input and output addresses for setting transaction"""
     signer, addresser, payload = ingest
-    props = Address(Address.FAMILY_ASSET)
     inputs = [
-        addresser.settings(payload.dimension),
-        props.candidates(payload.dimension)]
+        addresser.setting_address,
+        addresser.proposal.address]
     outputs = [
-        addresser.settings(payload.dimension),
-        props.candidates(payload.dimension)]
+        addresser.setting_address,
+        addresser.proposal.address]
     return (
         signer,
         addresser,
@@ -76,28 +75,28 @@ def _create_inputs_outputs(ingest):
         payload)
 
 
-_unit_addrs = Address(
-    Address.FAMILY_SETTING, "0.1.0", Address.DIMENSION_UNIT)
-_resource_addrs = Address(
-    Address.FAMILY_SETTING, "0.1.0", Address.DIMENSION_RESOURCE)
+_asset_addrs = Address.asset_addresser()
+_unit_addrs = Address.unit_addresser()
 
 
-def _create_settings(signer, resauths, resthresh, uomauths, uomthresh):
+def _create_settings(signer, assetauths, assetthresh, unitauths, unitthresh):
     """Creates and returns a batch of setting transactions"""
     valid_signer(signer)
-    res_auth_keys = _validate_settings(resauths, resthresh)
-    uom_auth_keys = _validate_settings(uomauths, uomthresh)
+    asset_auth_keys = _validate_settings(assetauths, assetthresh)
+    unit_auth_keys = _validate_settings(unitauths, unitthresh)
     setting_txn_build = compose_builder(
         create_transaction,
         _create_inputs_outputs,
         _create_setting)
-    res_setting_txn = setting_txn_build(
-        (signer, _resource_addrs, res_auth_keys, resthresh))[1]
-    uom_setting_txn = setting_txn_build(
-        (signer, _unit_addrs, uom_auth_keys, uomthresh))[1]
-    return [res_setting_txn, uom_setting_txn]
+    asset_setting_txn = setting_txn_build(
+        (signer, _asset_addrs, asset_auth_keys, assetthresh))[1]
+    unit_setting_txn = setting_txn_build(
+        (signer, _unit_addrs, unit_auth_keys, unitthresh))[1]
+    return [asset_setting_txn, unit_setting_txn]
 
 
-def create_settings_genesis(signer, resauths, resthresh, uomauths, uomthresh):
+def create_settings_genesis(
+        signer, assetauths, assetthresh, unitauths, unitthresh):
     """Creates the setting transactions returns for later submission"""
-    return _create_settings(signer, resauths, resthresh, uomauths, uomthresh)
+    return _create_settings(
+        signer, assetauths, assetthresh, unitauths, unitthresh)
