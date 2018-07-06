@@ -241,7 +241,7 @@ class UnitTransactionHandler(TransactionHandler):
             .format(accepted_count, rejected_count))
 
         unit = Unit()
-        unit.ParseFromString(candidate.proposal)
+        unit.ParseFromString(candidate.proposal.unit)
 
         if accepted_count >= approval_threshold:
             _set_unit_data(context, proposal_id, unit)

@@ -322,6 +322,10 @@ class Address(ABC):
     def family_current_version(self):
         pass
 
+    @abstractmethod
+    def is_family(self, address):
+        pass
+
 
 class BaseAddress(Address):
     """BaseAddress provides the fundemental address primatives for TPs"""
@@ -355,6 +359,9 @@ class BaseAddress(Address):
     @property
     def family_current_version(self):
         return self.family_versions[0]
+
+    def is_family(self, address):
+        return self.family_ns_hash == address[0:6]
 
 
 class SettingAddress(BaseAddress):
@@ -412,6 +419,9 @@ class UnitAddress(VotingAddress):
             + self.hashup(system)[0:8] \
             + self.hashup(key)[0:6] + ident
 
+    def element_address(self, system, key, ident):
+        return self.unit_address(system, key, ident)
+
 
 class AssetAddress(VotingAddress):
     """AssetAddress provides asset TP address support"""
@@ -427,6 +437,9 @@ class AssetAddress(VotingAddress):
         return self.family_ns_hash \
             + self.hashup(system)[0:8] \
             + self.hashup(key)[0:6] + ident
+
+    def element_address(self, system, key, ident):
+        return self.asset_address(system, key, ident)
 
 
 class MatchAddress(BaseAddress):

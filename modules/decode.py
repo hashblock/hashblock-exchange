@@ -36,11 +36,13 @@ from protobuf.match_pb2 import UTXQ
 from protobuf.match_pb2 import MTXQ
 from protobuf.setting_pb2 import Settings
 from protobuf.unit_pb2 import Unit
+from protobuf.unit_pb2 import UnitCandidates
 from protobuf.asset_pb2 import Asset
 from protobuf.asset_pb2 import AssetCandidates
 
 asset_addresser = Address.asset_addresser()
 unit_addresser = Address.unit_addresser()
+setting_addresser = Address.setting_addresser()
 
 STATE_CRYPTO = State()
 
@@ -152,16 +154,15 @@ def __decode_settings(address, data):
     """
     settings = Settings()
     settings.ParseFromString(data)
-    if address[12:18] == Address._unit_hash:
-        subfam = 'unit'
+    if address == setting_addresser.settings("unit"):
+        stype = 'unit'
     else:
-        subfam = 'resource'
+        stype = 'asset'
     data = MessageToDict(settings)
     data['authList'] = [key_owner(x) for x in data['authList'].split(",")]
     return {
-        'family': 'asset',
-        'type': 'setting',
-        'dimension': subfam,
+        'family': stype,
+        'type': 'settings',
         'data': data
     }
 
@@ -175,16 +176,11 @@ def decode_settings(address, data=None):
         __get_leaf_data(address)['data'])
 
 
-def __decode_proposals(address, data):
+def __decode_asset_proposals(address, data):
     """Decode a proposals address"""
     proposals = AssetCandidates()
     proposals.ParseFromString(data)
-    if address[18:24] == Address._unit_hash:
-        asset = Unit()
-        subfam = 'unit'
-    else:
-        asset = Asset()
-        subfam = 'resource'
+    asset = Asset()
     data = []
     for candidate in proposals.candidates:
         msg = MessageToDict(candidate)
@@ -196,7 +192,26 @@ def __decode_proposals(address, data):
     return {
         'family': 'asset',
         'type': 'proposal',
-        'dimension': subfam,
+        'data': data
+    }
+
+
+def __decode_unit_proposals(address, data):
+    """Decode a proposals address"""
+    proposals = UnitCandidates()
+    proposals.ParseFromString(data)
+    unit = Unit()
+    data = []
+    for candidate in proposals.candidates:
+        msg = MessageToDict(candidate)
+        unit.ParseFromString(candidate.proposal.unit)
+        msg['proposal']['asset'] = MessageToDict(unit)
+        for voter in msg['votes']:
+            voter['publicKey'] = key_owner(voter['publicKey'])
+        data.append(msg)
+    return {
+        'family': 'unit',
+        'type': 'proposal',
         'data': data
     }
 
@@ -204,22 +219,30 @@ def __decode_proposals(address, data):
 def decode_proposals(address, data=None):
     if not data:
         data = __get_leaf_data(address)['data']
-    return __decode_proposals(address, data)
+    return __decode_unit_proposals(address, data) \
+        if address == unit_addresser.candidate_address \
+        else __decode_asset_proposals(address, data)
 
 
-def __decode_asset(address, data):
-    """Decode a unit or resource asset address"""
-    if address[12:14] == Address._unit_asset_hash:
-        asset = Unit()
-        dim = Address.DIMENSION_UNIT
-    else:
-        asset = Asset()
-        dim = Address.DIMENSION_RESOURCE
+def decode_asset(address):
+    """Decode a asset address"""
+    data = __get_leaf_data(address)['data']
+    asset = Asset()
     asset.ParseFromString(data)
     return {
         'family': 'asset',
-        'dimension': dim,
         'data': MessageToDict(asset)
+    }
+
+
+def decode_unit(address):
+    """Decode a unit or resource asset address"""
+    data = __get_leaf_data(address)['data']
+    unit = Unit()
+    unit.ParseFromString(data)
+    return {
+        'family': 'unit',
+        'data': MessageToDict(unit)
     }
 
 
@@ -347,27 +370,42 @@ def __decode_asset_listing(address):
         if x['address'][12:18] != Address._candidates_hash]
 
 
-def decode_asset_list(address):
+def decode_asset_list():
     """List of assets not including proposals"""
-    results = __decode_asset_listing(address)
+    results = __decode_asset_listing(asset_addresser.family_ns_hash)
     data = []
     for element in results:
-        if element['address'][12:14] == Address._unit_asset_hash:
-            asset = Unit()
-            atype = 'unit'
-        else:
-            asset = Asset()
-            atype = 'resource'
+        asset = Asset()
         asset.ParseFromString(element['data'])
         data.append({
             'link': element['address'],
-            'type': atype,
+            'type': 'asset',
             'system': asset.system,
             'name': asset.key,
             'value': asset.value
         })
     return {
         'family': 'asset',
+        'data': data
+    }
+
+
+def decode_unit_list():
+    """List of assets not including proposals"""
+    results = __decode_asset_listing(unit_addresser.family_ns_hash)
+    data = []
+    for element in results:
+        unit = Unit()
+        unit.ParseFromString(element['data'])
+        data.append({
+            'link': element['address'],
+            'type': 'unit',
+            'system': unit.system,
+            'name': unit.key,
+            'value': unit.value
+        })
+    return {
+        'family': 'unit',
         'data': data
     }
 
@@ -402,10 +440,6 @@ _hash_map = {
         Address._asset_hash: {
             Address._candidates_hash:
                 [__get_leaf_data, decode_proposals],
-            Address._unit_hash:
-                [__get_leaf_data, __decode_asset],
-            Address._resource_hash:
-                [__get_leaf_data, __decode_asset]
         },
         Address._match_hash: {
             Address._utxq_hash:
@@ -427,7 +461,7 @@ def decode_from_leaf(address, partner_secret=None):
     if address[6:12] == Address._asset_hash and \
             address[12:18] != Address._candidates_hash:
                 f = __get_leaf_data
-                y = __decode_asset
+                y = decode_asset
     else:
         f, y = _hash_map[address[:6]][address[6:12]][address[12:18]]
     return y(address, f(address, partner_secret)['data'])

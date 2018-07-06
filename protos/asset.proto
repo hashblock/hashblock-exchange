@@ -43,7 +43,7 @@ message AssetPayload {
         // New 0.2.0: Genesis action - data will be Asset
         ACTION_GENESIS = 3;
 
-        // New 0.2.0: Genesis action - data will be Asset
+        // New 0.3.0: Genesis action - data will be Asset
         ACTION_DIRECT = 4;
     }
     // The action of this payload

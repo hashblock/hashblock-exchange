@@ -24,11 +24,13 @@ from functools import partial
 from shared.transactions import (
     create_batch, submit_batch,
     submit_single_txn, create_transaction, compose_builder)
+
+from modules.exceptions import DataException
 from modules.hashblock_zksnark import prime_gen
 from modules.address import Address
 from modules.config import valid_signer
-from modules.decode import decode_asset_unit_list, decode_proposals
-from modules.exceptions import DataException
+from modules.decode import (
+    decode_asset_unit_list, decode_proposals)
 
 from protobuf.asset_pb2 import (
     AssetPayload, AssetProposal, AssetVote, Asset)
@@ -37,19 +39,21 @@ from protobuf.unit_pb2 import (
     UnitPayload, UnitProposal, UnitVote, Unit)
 
 ASSET_KEY_SET = {'signer', 'key', 'system'}
+UNIT_KEY_SET = {'signer', 'key', 'system'}
 VOTE_KEY_SET = {'signer', 'proposal_id', 'vote'}
 VOTE_SET = {'accept', 'reject', 'rescind'}
 VOTE_ITEMS = ['rescind', 'accept', 'reject']
 
 
-_addresser = Address.asset_addresser()
+ASSET_ADDRESSER = Address.asset_addresser()
+UNIT_ADDRESSER = Address.unit_addresser()
 
 
 def __get_prime():
     return prime_gen().decode().lower()
 
 
-def __validate_asset(address, alist, data):
+def __fail_if_exists(address, alist, data):
     """Exception if asset already exists"""
     if alist:
         prime_list = [
@@ -59,38 +63,57 @@ def __validate_asset(address, alist, data):
             raise DataException("Have result {}".format(prime_list))
 
 
-def __validate_proposal(dimension, data):
+def __validate_signer(signer):
+    """Exception if signer not provided or not resolved"""
+    if not signer:
+        raise DataException("Missing signer value")
+    valid_signer(signer)
+
+
+def __validate_element(key_set, data, gen_prime=False):
+    if set(data.keys()) != key_set:
+        raise DataException("{} not in {}".format(data.keys(), key_set))
+    __validate_signer(data['signer'])
+    if gen_prime:
+        return __get_prime()
+    else:
+        pass
+
+
+def __validate_proposal(addr, key_set, data):
     """Validate the proposal being submitted"""
-    if set(data.keys()) != ASSET_KEY_SET:
-        raise DataException("{} not in {}".format(data.keys(), ASSET_KEY_SET))
-    if not data['signer']:
-        raise DataException("Missing signer for proposal")
-    valid_signer(data['signer'])
-    prime_id = __get_prime()
-    target_address = _addresser.asset_item(
-        dimension, data['system'], data['key'], prime_id)
-    __validate_asset(
+    prime_id = __validate_element(key_set, data, True)
+    target_address = addr.element_address(
+        data['system'], data['key'], prime_id)
+    __fail_if_exists(
         target_address,
-        decode_asset_unit_list(_addresser.asset_prefix(dimension)),
+        decode_asset_unit_list(addr.family_ns_hash),
         prime_id)
     return target_address
 
 
-def __validate_vote(dimension, data, ignoreAddress=False):
-    """Validate the vote content"""
+def __validate_asset_proposal(data, ignoreAddress=False):
+    """Vaidate an asset proposal"""
+    return __validate_proposal(ASSET_ADDRESSER, ASSET_KEY_SET, data)
+
+
+def __validate_unit_proposal(data, ignoreAddress=False):
+    """Validate a unit proposal"""
+    return __validate_proposal(UNIT_ADDRESSER, UNIT_KEY_SET, data)
+
+
+def __validate_vote(addr, data, ignoreAddress=False):
+    """Validate the vote attempt"""
     if set(data.keys()) != VOTE_KEY_SET:
         raise DataException(
             "Keys mismatch {} {}".format(data.keys, VOTE_KEY_SET))
-    if not data['signer']:
-        raise DataException("No signer value")
-    valid_signer(data['signer'])
+    __validate_signer(data['signer'])
     if not data['vote'] or data['vote'] not in VOTE_SET:
         raise DataException(
             "Vote not regognized {} {}".format(data['vote'], VOTE_SET))
     # Check proposal id exists
     proposal_id = data['proposal_id']
-    result = decode_proposals(
-        _addresser.candidates(dimension))['data']
+    result = decode_proposals(addr.candidate_address)['data']
     if result:
         proposal_match = []
         for x in result:
@@ -105,17 +128,18 @@ def __validate_vote(dimension, data, ignoreAddress=False):
         pass
 
 
-def __create_asset_vote(ingest):
-    """Create a vote for an asset"""
-    signatore, address, data = ingest
-    proposal_id = data['proposal_id']
-    return (signatore, address, proposal_id, AssetVote(
-        proposal_id=proposal_id,
-        vote=VOTE_ITEMS.index(data['vote'])))
+def __validate_asset_vote(data, ignoreAddress=False):
+    """Validate an asset vote"""
+    return __validate_vote(ASSET_ADDRESSER, data, ignoreAddress)
 
 
-def __create_resource_asset(ingest):
-    """Create a resource asset unit"""
+def __validate_unit_vote(data, ignoreAddress=False):
+    """Validate a unit vote"""
+    return __validate_vote(UNIT_ADDRESSER, data, ignoreAddress)
+
+
+def __create_asset(ingest):
+    """Create a asset"""
     signatore, proposal_id, address, data = ingest
     return (signatore, proposal_id, address, Asset(
         system=data['system'],
@@ -123,8 +147,8 @@ def __create_resource_asset(ingest):
         value=proposal_id[-44:]))
 
 
-def __create_unit_asset(ingest):
-    """Create a unif-of-measure asset unit"""
+def __create_unit(ingest):
+    """Create a unif-of-measure"""
     signatore, proposal_id, address, data = ingest
     return (signatore, proposal_id, address, Unit(
         system=data['system'],
@@ -132,25 +156,50 @@ def __create_unit_asset(ingest):
         value=proposal_id[-44:]))
 
 
-def __create_propose_txn(ingest):
+def __create_asset_proposal(ingest):
     """Create an asset proposal and payload"""
     signatore, proposal_id, address, asset = ingest
-    nonce = str(datetime.datetime.utcnow().timestamp())
     proposal = AssetProposal(
-        type=AssetProposal.UNIT
-        if address.dimension == Address.DIMENSION_UNIT
-        else AssetProposal.RESOURCE,
         asset=asset.SerializeToString(),
-        nonce=nonce)
+        nonce=str(datetime.datetime.utcnow().timestamp()))
 
     return (signatore, proposal_id, address, asset, AssetPayload(
         data=proposal.SerializeToString(),
-        dimension=address.dimension,
         action=AssetPayload.ACTION_PROPOSE))
 
 
-def __create_vote_txn(ingest):
-    """Create an asset proposal and payload"""
+def __create_unit_proposal(ingest):
+    """Create an unit proposal and payload"""
+    signatore, proposal_id, address, unit = ingest
+    proposal = UnitProposal(
+        unit=unit.SerializeToString(),
+        nonce=str(datetime.datetime.utcnow().timestamp()))
+
+    return (signatore, proposal_id, address, unit, UnitPayload(
+        data=proposal.SerializeToString(),
+        action=UnitPayload.ACTION_PROPOSE))
+
+
+def __create_asset_vote(ingest):
+    """Create a asset vote"""
+    signatore, address, data = ingest
+    proposal_id = data['proposal_id']
+    return (signatore, address, proposal_id, AssetVote(
+        proposal_id=proposal_id,
+        vote=VOTE_ITEMS.index(data['vote'])))
+
+
+def __create_unit_vote(ingest):
+    """Create a unit vote"""
+    signatore, address, data = ingest
+    proposal_id = data['proposal_id']
+    return (signatore, address, proposal_id, UnitVote(
+        proposal_id=proposal_id,
+        vote=VOTE_ITEMS.index(data['vote'])))
+
+
+def __create_asset_vote_payload(ingest):
+    """Create an asset vote payload"""
     signatore, address, prop_id, vote = ingest
     if vote.vote == AssetVote.VOTE_UNSET:
         action = AssetPayload.ACTION_UNSET
@@ -158,18 +207,22 @@ def __create_vote_txn(ingest):
         action = AssetPayload.ACTION_VOTE
     return (signatore, address, prop_id, AssetPayload(
         data=vote.SerializeToString(),
-        dimension=address.dimension,
         action=action))
 
 
-def __create_unit_payload(ingest):
-    signatore, proposal_id, address, unit = ingest
-    return (signatore, proposal_id, address, UnitPayload(
-        data=unit.SerializeToString(),
-        action=AssetPayload.ACTION_GENESIS))
+def __create_unit_vote_payload(ingest):
+    """Create an unit vote payload"""
+    signatore, address, prop_id, vote = ingest
+    if vote.vote == UnitVote.VOTE_UNSET:
+        action = UnitPayload.ACTION_UNSET
+    else:
+        action = UnitPayload.ACTION_VOTE
+    return (signatore, address, prop_id, UnitPayload(
+        data=vote.SerializeToString(),
+        action=action))
 
 
-def __create_asset_payload(ingest):
+def __create_asset_genesis_payload(ingest):
     signatore, proposal_id, address, asset = ingest
     return (signatore, proposal_id, address, AssetPayload(
         data=asset.SerializeToString(),
@@ -177,17 +230,28 @@ def __create_asset_payload(ingest):
         action=AssetPayload.ACTION_GENESIS))
 
 
-def __create_asset_inputs_outputs(ingest):
-    signatore, proposal_id, address, payload = ingest
-    inputs = [
-        proposal_id,
-        Address(Address.FAMILY_SETTING).settings(address.dimension)]
-    outputs = [proposal_id]
-    return (
-        signatore, address, {"inputs": inputs, "outputs": outputs}, payload)
+def __create_unit_genesis_payload(ingest):
+    signatore, proposal_id, address, unit = ingest
+    return (signatore, proposal_id, address, UnitPayload(
+        data=unit.SerializeToString(),
+        action=UnitPayload.ACTION_GENESIS))
 
 
-def __create_unit_inputs_outputs(ingest):
+def __create_asset_direct_payload(ingest):
+    signatore, proposal_id, address, asset = ingest
+    return (signatore, proposal_id, address, AssetPayload(
+        data=asset.SerializeToString(),
+        action=AssetPayload.ACTION_DIRECT))
+
+
+def __create_unit_direct_payload(ingest):
+    signatore, proposal_id, address, unit = ingest
+    return (signatore, proposal_id, address, UnitPayload(
+        data=unit.SerializeToString(),
+        action=UnitPayload.ACTION_DIRECT))
+
+
+def __create_inputs_outputs(ingest):
     signatore, proposal_id, address, payload = ingest
     inputs = [
         proposal_id,
@@ -199,15 +263,14 @@ def __create_unit_inputs_outputs(ingest):
 
 def __create_proposal_inputs_outputs(ingest):
     """Create asset transaction inputs and outputs"""
-    signatore, proposal_id, address, asset, payload = ingest
-    candidate_addr = address.candidates(address.dimension)
+    signatore, proposal_id, address, data, payload = ingest
     inputs = [
         proposal_id,
-        candidate_addr,
-        Address(Address.FAMILY_SETTING).settings(address.dimension)]
+        address.candidate_address,
+        address.setting_address]
     outputs = [
         proposal_id,
-        candidate_addr]
+        address.candidate_address]
     return (
         signatore, address, {"inputs": inputs, "outputs": outputs}, payload)
 
@@ -215,21 +278,20 @@ def __create_proposal_inputs_outputs(ingest):
 def __create_vote_inputs_outputs(ingest):
     """Create asset transaction inputs and outputs"""
     signatore, address, prop_id, payload = ingest
-    candidate_addr = address.candidates(address.dimension)
     inputs = [
         prop_id,
-        candidate_addr,
-        Address(Address.FAMILY_SETTING).settings(address.dimension)]
+        address.candidate_address,
+        address.setting_address]
     outputs = [
         prop_id,
-        candidate_addr]
+        address.candidate_address]
     return (
         signatore, address, {"inputs": inputs, "outputs": outputs}, payload)
 
 
-def create_proposal(dimension, data):
+def create_asset_proposal(data):
     """Create a asset proposal"""
-    proposal_id = __validate_proposal(dimension, data)
+    proposal_id = __validate_asset_proposal(data)
     # Creaate asset
     # Create proposal payload
     # Create inputs/outputs
@@ -237,52 +299,112 @@ def create_proposal(dimension, data):
     # Create batch
     propose = compose_builder(
         submit_single_txn, create_transaction,
-        __create_proposal_inputs_outputs, __create_propose_txn,
-        __create_resource_asset
-        if dimension == Address.DIMENSION_RESOURCE else __create_unit_asset)
+        __create_proposal_inputs_outputs, __create_asset_proposal,
+        __create_asset)
     propose((
         data['signer'],
         proposal_id,
-        Address(Address.FAMILY_ASSET, "0.2.0", dimension),
+        ASSET_ADDRESSER,
         data))
     return proposal_id
 
 
-def create_vote(dimension, data):
+def create_unit_proposal(data):
+    """Create a asset proposal"""
+    proposal_id = __validate_unit_proposal(data)
+    # Creaate unit
+    # Create proposal payload
+    # Create inputs/outputs
+    # Create transaction
+    # Create batch
+    propose = compose_builder(
+        submit_single_txn, create_transaction,
+        __create_proposal_inputs_outputs, __create_unit_proposal,
+        __create_unit)
+    propose((
+        data['signer'],
+        proposal_id,
+        UNIT_ADDRESSER,
+        data))
+    return proposal_id
+
+
+def create_asset_vote(data):
     """Vote on an asset proposal"""
-    __validate_vote(dimension, data)
-    # Creaate asset
+    __validate_asset_vote(data)
+    # Create asset vote
     # Create vote payload
     # Create inputs/outputs
     # Create transaction
     # Create batch
     vote = compose_builder(
         submit_single_txn, create_transaction,
-        __create_vote_inputs_outputs, __create_vote_txn,
+        __create_vote_inputs_outputs, __create_asset_vote_payload,
         __create_asset_vote)
-    vote((
+    vote((data['signer'], ASSET_ADDRESSER, data))
+
+
+def create_unit_vote(data):
+    """Vote on an unit proposal"""
+    __validate_unit_vote(data)
+    # Create unit vote
+    # Create vote payload
+    # Create inputs/outputs
+    # Create transaction
+    # Create batch
+    vote = compose_builder(
+        submit_single_txn, create_transaction,
+        __create_vote_inputs_outputs, __create_unit_vote_payload,
+        __create_unit_vote)
+    vote((data['signer'], UNIT_ADDRESSER, data))
+
+
+def create_direct_asset(data):
+    prime_id = __validate_element(ASSET_KEY_SET, data, True)
+    direct = compose_builder(
+        submit_single_txn, create_transaction, __create_inputs_outputs,
+        __create_asset_direct_payload, __create_asset)
+    direct((
         data['signer'],
-        Address(Address.FAMILY_ASSET, "0.2.0", dimension),
+        ASSET_ADDRESSER.asset_address(
+            data['system'], data['key'], prime_id),
+        ASSET_ADDRESSER,
         data))
+    return prime_id
+
+
+def create_direct_unit(data):
+    prime_id = __validate_element(UNIT_KEY_SET, data, True)
+    direct = compose_builder(
+        submit_single_txn, create_transaction, __create_inputs_outputs,
+        __create_unit_direct_payload, __create_unit)
+    direct((
+        data['signer'],
+        UNIT_ADDRESSER.unit_address(
+            data['system'], data['key'], prime_id),
+        UNIT_ADDRESSER,
+        data))
+    return prime_id
 
 
 def create_unit_genesis(signer, unit_list):
     """Generate the transaction batch for genesis block units of measure"""
     txns = []
-    uaddr = Address.unit_addresser()
     genesis = compose_builder(
-        create_transaction, __create_unit_inputs_outputs,
-        __create_unit_payload, __create_unit_asset)
+        create_transaction, __create_inputs_outputs,
+        __create_unit_genesis_payload, __create_unit)
     for data in unit_list:
-        if data["prime"]:
-            proposal_id = data.pop("prime")
+        prime_id = data.pop("prime")
+        if not prime_id:
+            prime_id = __get_prime()
         else:
-            proposal_id = __get_prime()
+            pass
         txns.append(
             genesis((
                 signer,
-                uaddr.unit_address(data['system'], data['key'], proposal_id),
-                uaddr,
+                UNIT_ADDRESSER.unit_address(
+                    data['system'], data['key'], prime_id),
+                UNIT_ADDRESSER,
                 data))[1])
     return txns
 
@@ -293,12 +415,12 @@ def create_asset_batch(json_file):
     # Proposal boilerplates
     propose_unit = compose_builder(
         create_transaction,
-        __create_proposal_inputs_outputs, __create_propose_txn,
-        __create_unit_asset)
+        __create_proposal_inputs_outputs, __create_unit_proposal,
+        __create_unit)
     propose_resource = compose_builder(
         create_transaction,
-        __create_proposal_inputs_outputs, __create_propose_txn,
-        __create_resource_asset)
+        __create_proposal_inputs_outputs, __create_asset_proposal,
+        __create_asset)
 
     # proposal entries {asset_id: [dimension, proposal_id, prop_txq_id]}
     id_track = {}
@@ -360,11 +482,11 @@ def create_asset_batch(json_file):
         asset_vote = compose_builder(
             create_transaction,
             partial(create_dependency, dep=txq_id),
-            __create_vote_inputs_outputs, __create_vote_txn,
+            __create_vote_inputs_outputs, __create_asset_vote_payload,
             __create_asset_vote)
         _, txq = asset_vote((
             vote['signer'],
-            Address(Address.FAMILY_ASSET, "0.2.0", dimension),
+            ASSET_ADDRESSER,
             vote))
         vote_txns.append(txq)
 

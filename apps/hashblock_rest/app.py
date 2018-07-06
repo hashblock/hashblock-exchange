@@ -26,7 +26,9 @@ from modules.exceptions import DataException, AuthException, NotPrimeException
 from modules.config import load_hashblock_config, agreement_secret
 from modules.address import Address
 from modules.decode import (
-    decode_from_leaf, decode_asset_list, decode_asset_unit_list,
+    decode_from_leaf,
+    decode_asset, decode_unit,
+    decode_asset_list, decode_unit_list,
     decode_proposals, decode_settings, decode_match_dimension,
     decode_match_initiate_list, decode_match_reciprocate_list)
 import shared.asset as asset
@@ -60,8 +62,6 @@ api = Api(
 ns = api.namespace('hashblock', description='hashblock state operations')
 
 _setting_address = Address.setting_addresser()
-_asset_address = Address.asset_addresser()
-_unit_address = Address.unit_addresser()
 _utxq_address = Address.match_utxq_addresser()
 _mtxq_address = Address.match_mtxq_addresser()
 
@@ -133,52 +133,69 @@ asset_propose_upload_parser.add_argument(
 # Entry points
 
 
-@ns.route('/asset-seed')
-class ABFIngest(Resource):
-    @ns.expect(asset_propose_upload_parser)
-    def post(self):
-        """Batch process asset propose/vote seed data onto chain"""
-        args = asset_propose_upload_parser.parse_args()
-        in_name = args['file'].filename
-        if not allowed_file(in_name):
-            return {
-                "DataException":
-                "{} unsupported file type".format(in_name)}, 400
-        try:
-            destination = application.config.get('UPLOAD_FOLDER')
-            filename = '%s%s' % (destination, secure_filename(in_name))
-            args['file'].save(filename)
-            args['file'].close()
-            asset.create_asset_batch(filename)
-        except (DataException, ValueError) as e:
-            return {"DataException": str(e)}, 400
-        return {"data": "TBD"}, 200
+# @ns.route('/asset-seed')
+# class ABFIngest(Resource):
+#     @ns.expect(asset_propose_upload_parser)
+#     def post(self):
+#         """Batch process asset propose/vote seed data onto chain"""
+#         args = asset_propose_upload_parser.parse_args()
+#         in_name = args['file'].filename
+#         if not allowed_file(in_name):
+#             return {
+#                 "DataException":
+#                 "{} unsupported file type".format(in_name)}, 400
+#         try:
+#             destination = application.config.get('UPLOAD_FOLDER')
+#             filename = '%s%s' % (destination, secure_filename(in_name))
+#             args['file'].save(filename)
+#             args['file'].close()
+#             asset.create_asset_batch(filename)
+#         except (DataException, ValueError) as e:
+#             return {"DataException": str(e)}, 400
+#         return {"data": "TBD"}, 200
+
+#
+#   Asset management
+#
+
+@ns.route('/asset-settings')
+class ASSetDecode(Resource):
+    def get(self):
+        """Returns the asset settings"""
+        return decode_settings(asset.ASSET_ADDRESSER.setting_address), 200
 
 
 @ns.route('/assets')
 class ASDecode(Resource):
     def get(self):
-        """Returns list of all asset units"""
-        result = decode_asset_list(_asset_address.ns_family)
+        """Returns list of all assets"""
+        result = decode_asset_list()
         result['data'] = assetlinks(result['data'])
         return result, 200
 
 
-@ns.route('/resource-settings')
-class RASDecode(Resource):
-    def get(self):
-        """Returns the resource asset unit settings"""
-        return decode_settings(
-            _setting_address.settings(Address.DIMENSION_RESOURCE)), 200
-
-
-@ns.route('/propose-resource')
-class RAPIngest(Resource):
+@ns.route('/asset-create')
+class CreateASIngest(Resource):
     @ns.expect(asset_fields)
     def post(self):
+        """Create an asset and publish on the chain"""
         try:
-            proposal_id = asset.create_proposal(
-                Address.DIMENSION_RESOURCE, request.json)
+            asset_id = asset.create_direct_asset(request.json)
+            return {"Asset ID": asset_id, "status": "OK"}, 200
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
+        except AuthException:
+            return {
+                "AuthException": "not authorized to create asset"}, 405
+
+
+@ns.route('/asset-propose')
+class PropASIngest(Resource):
+    @ns.expect(asset_fields)
+    def post(self):
+        """Propose an asset for publishing on the chain"""
+        try:
+            proposal_id = asset.create_asset_proposal(request.json)
             return {"proposal_id": proposal_id, "status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400
@@ -187,13 +204,20 @@ class RAPIngest(Resource):
                 "AuthException": "not authorized to make proposals"}, 405
 
 
-@ns.route('/vote-resource')
-class RAVIngest(Resource):
+@ns.route('/asset-proposals')
+class ASPropDecode(Resource):
+    def get(self):
+        """Returns asset proposals"""
+        return decode_proposals(asset.ASSET_ADDRESSER.candidate_address), 200
+
+
+@ns.route('/asset-vote')
+class VoteASIngest(Resource):
     @ns.expect(asset_vote_fields)
     def post(self):
+        """Vote on asset proposal"""
         try:
-            asset.create_vote(
-                Address.DIMENSION_RESOURCE, request.json)
+            asset.create_asset_vote(request.json)
             return {"status": "OK"}, 200
         except (DataException, ValueError, NotPrimeException):
             return {"DataException": "invalid payload"}, 400
@@ -201,64 +225,71 @@ class RAVIngest(Resource):
             return {
                 "AuthException": "not authorized to vote"}, 405
 
-
-@ns.route('/resource-proposals')
-class RAPDecode(Resource):
-    def get(self):
-        """Returns the resource asset unit proposals"""
-        return decode_proposals(
-            _asset_address.candidates(Address.DIMENSION_RESOURCE)), 200
-
-
-@ns.route('/resources')
-class RADecode(Resource):
-    def get(self):
-        """Returns all resource asset units"""
-        result = decode_asset_unit_list(
-            _asset_address.asset_prefix(Address.DIMENSION_RESOURCE))
-        result['data'] = assetunitlinks(
-            result['data'], Address.DIMENSION_RESOURCE)
-        return result, 200
+#
+#   Unit management
+#
 
 
 @ns.route('/unit-settings')
-class UASDecode(Resource):
+class UNSetDecode(Resource):
     def get(self):
-        """Returns the unit-of-measure asset unit settings"""
-        return decode_settings(
-            _setting_address.settings(Address.DIMENSION_UNIT)), 200
+        """Returns the unit settings"""
+        return decode_settings(asset.UNIT_ADDRESSER.setting_address), 200
 
 
-@ns.route('/unit-proposals')
-class UAPDecode(Resource):
+@ns.route('/units')
+class UNDecode(Resource):
     def get(self):
-        """Returns the unit-of-measure asset unit proposals"""
-        return decode_proposals(
-            _asset_address.candidates(Address.DIMENSION_UNIT)), 200
+        """Returns list of all units"""
+        result = decode_unit_list()
+        result['data'] = assetlinks(result['data'])
+        return result, 200
 
 
-@ns.route('/propose-unit')
-class UAPIngest(Resource):
+@ns.route('/unit-create')
+class CreateUNIngest(Resource):
     @ns.expect(asset_fields)
     def post(self):
+        """Create a unit and publish on the chain"""
         try:
-            proposal_id = asset.create_proposal(
-                Address.DIMENSION_UNIT, request.json)
+            unit_id = asset.create_direct_unit(request.json)
+            return {"Unit ID": unit_id, "status": "OK"}, 200
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
+        except AuthException:
+            return {
+                "AuthException": "not authorized to create asset"}, 405
+
+
+@ns.route('/unit-propose')
+class PropUNIngest(Resource):
+    @ns.expect(asset_fields)
+    def post(self):
+        """Propose a unit for publishing on the chain"""
+        try:
+            proposal_id = asset.create_unit_proposal(request.json)
             return {"proposal_id": proposal_id, "status": "OK"}, 200
-        except (DataException, ValueError, NotPrimeException):
-            return {"DataException": "invalid payload"}, 400
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
         except AuthException:
             return {
                 "AuthException": "not authorized to make proposals"}, 405
 
 
-@ns.route('/vote-unit')
-class UAVIngest(Resource):
+@ns.route('/unit-proposals')
+class UNPropDecode(Resource):
+    def get(self):
+        """Returns the list of unit proposals"""
+        return decode_proposals(asset.UNIT_ADDRESSER.candidate_address), 200
+
+
+@ns.route('/unit-vote')
+class VoteUNIngest(Resource):
     @ns.expect(asset_vote_fields)
     def post(self):
+        """Vote on unit proposal"""
         try:
-            asset.create_vote(
-                Address.DIMENSION_UNIT, request.json)
+            asset.create_unit_vote(request.json)
             return {"status": "OK"}, 200
         except (DataException, ValueError, NotPrimeException):
             return {"DataException": "invalid payload"}, 400
@@ -267,25 +298,16 @@ class UAVIngest(Resource):
                 "AuthException": "not authorized to vote"}, 405
 
 
-@ns.route('/units')
-class UADecode(Resource):
-    def get(self):
-        """Returns all unit-of-measure asset units"""
-        result = decode_asset_unit_list(
-            _asset_address.asset_prefix(Address.DIMENSION_UNIT))
-        result['data'] = assetunitlinks(
-            result['data'], Address.DIMENSION_UNIT)
-        return result, 200
-
-
 @ns.route('/unit/<string:address>', endpoint='asset_unit')
-@ns.route('/resource/<string:address>', endpoint='asset_resource')
+@ns.route('/asset/<string:address>', endpoint='asset_asset')
 @ns.param('address', 'The address to decode')
 class AU_Decode(Resource):
     def get(self, address):
         """Return asset details"""
+        tail = request.path.split('/')[-2]
+        f = decode_asset if tail == 'asset' else decode_unit
         if Address.valid_leaf_address(address):
-            return decode_from_leaf(address), 200
+            return f(address), 200
         else:
             return {
                 "address": "not a valid address",
@@ -305,43 +327,43 @@ class UTXQDecode(Resource):
         return result, 200
 
 
-@ns.route('/asks/<string:agreement>', endpoint='utxq_asks')
-@ns.route('/offers/<string:agreement>', endpoint='utxq_offers')
-@ns.route('/commitments/<string:agreement>', endpoint='utxq_commitments')
-@ns.route('/gives/<string:agreement>', endpoint='utxq_gives')
-@ns.param('agreement', 'The trading agreement')
-class UTXQS_Decode(Resource):
-    def get(self, agreement):
-        """Returns all match requests by type"""
-        tail = request.path.split('/')[-2]
-        ref = tail[:-1]
-        indr = 'utxq_' + ref
-        result = decode_match_initiate_list(
-            _utxq_address.txq_list(_utxq_address.dimension, ref),
-            agreement)
-        # new_data = matchtermlinks(result['data'], indr)
-        # result['data'] = new_data
-        return result, 200
+# @ns.route('/asks/<string:agreement>', endpoint='utxq_asks')
+# @ns.route('/offers/<string:agreement>', endpoint='utxq_offers')
+# @ns.route('/commitments/<string:agreement>', endpoint='utxq_commitments')
+# @ns.route('/gives/<string:agreement>', endpoint='utxq_gives')
+# @ns.param('agreement', 'The trading agreement')
+# class UTXQS_Decode(Resource):
+#     def get(self, agreement):
+#         """Returns all match requests by type"""
+#         tail = request.path.split('/')[-2]
+#         ref = tail[:-1]
+#         indr = 'utxq_' + ref
+#         result = decode_match_initiate_list(
+#             _utxq_address.txq_list(_utxq_address.dimension, ref),
+#             agreement)
+#         # new_data = matchtermlinks(result['data'], indr)
+#         # result['data'] = new_data
+#         return result, 200
 
 
-@ns.route('/ask/<string:agreement>/<string:address>', endpoint='utxq_ask')
-@ns.route('/offer/<string:agreement>/<string:address>', endpoint='utxq_offer')
-@ns.route('/commitment/<string:agreement>/<string:address>', endpoint='utxq_commitment')
-@ns.route('/give/<string:agreement>/<string:address>', endpoint='utxq_give')
-@ns.param('agreement', 'The trading agreement')
-@ns.param('address', 'The address to decode')
-class UTXQ_Decode(Resource):
-    def get(self, agreement, address):
-        """Return match request detail"""
+# @ns.route('/ask/<string:agreement>/<string:address>', endpoint='utxq_ask')
+# @ns.route('/offer/<string:agreement>/<string:address>', endpoint='utxq_offer')
+# @ns.route('/commitment/<string:agreement>/<string:address>', endpoint='utxq_commitment')
+# @ns.route('/give/<string:agreement>/<string:address>', endpoint='utxq_give')
+# @ns.param('agreement', 'The trading agreement')
+# @ns.param('address', 'The address to decode')
+# class UTXQ_Decode(Resource):
+#     def get(self, agreement, address):
+#         """Return match request detail"""
 
-        if Address.valid_leaf_address(address):
-            return decode_from_leaf(
-                address,
-                agreement_secret(agreement)), 200
-        else:
-            return {
-                "address": "not a valid address",
-                "data": ""}, 400
+#         if Address.valid_leaf_address(address):
+#             return decode_from_leaf(
+#                 address,
+#                 agreement_secret(agreement)), 200
+#         else:
+#             return {
+#                 "address": "not a valid address",
+#                 "data": ""}, 400
 
 
 match_asset_fields = ns.model('asset detail', {
@@ -372,17 +394,17 @@ mtxq_fields = ns.inherit("mtxq_fields", utxq_fields, {
 })
 
 
-@ns.route('/ask')
-@ns.route('/offer')
-@ns.route('/commitment')
-@ns.route('/give')
-class UTXQ_Ingest(Resource):
-    @ns.expect(utxq_fields)
-    def post(self):
-        operation = request.path.split('/')[-1]
-        print("Creating {} transaction".format(operation))
-        match.create_utxq(operation, request.json)
-        return {"status": "OK"}, 200
+# @ns.route('/ask')
+# @ns.route('/offer')
+# @ns.route('/commitment')
+# @ns.route('/give')
+# class UTXQ_Ingest(Resource):
+#     @ns.expect(utxq_fields)
+#     def post(self):
+#         operation = request.path.split('/')[-1]
+#         print("Creating {} transaction".format(operation))
+#         match.create_utxq(operation, request.json)
+#         return {"status": "OK"}, 200
 
 
 @ns.route('/mtxqs/<string:agreement>')
@@ -398,58 +420,58 @@ class MTXQDecode(Resource):
         return result, 200
 
 
-@ns.route('/tells/<string:agreement>', endpoint='mtxq_tells')
-@ns.route('/accepts/<string:agreement>', endpoint='mtxq_accepts')
-@ns.route('/obligations/<string:agreement>', endpoint='mtxq_obligations')
-@ns.route('/takes/<string:agreement>', endpoint='mtxq_takes')
-@ns.param('agreement', 'The trading agreement')
-class MTXQS_Decode(Resource):
-    def get(self, agreement):
-        """Returns all match response by type"""
-        tail = request.path.split('/')[-2]
-        ref = tail[:-1]
-        indr = 'mtxq_' + ref
-        result = decode_match_reciprocate_list(
-            _mtxq_address.txq_list(_mtxq_address.dimension, ref),
-            agreement)
-        # new_data = matchtermlinks(result['data'], indr)
-        # result['data'] = new_data
-        return result, 200
+# @ns.route('/tells/<string:agreement>', endpoint='mtxq_tells')
+# @ns.route('/accepts/<string:agreement>', endpoint='mtxq_accepts')
+# @ns.route('/obligations/<string:agreement>', endpoint='mtxq_obligations')
+# @ns.route('/takes/<string:agreement>', endpoint='mtxq_takes')
+# @ns.param('agreement', 'The trading agreement')
+# class MTXQS_Decode(Resource):
+#     def get(self, agreement):
+#         """Returns all match response by type"""
+#         tail = request.path.split('/')[-2]
+#         ref = tail[:-1]
+#         indr = 'mtxq_' + ref
+#         result = decode_match_reciprocate_list(
+#             _mtxq_address.txq_list(_mtxq_address.dimension, ref),
+#             agreement)
+#         # new_data = matchtermlinks(result['data'], indr)
+#         # result['data'] = new_data
+#         return result, 200
 
 
-@ns.route('/tell/<string:agreement>/<string:address>', endpoint='mtxq_tell')
-@ns.route('/accept/<string:agreement>/<string:address>', endpoint='mtxq_accept')
-@ns.route('/obligation/<string:agreement>/<string:address>', endpoint='mtxq_obligation')
-@ns.route('/take/<string:agreement>/<string:address>', endpoint='mtxq_take')
-@ns.param('agreement', 'The trading agreement')
-@ns.param('address', 'The address to decode')
-class MTXQ_Decode(Resource):
-    def get(self, agreement, address):
-        """Return match response detail"""
-        if Address.valid_leaf_address(address):
-            return decode_from_leaf(
-                address,
-                agreement_secret(agreement)), 200
-        else:
-            return {
-                "address": "not a valid address",
-                "data": ""}, 400
+# @ns.route('/tell/<string:agreement>/<string:address>', endpoint='mtxq_tell')
+# @ns.route('/accept/<string:agreement>/<string:address>', endpoint='mtxq_accept')
+# @ns.route('/obligation/<string:agreement>/<string:address>', endpoint='mtxq_obligation')
+# @ns.route('/take/<string:agreement>/<string:address>', endpoint='mtxq_take')
+# @ns.param('agreement', 'The trading agreement')
+# @ns.param('address', 'The address to decode')
+# class MTXQ_Decode(Resource):
+#     def get(self, agreement, address):
+#         """Return match response detail"""
+#         if Address.valid_leaf_address(address):
+#             return decode_from_leaf(
+#                 address,
+#                 agreement_secret(agreement)), 200
+#         else:
+#             return {
+#                 "address": "not a valid address",
+#                 "data": ""}, 400
 
 
-@ns.route('/tell')
-@ns.route('/accept')
-@ns.route('/obligation')
-@ns.route('/take')
-class MTXQ_Ingest(Resource):
-    @ns.expect(mtxq_fields)
-    def post(self):
-        operation = request.path.split('/')[-1]
-        print("Creating {} transaction".format(operation))
-        try:
-            match.create_mtxq(operation, request.json)
-            return {"status": "OK"}, 200
-        except (DataException, ValueError) as e:
-            return {"DataException": str(e)}, 400
+# @ns.route('/tell')
+# @ns.route('/accept')
+# @ns.route('/obligation')
+# @ns.route('/take')
+# class MTXQ_Ingest(Resource):
+#     @ns.expect(mtxq_fields)
+#     def post(self):
+#         operation = request.path.split('/')[-1]
+#         print("Creating {} transaction".format(operation))
+#         try:
+#             match.create_mtxq(operation, request.json)
+#             return {"status": "OK"}, 200
+#         except (DataException, ValueError) as e:
+#             return {"DataException": str(e)}, 400
 
 
 if __name__ == '__main__':

@@ -40,6 +40,7 @@ class AssetTransactionHandler(TransactionHandler):
         self._addresser = Address.asset_addresser()
         self._auth_list = None
         self._action = None
+        self._settings = None
 
     @property
     def addresser(self):
@@ -117,7 +118,7 @@ class AssetTransactionHandler(TransactionHandler):
         asset_proposal = AssetProposal()
         asset_proposal.ParseFromString(proposal_data)
         asset = Asset()
-        asset.ParseFromString(asset_proposal.data)
+        asset.ParseFromString(asset_proposal.asset)
         proposal_id = self.asset_address(asset)
 
         approval_threshold = self._get_approval_threshold(context)
@@ -228,7 +229,7 @@ class AssetTransactionHandler(TransactionHandler):
             .format(accepted_count, rejected_count))
 
         asset = Asset()
-        asset.ParseFromString(candidate.proposal)
+        asset.ParseFromString(candidate.proposal.asset)
 
         if accepted_count >= approval_threshold:
             _set_asset(context, proposal_id, asset)

@@ -63,39 +63,6 @@ message Unit {
 // </Response>
 // </UCUMWebServiceResponse>
 
-// UnitProposal
-//
-// This message proposes a Unit to be added
-
-message UnitProposal {
-
-    // The Unit being proposed
-    Unit unit = 1;
-
-    // allow duplicate proposals with different hashes
-    // randomly created by the client
-
-    string nonce = 2;
-}
-
-// Unit Vote
-//
-// This message votes on an existing UnitProposal
-
-message UnitVote {
-    enum Vote {
-        VOTE_UNSET = 0;
-        VOTE_ACCEPT = 1;
-        VOTE_REJECT = 2;
-    }
-
-    // The id of the proposal being voted on
-
-    string proposal_id = 1;
-
-    Vote vote = 2;
-}
-
 // Unit Payload
 // Contains either a proposal or a vote.
 
@@ -121,6 +88,40 @@ message UnitPayload {
 
     // The content of this payload (UnitProposal or UnitVote)
     bytes data = 2;
+}
+
+
+// UnitProposal
+//
+// This message proposes a Unit to be added
+
+message UnitProposal {
+
+    // The Unit being proposed
+    bytes unit = 1;
+
+    // allow duplicate proposals with different hashes
+    // randomly created by the client
+
+    string nonce = 2;
+}
+
+// Unit Vote
+//
+// This message votes on an existing UnitProposal
+
+message UnitVote {
+    enum Vote {
+        VOTE_UNSET = 0;
+        VOTE_ACCEPT = 1;
+        VOTE_REJECT = 2;
+    }
+
+    // The id of the proposal being voted on
+
+    string proposal_id = 1;
+
+    Vote vote = 2;
 }
 
 
