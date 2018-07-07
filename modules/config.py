@@ -27,6 +27,7 @@ from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 
 REST_CONFIG = None
+KEYS_PATH = None
 ENVIRONMENT_KEYS_PATH = 'HASHBLOCK_KEYS'
 ENVIRONMENT_CFGR_PATH = 'HASHBLOCK_CONFIG'
 DEFAULT_KEYS_PATH = '/project/keys'
@@ -113,7 +114,6 @@ def partnership_secret(part1, part2):
 def agreement_secret(agreement_name):
     result = None
     for key, value in REST_CONFIG['rest']['partners'].items():
-        print("Key {} Values {}".format(key, value))
         if key == agreement_name:
             result = value[2]
             break
@@ -245,12 +245,14 @@ def load_hashblock_config():
     global REST_CONFIG
     global DEFAULT_KEYS_PATH
     global DEFAULT_CFGR_PATH
+    global KEYS_PATH
 
     if REST_CONFIG:
         return REST_CONFIG
 
     if os.environ.get(ENVIRONMENT_KEYS_PATH):
         DEFAULT_KEYS_PATH = os.environ.get(ENVIRONMENT_KEYS_PATH)
+
     if os.environ.get(ENVIRONMENT_CFGR_PATH):
         DEFAULT_CFGR_PATH = os.environ.get(ENVIRONMENT_CFGR_PATH)
 
@@ -258,6 +260,8 @@ def load_hashblock_config():
         raise ValueError("/project/keys directory not found")
     if not os.path.exists(DEFAULT_CFGR_PATH):
         raise ValueError("/project/config directory not found")
+
+    KEYS_PATH = DEFAULT_KEYS_PATH + '/'
 
     sys.path.append(DEFAULT_CFGR_PATH)
     REST_CONFIG = __load_cfg_and_keys(CFGR_FILE)

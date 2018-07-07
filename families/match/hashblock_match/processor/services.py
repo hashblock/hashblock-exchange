@@ -23,33 +23,19 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from modules.state import State, StateDataNotFound
 from modules.hashblock_zksnark import zksnark_verify
 
-from protobuf.match_pb2 import (MatchEvent)
+from protobuf.match_pb2 import (MatchPayload)
 
 
 LOGGER = logging.getLogger(__name__)
 KEYS_PATH = os.environ['HASHBLOCK_KEYS'] + '/'
 
-_initiate_actions = frozenset([
-    MatchEvent.UTXQ_ASK,
-    MatchEvent.UTXQ_OFFER,
-    MatchEvent.UTXQ_COMMITMENT,
-    MatchEvent.UTXQ_GIVE])
-
-_reciprocate_actions = frozenset([
-    MatchEvent.MTXQ_TELL,
-    MatchEvent.MTXQ_ACCEPT,
-    MatchEvent.MTXQ_OBLIGATION,
-    MatchEvent.MTXQ_TAKE])
-
 
 class Service(ABC):
-    _version_list = ['0.2.0']
 
     @classmethod
     def factory(cls, addresser, txn, context):
-        cls.addresser = addresser
         key = txn.header.family_version
-        if key not in cls._version_list:
+        if key not in addresser.family_versions:
             raise InvalidTransaction("Unhandled version {}".format(key))
         else:
             handler = V020apply(txn, State(context))
@@ -87,7 +73,7 @@ class BaseService(Service):
     def __init__(self, txn, state):
         self._txn = txn
         self._state = state
-        self._payload = MatchEvent()
+        self._payload = MatchPayload()
         self._payload.ParseFromString(txn.payload)
 
     @property
@@ -103,14 +89,14 @@ class BaseService(Service):
         return self._payload
 
     def process(self, initiateFn, reciprocateFn):
-        if self.payload.action in _initiate_actions:
+        if self.payload.type == MatchPayload.Type.UTXQ:
             initiateFn()
-        elif self.payload.action in _reciprocate_actions:
+        elif self.payload.type == MatchPayload.Type.MTXQ:
             reciprocateFn()
         else:
             raise InvalidTransaction(
-                "Payload 'action' must be one of {} or {}".
-                format([_initiate_actions, _reciprocate_actions]))
+                "Payload 'type' must be one of: {} or {}".
+                format([MatchPayload.Type.UTXQ, MatchPayload.Type.MTXQ]))
 
 
 class V020apply(BaseService):

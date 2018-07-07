@@ -26,10 +26,12 @@ from modules.exceptions import DataException, AuthException, NotPrimeException
 from modules.config import load_hashblock_config, agreement_secret
 from modules.address import Address
 from modules.decode import (
-    decode_from_leaf,
+    setting_addresser,
+    utxq_addresser,
+    mtxq_addresser,
     decode_asset, decode_unit,
     decode_asset_list, decode_unit_list,
-    decode_proposals, decode_settings, decode_match_dimension,
+    decode_proposals, decode_settings, decode_match_types,
     decode_match_initiate_list, decode_match_reciprocate_list)
 import shared.asset as asset
 import shared.match as match
@@ -60,10 +62,6 @@ api = Api(
     description='REST for hashblock-exchange')
 
 ns = api.namespace('hashblock', description='hashblock state operations')
-
-_setting_address = Address.setting_addresser()
-_utxq_address = Address.match_utxq_addresser()
-_mtxq_address = Address.match_mtxq_addresser()
 
 # Utility functions
 
@@ -314,18 +312,36 @@ class AU_Decode(Resource):
                 "data": ""}, 400
 
 
+#
+#   UTXQ management
+#
+
+
 @ns.route('/utxqs/<string:agreement>')
 @ns.param('agreement', 'The trading agreement')
 class UTXQDecode(Resource):
     def get(self, agreement):
-        """Returns all match request transactions"""
-        result = decode_match_dimension(
-            _utxq_address.dimension_address,
-            agreement)
+        """Returns all UTXQs"""
+        result = decode_match_types(utxq_addresser, agreement)
         # new_data = matchlinks(result['data'], 'operation', 'utxq_')
         # result['data'] = new_data
         return result, 200
 
+
+#
+#   MTXQ management
+#
+
+
+@ns.route('/mtxqs/<string:agreement>')
+@ns.param('agreement', 'The trading agreement')
+class MTXQDecode(Resource):
+    def get(self, agreement):
+        """Returns all match response transactions"""
+        result = decode_match_types(mtxq_addresser, agreement)
+        # new_data = matchlinks(result['data'], 'operation', 'mtxq_')
+        # result['data'] = new_data
+        return result, 200
 
 # @ns.route('/asks/<string:agreement>', endpoint='utxq_asks')
 # @ns.route('/offers/<string:agreement>', endpoint='utxq_offers')
@@ -405,19 +421,6 @@ mtxq_fields = ns.inherit("mtxq_fields", utxq_fields, {
 #         print("Creating {} transaction".format(operation))
 #         match.create_utxq(operation, request.json)
 #         return {"status": "OK"}, 200
-
-
-@ns.route('/mtxqs/<string:agreement>')
-@ns.param('agreement', 'The trading agreement')
-class MTXQDecode(Resource):
-    def get(self, agreement):
-        """Returns all match response transactions"""
-        result = decode_match_dimension(
-            _mtxq_address.dimension_address,
-            agreement)
-        # new_data = matchlinks(result['data'], 'operation', 'mtxq_')
-        # result['data'] = new_data
-        return result, 200
 
 
 # @ns.route('/tells/<string:agreement>', endpoint='mtxq_tells')

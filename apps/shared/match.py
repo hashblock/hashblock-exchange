@@ -18,42 +18,29 @@
 
 This module is referenced when posting utxq and mtxq exchanges
 """
-import os
 import uuid
 import binascii
 
 from shared.transactions import (
     submit_single_txn, create_transaction, compose_builder)
 
-from modules.address import Address
 from modules.hashblock_zksnark import zksnark_genproof
 from modules.config import (
     public_key, private_key,
+    KEYS_PATH,
     valid_partnership, partnership_secret)
 from modules.decode import (
     asset_addresser,
+    unit_addresser,
+    utxq_addresser,
+    mtxq_addresser,
     decode_asset_list,
     STATE_CRYPTO,
     get_utxq_obj_json)
 from modules.exceptions import (
     AuthException, RestException, DataException, AssetNotExistException)
 from protobuf.match_pb2 import (
-    MatchEvent, UTXQ, MTXQ, Quantity, Ratio)
-
-KEYS_PATH = os.environ['HASHBLOCK_KEYS'] + '/'
-_utxq_addrs = Address.match_utxq_addresser()
-_mtxq_addrs = Address.match_utxq_addresser()
-
-
-_ACTION_MAP = {
-    'ask': MatchEvent.UTXQ_ASK,
-    'tell': MatchEvent.MTXQ_TELL,
-    'offer': MatchEvent.UTXQ_OFFER,
-    'accept': MatchEvent.MTXQ_ACCEPT,
-    'commitment': MatchEvent.UTXQ_COMMITMENT,
-    'obligation': MatchEvent.MTXQ_OBLIGATION,
-    'give': MatchEvent.UTXQ_GIVE,
-    'take': MatchEvent.MTXQ_TAKE}
+    MatchPayload, UTXQ, MTXQ, Quantity, Ratio)
 
 
 def __validate_partners(plus, minus):
@@ -65,17 +52,13 @@ def __validate_partners(plus, minus):
             "No partnership for {} and {}".format(plus, minus))
 
 
-def __validate_assets(value, unit, resource):
-    """Validate and return asset addresses that are reachable"""
+def __validate_references(value, unit, asset):
+    """Validate and return addresses that are reachable"""
     unit_result = None
-    resource_result = None
+    asset_result = None
     int(value)
-    unit_add = asset_addresser.asset_item_syskey(
-        Address.DIMENSION_UNIT,
-        unit['system'], unit['key'])
-    resource_add = asset_addresser.asset_item_syskey(
-        Address.DIMENSION_RESOURCE,
-        resource['system'], resource['key'])
+    unit_add = unit_addresser.address_syskey(unit['system'], unit['key'])
+    asset_add = asset_addresser.address_syskey(asset['system'], asset['key'])
 
     def in_list(ent, elist):
         result = None
@@ -87,12 +70,12 @@ def __validate_assets(value, unit, resource):
         return result
 
     unit_result = in_list(unit, decode_asset_list(unit_add))
-    resource_result = in_list(resource, decode_asset_list(resource_add))
+    asset_result = in_list(asset, decode_asset_list(asset_add))
 
-    if not unit_result or not resource_result:
+    if not unit_result or not asset_result:
         raise AssetNotExistException("Asset does not exist")
 
-    return (unit_result, resource_result)
+    return (unit_result, asset_result)
 
 
 def __get_and_validate_utxq(address, secret):
@@ -111,10 +94,10 @@ def __get_and_validate_utxq(address, secret):
 def __validate_utxq(request):
     """Validate the content for utxq"""
     __validate_partners(request["plus"], request["minus"])
-    quantity_assets = __validate_assets(
+    quantity_assets = __validate_references(
         request['quantity']['value'],
         request['quantity']['unit'],
-        request['quantity']['resource'])
+        request['quantity']['asset'])
     return (quantity_assets)
 
 
@@ -125,18 +108,18 @@ def __validate_mtxq(request):
         request["utxq_address"],
         partnership_secret(request["plus"], request["minus"]))
     utxq_qblock = json['data']['quantity']
-    quantity_assets = __validate_assets(
+    quantity_assets = __validate_references(
         request['quantity']['value'],
         request['quantity']['unit'],
-        request['quantity']['resource'])
-    numerator_assets = __validate_assets(
+        request['quantity']['asset'])
+    numerator_assets = __validate_references(
         request['ratio']['numerator']['value'],
         request['ratio']['numerator']['unit'],
-        request['ratio']['numerator']['resource'])
-    denominator_assets = __validate_assets(
+        request['ratio']['numerator']['asset'])
+    denominator_assets = __validate_references(
         request['ratio']['denominator']['value'],
         request['ratio']['denominator']['unit'],
-        request['ratio']['denominator']['resource'])
+        request['ratio']['denominator']['asset'])
     data_tuple = []
 
     data_tuple.append(str(utxq_qblock['value']))
@@ -149,7 +132,7 @@ def __validate_mtxq(request):
     data_tuple.append(denominator_assets[0]['value'])
     data_tuple.append(quantity_assets[0]['value'])
 
-    data_tuple.append(str(utxq_qblock['resource']))
+    data_tuple.append(str(utxq_qblock['asset']))
     data_tuple.append(numerator_assets[1]['value'])
     data_tuple.append(denominator_assets[1]['value'])
     data_tuple.append(quantity_assets[1]['value'])
@@ -166,57 +149,57 @@ def __validate_mtxq(request):
 
 def __create_quantity(value, quantity):
     """Converts a quantity type into byte string from prime number"""
-    unit_data, resource_data = quantity
+    unit_data, asset_data = quantity
     return Quantity(
         value=int(value).to_bytes(len(value), byteorder='little'),
         unit=int(unit_data['value']).to_bytes(
             len(unit_data['value']), byteorder='little'),
-        resource=int(resource_data['value']).to_bytes(
-            len(resource_data['value']), byteorder='little'))
+        asset=int(asset_data['value']).to_bytes(
+            len(asset_data['value']), byteorder='little'))
 
 
 def __create_utxq(ingest):
     """Create a utxq object"""
     operation, quantity, request = ingest
     return (operation, request, UTXQ(
-        matched=False,
         plus=public_key(request['plus']).encode(),
         minus=public_key(request['minus']).encode(),
-        quantity=__create_quantity(request['quantity']['value'], quantity)))
+        quantity=__create_quantity(request['quantity']['value'], quantity),
+        operation=operation))
 
 
 def __create_initiate_payload(ingest):
     """Create the utxq payload"""
     operation, request, data = ingest
-    utxq_addr = _utxq_addrs.match2_initiate_unmatched(
-        _utxq_addrs.dimension, operation, str(uuid.uuid4))
     encrypted = binascii.hexlify(
         STATE_CRYPTO.encrypt_from(
             data.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
-    return (operation, request['plus'], MatchEvent(
+    return (request['plus'], MatchPayload(
         udata=encrypted,
-        ukey=utxq_addr,
-        action=_ACTION_MAP[operation]))
+        ukey=utxq_addresser.utxq_unmatched(operation, str(uuid.uuid4)),
+        type=MatchPayload.UTXQ))
 
 
 def __create_initiate_inputs_outputs(ingest):
     """Create utxq address (state) authorizations"""
-    operation, signer, payload = ingest
+    signer, payload = ingest
     inputs = []
     outputs = [payload.ukey]
     return (
-        signer, _utxq_addrs, {"inputs": inputs, "outputs": outputs}, payload)
+        signer,
+        utxq_addresser,
+        {"inputs": inputs, "outputs": outputs},
+        payload)
 
 
 def __create_mtxq(ingest):
     """Create the mtxq object"""
     operation, qassets, data = ingest
     utxq, uaddr, quantity, numerator, denominator, prf_pair = qassets
-    # mtxq = MTXQ()
-    utxq.matched = True
-    return (operation, utxq, uaddr, prf_pair, data, MTXQ(
+    matched_uaddr = mtxq_addresser.set_utxq_matched(uaddr)
+    return (operation, utxq, matched_uaddr, prf_pair, data, MTXQ(
         plus=public_key(data['plus']).encode(),
         minus=public_key(data['minus']).encode(),
         quantity=__create_quantity(data['quantity']['value'], quantity),
@@ -225,12 +208,12 @@ def __create_mtxq(ingest):
                 data['ratio']['numerator']['value'], numerator),
             denominator=__create_quantity(
                 data['ratio']['denominator']['value'], denominator)),
-        utxq_addr=_mtxq_addrs.set_utxq_matched(uaddr).encode()))
+        utxq_addr=matched_uaddr.encode()))
 
 
 def __create_reciprocate_payload(ingest):
     """Create the mtxq payload"""
-    operation, utxq, uaddr, prf_pair, request, payload = ingest
+    operation, utxq, matched_uaddr, prf_pair, request, payload = ingest
     proof, pairing = prf_pair
     e_utxq = binascii.hexlify(
         STATE_CRYPTO.encrypt_from(
@@ -242,11 +225,11 @@ def __create_reciprocate_payload(ingest):
             payload.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
-    return (operation, uaddr, request['plus'], MatchEvent(
-        action=_ACTION_MAP[operation],
-        ukey=_mtxq_addrs.set_utxq_matched(uaddr),
-        mkey=_mtxq_addrs.txq_item(
-            _mtxq_addrs.dimension, operation, str(uuid.uuid4)),
+    return (request['plus'], MatchPayload(
+        type=MatchPayload.UTXQ,
+        ukey=matched_uaddr,
+        mkey=mtxq_addresser.txq_item(
+            mtxq_addresser.dimension, operation, str(uuid.uuid4)),
         mdata=e_mtxq,
         udata=e_utxq,
         pairings=pairing.encode(),
@@ -255,11 +238,14 @@ def __create_reciprocate_payload(ingest):
 
 def __create_reciprocate_inputs_outputs(ingest):
     """Create mtxq address (state) authorizations"""
-    operation, uaddr, signer, payload = ingest
-    inputs = [uaddr, payload.ukey]
+    signer, payload = ingest
+    inputs = [payload.ukey]
     outputs = [payload.ukey, payload.mkey]
     return (
-        signer, _mtxq_addrs, {"inputs": inputs, "outputs": outputs}, payload)
+        signer,
+        mtxq_addresser,
+        {"inputs": inputs, "outputs": outputs},
+        payload)
 
 
 def create_utxq(operation, request):

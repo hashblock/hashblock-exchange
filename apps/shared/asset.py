@@ -30,7 +30,8 @@ from modules.hashblock_zksnark import prime_gen
 from modules.address import Address
 from modules.config import valid_signer
 from modules.decode import (
-    decode_asset_unit_list, decode_proposals)
+    asset_addresser, unit_addresser,
+    decode_unit_list, decode_asset_list, decode_proposals)
 
 from protobuf.asset_pb2 import (
     AssetPayload, AssetProposal, AssetVote, Asset)
@@ -45,8 +46,8 @@ VOTE_SET = {'accept', 'reject', 'rescind'}
 VOTE_ITEMS = ['rescind', 'accept', 'reject']
 
 
-ASSET_ADDRESSER = Address.asset_addresser()
-UNIT_ADDRESSER = Address.unit_addresser()
+ASSET_ADDRESSER = asset_addresser
+UNIT_ADDRESSER = unit_addresser
 
 
 def __get_prime():
@@ -80,26 +81,34 @@ def __validate_element(key_set, data, gen_prime=False):
         pass
 
 
-def __validate_proposal(addr, key_set, data):
+def __validate_proposal(addresser, key_set, data, listFN):
     """Validate the proposal being submitted"""
     prime_id = __validate_element(key_set, data, True)
-    target_address = addr.element_address(
+    target_address = addresser.element_address(
         data['system'], data['key'], prime_id)
     __fail_if_exists(
         target_address,
-        decode_asset_unit_list(addr.family_ns_hash),
+        listFN(),
         prime_id)
     return target_address
 
 
 def __validate_asset_proposal(data, ignoreAddress=False):
     """Vaidate an asset proposal"""
-    return __validate_proposal(ASSET_ADDRESSER, ASSET_KEY_SET, data)
+    return __validate_proposal(
+        ASSET_ADDRESSER,
+        ASSET_KEY_SET,
+        data,
+        decode_asset_list)
 
 
 def __validate_unit_proposal(data, ignoreAddress=False):
     """Validate a unit proposal"""
-    return __validate_proposal(UNIT_ADDRESSER, UNIT_KEY_SET, data)
+    return __validate_proposal(
+        UNIT_ADDRESSER,
+        UNIT_KEY_SET,
+        data,
+        decode_unit_list)
 
 
 def __validate_vote(addr, data, ignoreAddress=False):

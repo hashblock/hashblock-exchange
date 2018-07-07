@@ -31,7 +31,7 @@ load_hashblock_config()
 class MatchTransactionHandler(TransactionHandler):
 
     def __init__(self):
-        self._addresser = Address(Address.FAMILY_MATCH, ['0.2.0'])
+        self._addresser = Address.match_utxq_addresser()
 
     @property
     def addresser(self):
@@ -39,15 +39,15 @@ class MatchTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):
-        return self.addresser.namespace
+        return self.addresser.family_ns_name
 
     @property
     def family_versions(self):
-        return self.addresser.version
+        return self.addresser.family_versions
 
     @property
     def namespaces(self):
-        return [self.addresser.ns_family]
+        return [self.addresser.family_ns_hash]
 
     def apply(self, transaction, context):
         """match-tp transaction handling entry point"""

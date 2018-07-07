@@ -24,11 +24,11 @@ message Quantity {
     //  Quantity amount? - Fixed width integer
 	bytes value = 1;
 
-    //  Prime # associated to unit
+    //  Prime # associated to unit of measure
 	bytes unit = 2;
 
-    //  Prime # associated to resource
-	bytes resource = 3;
+    //  Prime # associated to asset
+	bytes asset = 3;
 }
 
 // Quantity ratio data for matching equation
@@ -49,8 +49,8 @@ message UTXQ {
     bytes minus = 2;
     //  Transaction quantity structure
     Quantity quantity = 3;
-    //  State flag for reciprocate validity 0.1.0 only
-    bool matched = 4;
+    //  User configured UTXQ verb
+    string operation = 4;
 }
 
 //  Reciprocating data elements
@@ -70,54 +70,38 @@ message MTXQ {
     //  For 0.2.0 this contains the address (same as ukey)
     //  that refers to the matched initiate
     bytes utxq_addr = 6;
+    //  User configured MTXQ verb
+    string operation = 7;
 }
 
-message MatchEvent {
-    enum Action {
-        UTXQ_ASK = 0;
-        MTXQ_TELL = 1;
-        UTXQ_OFFER = 2;
-        MTXQ_ACCEPT = 3;
-        UTXQ_COMMITMENT = 4;
-        MTXQ_OBLIGATION = 5;
-        UTXQ_GIVE = 6;
-        MTXQ_TAKE = 7;
+message MatchPayload {
+    enum Type {
+        UTXQ = 0;
+        MTXQ = 1;
     }
 
-    //  See enum above
-    Action action = 1;
+    //  Transaction type
+    Type type = 1;
 
-    //  The initiate event key
-    //  If this is 0.1.0 and an initiate based txn then
-    //  this is the old address and the data is serialized protobuf
-    //  If this is 0.2.0 and initiate based txn then
-    //  this is the new address scheme for unmatched initiate and the
-    //  data is an encrypted blob of UTXQ that should be stored at this address
-    //  If this is 0.2.0 and reciprocate based txn then
-    //  the auxdata below (new) is the encrypted block of matching UTXQ
+    //  The initiate address key
+    //  Data is in udata
     string ukey = 2;
 
-    //  The reciprocate event key
-    //  If this is 0.1.0 and an initiate based txn then
-    //  this is the old address and the data is serialized protobuf
-    //  If this is 0.2.0 and initiate based txn then
-    //  this is the new address scheme for unmatched initiate and the
-    //  data is an encrypted blob of MTXQ that should be stored at this address
+    //  The reciprocate address key
+    //  Data is in mdata
     string mkey = 3;
 
-    // The content of this payload (protobuffed or encrypted blob)
+    // The encrypted blob of the MTXQ
     bytes mdata = 4;
 
-    // New in 0.2.0: The encrypted blob of the matched UTXQ
-    // if we are processing MTXQ Actions
-    // This blob is set to merkle once verified
+    // The encrypted blob of the UTXQ
     bytes udata = 5;
 
-    // New in 0.2.0: The encrypted blob of the matched UTXQ
+    // The encrypted blob of the matched UTXQ
     // if we are processing MTXQ Actions
     bytes pairings = 6;
 
-    //  New in 0.2.0 and usable by 0.1.0 as well:
     //  This is the 'proof' to use in verifying matching equation
     bytes proof = 7;
 }
+

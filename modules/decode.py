@@ -43,19 +43,11 @@ from protobuf.asset_pb2 import AssetCandidates
 asset_addresser = Address.asset_addresser()
 unit_addresser = Address.unit_addresser()
 setting_addresser = Address.setting_addresser()
+utxq_addresser = Address.match_utxq_addresser()
+mtxq_addresser = Address.match_mtxq_addresser()
+
 
 STATE_CRYPTO = State()
-
-__revmachadd = {
-    Address._ask_hash: 'ask',
-    Address._tell_hash: 'tell',
-    Address._offer_hash: 'offer',
-    Address._accept_hash: 'accept',
-    Address._commitment_hash: 'commitment',
-    Address._obligation_hash: 'obligation',
-    Address._give_hash: 'give',
-    Address._take_hash: 'take'
-}
 
 
 def __get_leaf_data(address, partner_secret=None):
@@ -95,10 +87,9 @@ def __get_encrypted_list_data(address, partner_secret=None):
 
 
 @lru_cache(maxsize=128)
-def __resource_asset_cache(prime):
+def __asset_cache(prime):
     """Prime (value) lookup for resource asset"""
-    res = __get_list_data(
-        asset_addresser.asset_prefix(Address.DIMENSION_RESOURCE))
+    res = __get_list_data(asset_addresser.family_ns_hash)
     resource = None
     for entry in res['data']:
         er = Asset()
@@ -110,10 +101,9 @@ def __resource_asset_cache(prime):
 
 
 @lru_cache(maxsize=128)
-def __unit_asset_cache(prime):
+def __unit_cache(prime):
     """Prime (value) lookup for unit asset"""
-    res = __get_list_data(
-        asset_addresser.asset_prefix(Address.DIMENSION_UNIT))
+    res = __get_list_data(unit_addresser.family_ns_hash)
     unit = None
     for entry in res['data']:
         eu = Unit()
@@ -124,16 +114,16 @@ def __unit_asset_cache(prime):
     return unit
 
 
-def __resource_key_lookup(prime_value):
-    """Get key string of asset for type resource"""
-    return __resource_asset_cache(
+def __asset_key_lookup(prime_value):
+    """Get key string of asset"""
+    return __asset_cache(
         '0' + '{:x}'.
         format(int.from_bytes(prime_value, byteorder='little'))).key
 
 
 def __unit_key_lookup(prime_value):
-    """Get key string of asset for type unit-of-measure"""
-    return __unit_asset_cache(
+    """Get key string of unit-of-measure"""
+    return __unit_cache(
         '0' + '{:x}'.
         format(int.from_bytes(prime_value, byteorder='little'))).key
 
@@ -142,7 +132,7 @@ def __format_quantity(quantity):
     """Replaces primes with asset information"""
     magnitude = int.from_bytes(quantity.value, byteorder='little')
     unit = __unit_key_lookup(quantity.unit)
-    resource = __resource_key_lookup(quantity.resource)
+    resource = __asset_key_lookup(quantity.resource)
     return '{} {} of {}'.format(
         magnitude,
         unit,
@@ -246,6 +236,52 @@ def decode_unit(address):
     }
 
 
+def __filter_out_candidate_listing(address):
+    return [
+        x for x in __get_list_data(address)['data']
+        if x['address'][12:18] != Address._candidates_hash]
+
+
+def decode_asset_list():
+    """List of assets not including proposals"""
+    results = __filter_out_candidate_listing(asset_addresser.family_ns_hash)
+    data = []
+    for element in results:
+        asset = Asset()
+        asset.ParseFromString(element['data'])
+        data.append({
+            'link': element['address'],
+            'type': 'asset',
+            'system': asset.system,
+            'name': asset.key,
+            'value': asset.value
+        })
+    return {
+        'family': 'asset',
+        'data': data
+    }
+
+
+def decode_unit_list():
+    """List of assets not including proposals"""
+    results = __filter_out_candidate_listing(unit_addresser.family_ns_hash)
+    data = []
+    for element in results:
+        unit = Unit()
+        unit.ParseFromString(element['data'])
+        data.append({
+            'link': element['address'],
+            'type': 'unit',
+            'system': unit.system,
+            'name': unit.key,
+            'value': unit.value
+        })
+    return {
+        'family': 'unit',
+        'data': data
+    }
+
+
 def __decode_match(address, data):
     """Detail decode a unmatched or matched address"""
     def quantity_to_prime(quantity, rquant):
@@ -255,14 +291,13 @@ def __decode_match(address, data):
             rquant.unit, byteorder='little')
         quantity['resource'] = int.from_bytes(
             rquant.resource, byteorder='little')
-    operation = __revmachadd[address[18:24]]
     if address[12:18] == Address._utxq_hash:
         item = UTXQ()
-        dim = 'utxq'
+        mtype = 'utxq'
         deep = False
     else:
         item = MTXQ()
-        dim = 'mtxq'
+        mtype = 'mtxq'
         deep = True
     item.ParseFromString(data)
     match = MessageToDict(item)
@@ -281,8 +316,7 @@ def __decode_match(address, data):
             item.ratio.denominator)
     return {
         'family': 'match',
-        'dimension': dim,
-        'operation': operation,
+        'type': mtype,
         'data': match
     }
 
@@ -294,19 +328,19 @@ def get_utxq_obj_json(address, secret):
     return (utxq, __decode_match(address, utxq_obj))
 
 
-def decode_match_dimension(address, agreement):
+def decode_match_types(addresser, agreement):
     sec = agreement_secret(agreement)
-    results = __get_encrypted_list_data(address, sec)['data']
-    dim = 'utxq' if address[12:18] == Address._utxq_hash else 'mtxq'
+    results = __get_encrypted_list_data(
+        addresser.family_ns_hash, sec)['data']
     data = []
     for element in results:
         data.append(
             (
-                __revmachadd[element['address'][18:24]],
+                "filler",
                 element['address']))
     return {
         'family': 'match',
-        'dimension': dim,
+        'match_type': addresser.mtype,
         'data': data
     }
 
@@ -315,7 +349,7 @@ def decode_match_initiate_list(address, agreement):
     """Decorate initiates with text conversions"""
     sec = agreement_secret(agreement)
     results = __get_encrypted_list_data(address, sec)['data']
-    ops = __revmachadd[address[18:24]]
+    ops = "filler"
 
     data = []
     for element in results:
@@ -342,7 +376,7 @@ def decode_match_reciprocate_list(address, agreement):
     """Decorate reciprocates with text conversions"""
     sec = agreement_secret(agreement)
     results = __get_encrypted_list_data(address, sec)['data']
-    ops = __revmachadd[address[18:24]]
+    ops = "filler"
 
     data = []
     for element in results:
@@ -362,106 +396,3 @@ def decode_match_reciprocate_list(address, agreement):
         'operation': ops,
         'data': data
     }
-
-
-def __decode_asset_listing(address):
-    return [
-        x for x in __get_list_data(address)['data']
-        if x['address'][12:18] != Address._candidates_hash]
-
-
-def decode_asset_list():
-    """List of assets not including proposals"""
-    results = __decode_asset_listing(asset_addresser.family_ns_hash)
-    data = []
-    for element in results:
-        asset = Asset()
-        asset.ParseFromString(element['data'])
-        data.append({
-            'link': element['address'],
-            'type': 'asset',
-            'system': asset.system,
-            'name': asset.key,
-            'value': asset.value
-        })
-    return {
-        'family': 'asset',
-        'data': data
-    }
-
-
-def decode_unit_list():
-    """List of assets not including proposals"""
-    results = __decode_asset_listing(unit_addresser.family_ns_hash)
-    data = []
-    for element in results:
-        unit = Unit()
-        unit.ParseFromString(element['data'])
-        data.append({
-            'link': element['address'],
-            'type': 'unit',
-            'system': unit.system,
-            'name': unit.key,
-            'value': unit.value
-        })
-    return {
-        'family': 'unit',
-        'data': data
-    }
-
-
-def decode_asset_unit_list(address):
-    """List of assets not including proposals"""
-    results = __decode_asset_listing(address)
-    if address[12:14] == Address._unit_asset_hash:
-        asset = Unit()
-        atype = 'unit'
-    else:
-        asset = Asset()
-        atype = 'resource'
-    data = []
-    for element in results:
-        asset.ParseFromString(element['data'])
-        data.append({
-            'link': element['address'],
-            'system': asset.system,
-            'name': asset.key,
-            'value': asset.value
-        })
-    return {
-        'family': 'asset',
-        'dimension': atype,
-        'data': data
-    }
-
-
-_hash_map = {
-    Address._namespace_hash: {
-        Address._asset_hash: {
-            Address._candidates_hash:
-                [__get_leaf_data, decode_proposals],
-        },
-        Address._match_hash: {
-            Address._utxq_hash:
-                [__get_encrypted_leaf, __decode_match],
-            Address._mtxq_hash:
-                [__get_encrypted_leaf, __decode_match]
-        },
-        Address._setting_hash: {
-            Address._unit_hash:
-                [__get_leaf_data, decode_settings],
-            Address._resource_hash:
-                [__get_leaf_data, decode_settings]
-        }
-    }
-}
-
-
-def decode_from_leaf(address, partner_secret=None):
-    if address[6:12] == Address._asset_hash and \
-            address[12:18] != Address._candidates_hash:
-                f = __get_leaf_data
-                y = decode_asset
-    else:
-        f, y = _hash_map[address[:6]][address[6:12]][address[12:18]]
-    return y(address, f(address, partner_secret)['data'])
