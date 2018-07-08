@@ -238,13 +238,14 @@ def decode_unit(address):
 
 def __filter_out_candidate_listing(address):
     return [
-        x for x in __get_list_data(address)['data']
-        if x['address'][12:18] != Address._candidates_hash]
+        x for x in __get_list_data(address)['data']]
+    # if x['address'][12:18] != Address._candidates_hash
 
 
-def decode_asset_list():
+def decode_asset_list(address=None):
     """List of assets not including proposals"""
-    results = __filter_out_candidate_listing(asset_addresser.family_ns_hash)
+    targetadd = address if address else asset_addresser.family_ns_hash
+    results = __filter_out_candidate_listing(targetadd)
     data = []
     for element in results:
         asset = Asset()
@@ -262,9 +263,10 @@ def decode_asset_list():
     }
 
 
-def decode_unit_list():
+def decode_unit_list(address=None):
     """List of assets not including proposals"""
-    results = __filter_out_candidate_listing(unit_addresser.family_ns_hash)
+    targetadd = address if address else unit_addresser.family_ns_hash
+    results = __filter_out_candidate_listing(targetadd)
     data = []
     for element in results:
         unit = Unit()
@@ -289,9 +291,9 @@ def __decode_match(address, data):
             int.from_bytes(rquant.value, byteorder='little')
         quantity['unit'] = int.from_bytes(
             rquant.unit, byteorder='little')
-        quantity['resource'] = int.from_bytes(
-            rquant.resource, byteorder='little')
-    if address[12:18] == Address._utxq_hash:
+        quantity['asset'] = int.from_bytes(
+            rquant.asset, byteorder='little')
+    if utxq_addresser.is_mtype_prefix(address):
         item = UTXQ()
         mtype = 'utxq'
         deep = False
@@ -307,7 +309,7 @@ def __decode_match(address, data):
     if deep:
         # Get address of utxq
         match["utxqAddr"] = item.utxq_addr.decode()
-        match["matched"] = asset_addresser.is_utxq_matched(match["utxqAddr"])
+        match["matched"] = utxq_addresser.is_matched(match["utxqAddr"])
         quantity_to_prime(
             match['ratio']['numerator'],
             item.ratio.numerator)
@@ -361,7 +363,7 @@ def decode_match_initiate_list(address, agreement):
                 "plus": key_owner(utxq.plus.decode("utf-8")),
                 "minus": key_owner(utxq.minus.decode("utf-8")),
                 "text": __format_quantity(utxq.quantity),
-                "matched": asset_addresser.is_utxq_matched(ladd)
+                "matched": utxq_addresser.is_matched(ladd)
             },
             ladd))
     return {

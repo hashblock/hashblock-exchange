@@ -27,18 +27,20 @@ from shared.transactions import (
 from modules.hashblock_zksnark import zksnark_genproof
 from modules.config import (
     public_key, private_key,
-    KEYS_PATH,
+    keys_path,
     valid_partnership, partnership_secret)
 from modules.decode import (
     asset_addresser,
     unit_addresser,
     utxq_addresser,
     mtxq_addresser,
+    decode_unit_list,
     decode_asset_list,
     STATE_CRYPTO,
     get_utxq_obj_json)
 from modules.exceptions import (
-    AuthException, RestException, DataException, AssetNotExistException)
+    AuthException, RestException, DataException,
+    AssetNotExistException, UnitNotExistException)
 from protobuf.match_pb2 import (
     MatchPayload, UTXQ, MTXQ, Quantity, Ratio)
 
@@ -57,6 +59,9 @@ def __validate_references(value, unit, asset):
     unit_result = None
     asset_result = None
     int(value)
+
+    print("Validating references for asset {} and unit {}".format(asset, unit))
+
     unit_add = unit_addresser.address_syskey(unit['system'], unit['key'])
     asset_add = asset_addresser.address_syskey(asset['system'], asset['key'])
 
@@ -69,19 +74,24 @@ def __validate_references(value, unit, asset):
                 break
         return result
 
-    unit_result = in_list(unit, decode_asset_list(unit_add))
+    unit_result = in_list(unit, decode_unit_list(unit_add))
+    if not unit_result:
+        raise UnitNotExistException(
+            "Unit {} does not exist".format(unit_add))
     asset_result = in_list(asset, decode_asset_list(asset_add))
-
-    if not unit_result or not asset_result:
-        raise AssetNotExistException("Asset does not exist")
+    if not asset_result:
+        raise AssetNotExistException(
+            "Asset {} does not exist".format(asset_add))
 
     return (unit_result, asset_result)
 
 
 def __get_and_validate_utxq(address, secret):
     """Check that the utxq exists to recipricate on"""
-    print("Address to check utxq {}".format(address[24]))
-    if address[24] == '1':
+    print("Address to check utxq {}".format(address))
+    if utxq_addresser.is_matched(address) or \
+            utxq_addresser.is_matched(
+                mtxq_addresser.set_utxq_matched(address)):
         raise DataException(
             'Attempt to match on already matched transaction')
     try:
@@ -137,7 +147,7 @@ def __validate_mtxq(request):
     data_tuple.append(denominator_assets[1]['value'])
     data_tuple.append(quantity_assets[1]['value'])
     data_str = ",".join(data_tuple)
-    prf_pair = zksnark_genproof(KEYS_PATH, data_str)
+    prf_pair = zksnark_genproof(keys_path(), data_str)
     return (
         utxq,
         request["utxq_address"],
@@ -228,8 +238,7 @@ def __create_reciprocate_payload(ingest):
     return (request['plus'], MatchPayload(
         type=MatchPayload.UTXQ,
         ukey=matched_uaddr,
-        mkey=mtxq_addresser.txq_item(
-            mtxq_addresser.dimension, operation, str(uuid.uuid4)),
+        mkey=mtxq_addresser.mtxq_address(operation, str(uuid.uuid4)),
         mdata=e_mtxq,
         udata=e_utxq,
         pairings=pairing.encode(),
@@ -248,8 +257,10 @@ def __create_reciprocate_inputs_outputs(ingest):
         payload)
 
 
-def create_utxq(operation, request):
+def create_utxq(request):
     """Create utxq transaction"""
+    operation = request['operation']
+    print("Processing UTXQ create with operation => {}".format(operation))
     quant = __validate_utxq(request)
     utxq_build = compose_builder(
         submit_single_txn, create_transaction,
@@ -258,9 +269,10 @@ def create_utxq(operation, request):
     utxq_build((operation, quant, request))
 
 
-def create_mtxq(operation, request):
+def create_mtxq(request):
     """Create mtxq transaction"""
     qnd = __validate_mtxq(request)
+    operation = request['operation']
     mtxq_build = compose_builder(
         submit_single_txn, create_transaction,
         __create_reciprocate_inputs_outputs, __create_reciprocate_payload,

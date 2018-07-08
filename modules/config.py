@@ -38,6 +38,10 @@ UNKNOWN_SIGNER = '__unknown_key_signer_value__'
 UNKNOWN_SUBMITTER = '__unknown_key_submitter_value__'
 
 
+def keys_path():
+    return KEYS_PATH
+
+
 def sawtooth_rest_host():
     """Retrieve sawtooth rest-api url"""
     return REST_CONFIG['rest']['hosts']['swrest-connect']

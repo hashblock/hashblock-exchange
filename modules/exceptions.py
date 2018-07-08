@@ -35,6 +35,10 @@ class AssetNotExistException(Exception):
     pass
 
 
+class UnitNotExistException(Exception):
+    pass
+
+
 class AuthException(Exception):
     pass
 

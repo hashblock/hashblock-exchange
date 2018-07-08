@@ -95,43 +95,6 @@ class Address(ABC):
         """Create a suitable hash from value"""
         return hashlib.sha512(value.encode("utf-8")).hexdigest()
 
-    # E.g. hashblock.match.utxq
-    # 0-2 namespace
-    # 3-5 family
-    # 6-8 mtype
-    def txq_dimension(self, mtype):
-        return self.ns_family \
-            + self.hashup(mtype)[0:6]
-
-    # E.g. hashblock.match.utxq.ask
-    # 0-2 namespace
-    # 3-5 family
-    # 6-8 mtype
-    # 9-11 ops
-    def txq_list(self, mtype, ops):
-        return self.txq_dimension(mtype) \
-            + self.hashup(ops)[0:6]
-
-    # E.g. hashblock.match.utxq.ask.ident
-    # 0-2 namespace
-    # 3-5 family
-    # 6-8 mtype
-    # 9-11 ops
-    # 12-34 id
-    def txq_item(self, mtype, ops, ident):
-        """Create a specific match address based on mtype, operation and id
-        """
-        return self.txq_list(mtype, ops) \
-            + self.hashup(ident)[0:46]
-
-    def set_utxq_unmatched(self, address):
-        laddr = list(address)
-        laddr[24] = '0'
-        return ''.join(laddr)
-
-    def is_utxq_matched(self, address):
-        return True if address[24] == '1' else False
-
     @property
     @abstractmethod
     def family(self):
@@ -302,6 +265,9 @@ class MatchAddress(BaseAddress):
     def mtype_address(self):
         return self._mtype_address
 
+    def is_mtype_prefix(self, address):
+        return address[0:18] == self.mtype_address
+
     def operation_address(self, operation):
         return self.mtype_address + self.hashup(operation)[0:6]
 
@@ -315,11 +281,18 @@ class MatchUTXQAddress(MatchAddress):
         return self.operation_address(operation) \
             + '0' + self.hashup(ident)[0:45]
 
+    def is_matched(self, address):
+        return True if address[24] == '1' else False
+
 
 class MatchMTXQAddress(MatchAddress):
     """MatchMTXQAddress is concrete for MTXQ address support"""
     def __init__(self):
         super().__init__(self.MATCH_TYPE_MTXQ)
+
+    def mtxq_address(self, operation, ident):
+        return self.operation_address(operation) \
+            + '0' + self.hashup(ident)[0:45]
 
     def set_utxq_matched(self, address):
         laddr = list(address)

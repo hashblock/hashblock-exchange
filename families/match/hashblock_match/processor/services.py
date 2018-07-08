@@ -89,14 +89,14 @@ class BaseService(Service):
         return self._payload
 
     def process(self, initiateFn, reciprocateFn):
-        if self.payload.type == MatchPayload.Type.UTXQ:
+        if self.payload.type == MatchPayload.UTXQ:
             initiateFn()
-        elif self.payload.type == MatchPayload.Type.MTXQ:
+        elif self.payload.type == MatchPayload.MTXQ:
             reciprocateFn()
         else:
             raise InvalidTransaction(
                 "Payload 'type' must be one of: {} or {}".
-                format([MatchPayload.Type.UTXQ, MatchPayload.Type.MTXQ]))
+                format([MatchPayload.UTXQ, MatchPayload.MTXQ]))
 
 
 class V020apply(BaseService):

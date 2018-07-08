@@ -418,7 +418,7 @@ def create_unit_genesis(signer, unit_list):
     return txns
 
 
-def create_asset_batch(json_file):
+def create_asset_unit_batch(json_file):
     """Consume a batch of json asset entities"""
 
     # Proposal boilerplates
@@ -426,7 +426,7 @@ def create_asset_batch(json_file):
         create_transaction,
         __create_proposal_inputs_outputs, __create_unit_proposal,
         __create_unit)
-    propose_resource = compose_builder(
+    propose_asset = compose_builder(
         create_transaction,
         __create_proposal_inputs_outputs, __create_asset_proposal,
         __create_asset)
@@ -453,16 +453,21 @@ def create_asset_batch(json_file):
         asset_id = asset.pop('id')
         if asset_id in id_track:
             raise DataException("Duplicate proposal.id found")
-        dimension = asset.pop('dimension')
+        dimension = asset.pop('type')
         accum.append(dimension)
-        proposal_id = __validate_proposal(dimension, asset)
+        if dimension == 'asset':
+            proposal_id = __validate_asset_proposal(asset)
+            fn = propose_asset
+            addy = asset_addresser
+        else:
+            proposal_id = __validate_unit_proposal(asset)
+            fn = propose_unit
+            addy = unit_addresser
         accum.append(proposal_id)
-        fn = propose_unit \
-            if dimension == Address.DIMENSION_UNIT else propose_resource
         _, txq = fn((
             asset['signer'],
             proposal_id,
-            Address(Address.FAMILY_ASSET, "0.2.0", dimension),
+            addy,
             asset))
         prop_txns.append(txq)
         accum.append(txq.header_signature)
@@ -487,17 +492,30 @@ def create_asset_batch(json_file):
             voteSigner = vote['signer']
         dimension, prop_id, txq_id = id_track[vote.pop('proposal_id')]
         vote['proposal_id'] = prop_id
-        __validate_vote(dimension, vote, True)
         asset_vote = compose_builder(
             create_transaction,
             partial(create_dependency, dep=txq_id),
             __create_vote_inputs_outputs, __create_asset_vote_payload,
             __create_asset_vote)
-        _, txq = asset_vote((
+        unit_vote = compose_builder(
+            create_transaction,
+            partial(create_dependency, dep=txq_id),
+            __create_vote_inputs_outputs, __create_unit_vote_payload,
+            __create_unit_vote)
+        if dimension == 'asset':
+            __validate_asset_vote(vote, True)
+            fn = asset_vote
+            addy = asset_addresser
+        else:
+            __validate_unit_vote(vote, True)
+            fn = unit_vote
+            addy = unit_addresser
+
+        _, txq = fn((
             vote['signer'],
-            ASSET_ADDRESSER,
+            addy,
             vote))
         vote_txns.append(txq)
 
-    # Submit proposals
+    # Submit votes
     submit_batch([create_batch((voteSigner, vote_txns))])

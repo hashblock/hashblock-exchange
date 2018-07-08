@@ -3,35 +3,35 @@
 		{
 			"signer": "turing",
 			"id": "1",
-			"dimension":"unit",
+			"type":"unit",
 			"system": "purchasing",
 			"key": "bag"
 		},
 		{
 			"signer": "turing",
 			"id": "2",
-			"dimension":"resource",
+			"type":"asset",
 			"system": "food",
 			"key": "peanuts"
 		},
 		{
 			"signer": "turing",
 			"id": "3",
-			"dimension":"unit",
+			"type":"asset",
 			"system": "imperial",
 			"key": "$"
 		},
 		{
 			"signer": "turing",
 			"id": "4",
-			"dimension":"unit",
+			"type":"unit",
 			"system": "purchasing",
 			"key": "bale"
 		},
 		{
 			"signer": "turing",
 			"id": "5",
-			"dimension":"resource",
+			"type":"asset",
 			"system": "food",
 			"key": "hay"
 		}

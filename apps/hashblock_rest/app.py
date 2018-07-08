@@ -23,16 +23,14 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from modules.exceptions import DataException, AuthException, NotPrimeException
-from modules.config import load_hashblock_config, agreement_secret
+from modules.config import load_hashblock_config
 from modules.address import Address
 from modules.decode import (
-    setting_addresser,
     utxq_addresser,
     mtxq_addresser,
     decode_asset, decode_unit,
     decode_asset_list, decode_unit_list,
-    decode_proposals, decode_settings, decode_match_types,
-    decode_match_initiate_list, decode_match_reciprocate_list)
+    decode_proposals, decode_settings, decode_match_types)
 import shared.asset as asset
 import shared.match as match
 
@@ -123,38 +121,43 @@ asset_vote_fields = ns.model('asset-vote', {
     'signer': fields.String(
         required=True, description='The authorized voter')})
 
-asset_propose_upload_parser = ns.parser()
-asset_propose_upload_parser.add_argument(
+batch_propose_upload_parser = ns.parser()
+batch_propose_upload_parser.add_argument(
     'file', location='files',
     type=FileStorage, required=True)
 
 # Entry points
 
+#
+#   Batch load management
+#
 
-# @ns.route('/asset-seed')
-# class ABFIngest(Resource):
-#     @ns.expect(asset_propose_upload_parser)
-#     def post(self):
-#         """Batch process asset propose/vote seed data onto chain"""
-#         args = asset_propose_upload_parser.parse_args()
-#         in_name = args['file'].filename
-#         if not allowed_file(in_name):
-#             return {
-#                 "DataException":
-#                 "{} unsupported file type".format(in_name)}, 400
-#         try:
-#             destination = application.config.get('UPLOAD_FOLDER')
-#             filename = '%s%s' % (destination, secure_filename(in_name))
-#             args['file'].save(filename)
-#             args['file'].close()
-#             asset.create_asset_batch(filename)
-#         except (DataException, ValueError) as e:
-#             return {"DataException": str(e)}, 400
-#         return {"data": "TBD"}, 200
+
+@ns.route('/batch-seed')
+class BatchIngest(Resource):
+    @ns.expect(batch_propose_upload_parser)
+    def post(self):
+        """Batch process asset propose/vote seed data onto chain"""
+        args = batch_propose_upload_parser.parse_args()
+        in_name = args['file'].filename
+        if not allowed_file(in_name):
+            return {
+                "DataException":
+                "{} unsupported file type".format(in_name)}, 400
+        try:
+            destination = application.config.get('UPLOAD_FOLDER')
+            filename = '%s%s' % (destination, secure_filename(in_name))
+            args['file'].save(filename)
+            args['file'].close()
+            asset.create_asset_unit_batch(filename)
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
+        return {"data": "TBD"}, 200
 
 #
 #   Asset management
 #
+
 
 @ns.route('/asset-settings')
 class ASSetDecode(Resource):
@@ -311,6 +314,39 @@ class AU_Decode(Resource):
                 "address": "not a valid address",
                 "data": ""}, 400
 
+#
+# Match data model
+#
+
+
+match_fields = ns.model('quantity detail', {
+    'system': fields.String(required=True),
+    'key': fields.String(required=True),
+})
+
+quantity_fields = ns.model('quantity_list', {
+    'value': fields.String(required=True),
+    'unit': fields.Nested(match_fields, required=True),
+    'asset': fields.Nested(match_fields, required=True)
+})
+
+ratio_fields = ns.model('ratio', {
+    'numerator': fields.Nested(quantity_fields, required=True),
+    'denominator': fields.Nested(quantity_fields, required=True)
+})
+
+utxq_fields = ns.model('utxq_fields', {
+    'operation': fields.String(required=True),
+    'plus': fields.String(required=True),
+    'minus': fields.String(required=True),
+    'quantity': fields.Nested(quantity_fields, required=True)
+})
+
+mtxq_fields = ns.inherit("mtxq_fields", utxq_fields, {
+    'ratio': fields.Nested(ratio_fields, required=True),
+    'utxq_address': fields.String(required=True)
+})
+
 
 #
 #   UTXQ management
@@ -328,6 +364,17 @@ class UTXQDecode(Resource):
         return result, 200
 
 
+@ns.route('/utxq-create')
+class UTXQ_Ingest(Resource):
+    @ns.expect(utxq_fields)
+    def post(self):
+        # operation = request.path.split('/')[-1]
+        # print("Creating {} transaction".format(operation))
+        # match.create_utxq(operation, request.json)
+        match.create_utxq(request.json)
+        return {"status": "OK"}, 200
+
+
 #
 #   MTXQ management
 #
@@ -343,138 +390,17 @@ class MTXQDecode(Resource):
         # result['data'] = new_data
         return result, 200
 
-# @ns.route('/asks/<string:agreement>', endpoint='utxq_asks')
-# @ns.route('/offers/<string:agreement>', endpoint='utxq_offers')
-# @ns.route('/commitments/<string:agreement>', endpoint='utxq_commitments')
-# @ns.route('/gives/<string:agreement>', endpoint='utxq_gives')
-# @ns.param('agreement', 'The trading agreement')
-# class UTXQS_Decode(Resource):
-#     def get(self, agreement):
-#         """Returns all match requests by type"""
-#         tail = request.path.split('/')[-2]
-#         ref = tail[:-1]
-#         indr = 'utxq_' + ref
-#         result = decode_match_initiate_list(
-#             _utxq_address.txq_list(_utxq_address.dimension, ref),
-#             agreement)
-#         # new_data = matchtermlinks(result['data'], indr)
-#         # result['data'] = new_data
-#         return result, 200
 
-
-# @ns.route('/ask/<string:agreement>/<string:address>', endpoint='utxq_ask')
-# @ns.route('/offer/<string:agreement>/<string:address>', endpoint='utxq_offer')
-# @ns.route('/commitment/<string:agreement>/<string:address>', endpoint='utxq_commitment')
-# @ns.route('/give/<string:agreement>/<string:address>', endpoint='utxq_give')
-# @ns.param('agreement', 'The trading agreement')
-# @ns.param('address', 'The address to decode')
-# class UTXQ_Decode(Resource):
-#     def get(self, agreement, address):
-#         """Return match request detail"""
-
-#         if Address.valid_leaf_address(address):
-#             return decode_from_leaf(
-#                 address,
-#                 agreement_secret(agreement)), 200
-#         else:
-#             return {
-#                 "address": "not a valid address",
-#                 "data": ""}, 400
-
-
-match_asset_fields = ns.model('asset detail', {
-    'system': fields.String(required=True),
-    'key': fields.String(required=True),
-})
-
-quantity_fields = ns.model('quantity_list', {
-    'value': fields.String(required=True),
-    'unit': fields.Nested(match_asset_fields, required=True),
-    'resource': fields.Nested(match_asset_fields, required=True)
-})
-
-ratio_fields = ns.model('ratio', {
-    'numerator': fields.Nested(quantity_fields, required=True),
-    'denominator': fields.Nested(quantity_fields, required=True)
-})
-
-utxq_fields = ns.model('utxq_fields', {
-    'plus': fields.String(required=True),
-    'minus': fields.String(required=True),
-    'quantity': fields.Nested(quantity_fields, required=True)
-})
-
-mtxq_fields = ns.inherit("mtxq_fields", utxq_fields, {
-    'ratio': fields.Nested(ratio_fields, required=True),
-    'utxq_address': fields.String(required=True)
-})
-
-
-# @ns.route('/ask')
-# @ns.route('/offer')
-# @ns.route('/commitment')
-# @ns.route('/give')
-# class UTXQ_Ingest(Resource):
-#     @ns.expect(utxq_fields)
-#     def post(self):
-#         operation = request.path.split('/')[-1]
-#         print("Creating {} transaction".format(operation))
-#         match.create_utxq(operation, request.json)
-#         return {"status": "OK"}, 200
-
-
-# @ns.route('/tells/<string:agreement>', endpoint='mtxq_tells')
-# @ns.route('/accepts/<string:agreement>', endpoint='mtxq_accepts')
-# @ns.route('/obligations/<string:agreement>', endpoint='mtxq_obligations')
-# @ns.route('/takes/<string:agreement>', endpoint='mtxq_takes')
-# @ns.param('agreement', 'The trading agreement')
-# class MTXQS_Decode(Resource):
-#     def get(self, agreement):
-#         """Returns all match response by type"""
-#         tail = request.path.split('/')[-2]
-#         ref = tail[:-1]
-#         indr = 'mtxq_' + ref
-#         result = decode_match_reciprocate_list(
-#             _mtxq_address.txq_list(_mtxq_address.dimension, ref),
-#             agreement)
-#         # new_data = matchtermlinks(result['data'], indr)
-#         # result['data'] = new_data
-#         return result, 200
-
-
-# @ns.route('/tell/<string:agreement>/<string:address>', endpoint='mtxq_tell')
-# @ns.route('/accept/<string:agreement>/<string:address>', endpoint='mtxq_accept')
-# @ns.route('/obligation/<string:agreement>/<string:address>', endpoint='mtxq_obligation')
-# @ns.route('/take/<string:agreement>/<string:address>', endpoint='mtxq_take')
-# @ns.param('agreement', 'The trading agreement')
-# @ns.param('address', 'The address to decode')
-# class MTXQ_Decode(Resource):
-#     def get(self, agreement, address):
-#         """Return match response detail"""
-#         if Address.valid_leaf_address(address):
-#             return decode_from_leaf(
-#                 address,
-#                 agreement_secret(agreement)), 200
-#         else:
-#             return {
-#                 "address": "not a valid address",
-#                 "data": ""}, 400
-
-
-# @ns.route('/tell')
-# @ns.route('/accept')
-# @ns.route('/obligation')
-# @ns.route('/take')
-# class MTXQ_Ingest(Resource):
-#     @ns.expect(mtxq_fields)
-#     def post(self):
-#         operation = request.path.split('/')[-1]
-#         print("Creating {} transaction".format(operation))
-#         try:
-#             match.create_mtxq(operation, request.json)
-#             return {"status": "OK"}, 200
-#         except (DataException, ValueError) as e:
-#             return {"DataException": str(e)}, 400
+@ns.route('/mtxq-create')
+class MTXQ_Ingest(Resource):
+    @ns.expect(mtxq_fields)
+    def post(self):
+        """Create a matching transaction"""
+        try:
+            match.create_mtxq(request.json)
+            return {"status": "OK"}, 200
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
 
 
 if __name__ == '__main__':
