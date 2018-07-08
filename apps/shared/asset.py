@@ -27,7 +27,6 @@ from shared.transactions import (
 
 from modules.exceptions import DataException
 from modules.hashblock_zksnark import prime_gen
-from modules.address import Address
 from modules.config import valid_signer
 from modules.decode import (
     asset_addresser, unit_addresser,
@@ -88,7 +87,7 @@ def __validate_proposal(addresser, key_set, data, listFN):
         data['system'], data['key'], prime_id)
     __fail_if_exists(
         target_address,
-        listFN(),
+        listFN(target_address),
         prime_id)
     return target_address
 

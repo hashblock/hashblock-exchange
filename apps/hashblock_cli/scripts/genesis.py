@@ -102,9 +102,9 @@ def do_genesis(args, config):
 
     txns.extend(create_unit_genesis(args.signer, std_units))
 
-    batch = create_batch_list([create_batch((args.signer, txns))])
-
     # # Combine setting txns with assets txns in batchlist
+
+    batch = create_batch_list([create_batch((args.signer, txns))])
 
     if args.output:
         try:

@@ -38,8 +38,7 @@ def compose_builder(*functions):
 
 
 def create_transaction(ingest):
-    """Creates and signs a hashblock_asset transaction with with a payload.
-    """
+    """Creates and signs a hashblock transaction with a payload."""
     signatore, address, permissions, payload = ingest
     serialized_payload = payload.SerializeToString()
     submitter = valid_submitter(signatore)
@@ -69,8 +68,9 @@ def create_batch(payload):
     Args:
         payload (tuple of):
             signatore (string): name for signing and cryptographic signer
-        transactions (list of `Transaction`): The transactions to add to the
-            batch.
+
+            transactions (list of `Transaction`): The transactions to add
+            to the batch.
 
     Returns:
         `Batch`: The constructed and signed batch.

@@ -236,16 +236,10 @@ def decode_unit(address):
     }
 
 
-def __filter_out_candidate_listing(address):
-    return [
-        x for x in __get_list_data(address)['data']]
-    # if x['address'][12:18] != Address._candidates_hash
-
-
 def decode_asset_list(address=None):
     """List of assets not including proposals"""
     targetadd = address if address else asset_addresser.family_ns_hash
-    results = __filter_out_candidate_listing(targetadd)
+    results = __get_list_data(targetadd)['data']
     data = []
     for element in results:
         asset = Asset()
@@ -266,7 +260,7 @@ def decode_asset_list(address=None):
 def decode_unit_list(address=None):
     """List of assets not including proposals"""
     targetadd = address if address else unit_addresser.family_ns_hash
-    results = __filter_out_candidate_listing(targetadd)
+    results = __get_list_data(targetadd)['data']
     data = []
     for element in results:
         unit = Unit()
@@ -332,14 +326,10 @@ def get_utxq_obj_json(address, secret):
 
 def decode_match_types(addresser, agreement):
     sec = agreement_secret(agreement)
-    results = __get_encrypted_list_data(
-        addresser.family_ns_hash, sec)['data']
+    results = __get_encrypted_list_data(addresser.family_ns_hash, sec)['data']
     data = []
     for element in results:
-        data.append(
-            (
-                "filler",
-                element['address']))
+        data.append((element['address']))
     return {
         'family': 'match',
         'match_type': addresser.mtype,
