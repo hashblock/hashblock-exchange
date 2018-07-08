@@ -48,6 +48,21 @@ services:
      \""
     stop_signal: SIGKILL
 
+  unit-processor:
+    image: hashblock/hashblock-unit-tp:latest
+    container_name: hashblock-unit-tp-latest
+    restart: always
+    environment:
+      - PYTHONPATH=/project/hashblock-exchange
+    depends_on:
+      - setting-processor
+    command: "bash -c \"\
+       sleep 1 && \
+       unit-tp -vv \
+         -C tcp://validator:4004 \
+     \""
+    stop_signal: SIGKILL
+
   match-processor:
     image: hashblock/hashblock-match-tp:latest
     container_name: hashblock-match-tp-latest
