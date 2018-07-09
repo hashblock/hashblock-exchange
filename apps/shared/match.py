@@ -34,6 +34,7 @@ from modules.decode import (
     unit_addresser,
     utxq_addresser,
     mtxq_addresser,
+    get_node,
     decode_unit_list,
     decode_asset_list,
     STATE_CRYPTO,
@@ -89,11 +90,16 @@ def __validate_references(value, unit, asset):
 def __get_and_validate_utxq(address, secret):
     """Check that the utxq exists to recipricate on"""
     print("Address to check utxq {}".format(address))
-    if utxq_addresser.is_matched(address) or \
-            utxq_addresser.is_matched(
-                mtxq_addresser.set_utxq_matched(address)):
+    if utxq_addresser.is_matched(address):
         raise DataException(
-            'Attempt to match on already matched transaction')
+            'Attempt to match using already matched utxq address')
+    else:
+        try:
+            get_node(mtxq_addresser.set_utxq_matched(address))
+            raise DataException(
+                'UTXQ is already matched')
+        except RestException:
+            pass
     try:
         utxq = get_utxq_obj_json(address, secret)
         return utxq
@@ -236,7 +242,7 @@ def __create_reciprocate_payload(ingest):
             private_key(request['plus']),
             public_key(request['minus'])))
     return (request['plus'], MatchPayload(
-        type=MatchPayload.UTXQ,
+        type=MatchPayload.MTXQ,
         ukey=matched_uaddr,
         mkey=mtxq_addresser.mtxq_address(operation, str(uuid.uuid4)),
         mdata=e_mtxq,

@@ -50,6 +50,10 @@ mtxq_addresser = Address.match_mtxq_addresser()
 STATE_CRYPTO = State()
 
 
+def get_node(address):
+    return RestClient(sawtooth_rest_host()).get_leaf(address)
+
+
 def __get_leaf_data(address, partner_secret=None):
     """Fetch leaf data from chain"""
     ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
@@ -326,7 +330,7 @@ def get_utxq_obj_json(address, secret):
 
 def decode_match_types(addresser, agreement):
     sec = agreement_secret(agreement)
-    results = __get_encrypted_list_data(addresser.family_ns_hash, sec)['data']
+    results = __get_encrypted_list_data(addresser.mtype_address, sec)['data']
     data = []
     for element in results:
         data.append((element['address']))

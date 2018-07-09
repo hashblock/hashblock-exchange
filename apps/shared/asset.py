@@ -234,7 +234,6 @@ def __create_asset_genesis_payload(ingest):
     signatore, proposal_id, address, asset = ingest
     return (signatore, proposal_id, address, AssetPayload(
         data=asset.SerializeToString(),
-        dimension=address.dimension,
         action=AssetPayload.ACTION_GENESIS))
 
 
@@ -413,6 +412,28 @@ def create_unit_genesis(signer, unit_list):
                 UNIT_ADDRESSER.unit_address(
                     data['system'], data['key'], prime_id),
                 UNIT_ADDRESSER,
+                data))[1])
+    return txns
+
+
+def create_asset_genesis(signer, asset_list):
+    """Generate the transaction batch for genesis block assets"""
+    txns = []
+    genesis = compose_builder(
+        create_transaction, __create_inputs_outputs,
+        __create_asset_genesis_payload, __create_asset)
+    for data in asset_list:
+        prime_id = data.pop("prime")
+        if not prime_id:
+            prime_id = __get_prime()
+        else:
+            pass
+        txns.append(
+            genesis((
+                signer,
+                ASSET_ADDRESSER.asset_address(
+                    data['system'], data['key'], prime_id),
+                ASSET_ADDRESSER,
                 data))[1])
     return txns
 

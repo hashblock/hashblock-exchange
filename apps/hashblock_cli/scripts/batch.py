@@ -17,7 +17,7 @@
 from __future__ import print_function
 
 from modules.exceptions import CliException
-from shared.asset import create_asset_batch
+from shared.asset import create_asset_unit_batch
 
 
 def add_batch_parser(subparsers, parent_parser):
@@ -50,4 +50,4 @@ def do_batch(args, config):
     print("Args = {}".format(args))
 
     if args.target == 'asset':
-        create_asset_batch(args.file)
+        create_asset_unit_batch(args.file)

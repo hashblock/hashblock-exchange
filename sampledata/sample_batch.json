@@ -17,8 +17,8 @@
 		{
 			"signer": "turing",
 			"id": "3",
-			"type":"asset",
-			"system": "imperial",
+			"type":"unit",
+			"system": "currency",
 			"key": "$"
 		},
 		{
