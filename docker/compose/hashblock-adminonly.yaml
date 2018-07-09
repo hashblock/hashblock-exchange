@@ -26,13 +26,13 @@ services:
     container_name: hashblock-adminonly
     volumes:
       - ../../:/project/hashblock-exchange
-      # - ~/hbruntime:/project/node_data
+      - ~/hbruntime:/project/node_data
     environment:
       - PYTHONPATH=/project/hashblock-exchange:/project/hashblock-exchange/apps
-      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
-      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
-      # - HASHBLOCK_KEYS=/project/node_data
-      # - HASHBLOCK_CONFIG=/project/node_data
+      # - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      # - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
+      - HASHBLOCK_KEYS=/project/node_data
+      - HASHBLOCK_CONFIG=/project/node_data
     command: "bash -c \"\
         tail -f /dev/null \
         \""
@@ -42,8 +42,8 @@ services:
     image: hyperledger/sawtooth-shell:latest
     container_name: sawtooth-shell-local
     volumes:
-      - ../../:/project/hashblock-exchange
-      # - ~/hbruntime:/project/node_data
+      # - ../../:/project/hashblock-exchange
+      - ~/hbruntime:/project/node_data
     command: "bash -c \"\
         tail -f /dev/null \
         \""
