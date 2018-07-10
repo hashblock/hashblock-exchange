@@ -26,11 +26,13 @@ from modules.exceptions import DataException, AuthException, NotPrimeException
 from modules.config import load_hashblock_config
 from modules.address import Address
 from modules.decode import (
-    utxq_addresser,
-    mtxq_addresser,
+    decode_match_initiate,
+    decode_match_initiate_list,
+    decode_match_reciprocate,
+    decode_match_reciprocate_list,
     decode_asset, decode_unit,
     decode_asset_list, decode_unit_list,
-    decode_proposals, decode_settings, decode_match_types)
+    decode_proposals, decode_settings)
 import shared.asset as asset
 import shared.match as match
 
@@ -78,26 +80,6 @@ def assetunitlinks(data, asset_type):
         baseref = 'asset_' + asset_type
         element['link'] = url_for(baseref, address=addr, _external=True)
     return data
-
-
-def matchlinks(data, desc_term, url_path):
-    new_data = []
-    for element in data:
-        op, link = element
-        new_data.append({
-            desc_term: op,
-            'link': url_for(url_path + op, address=link, _external=True)})
-    return new_data
-
-
-def matchtermlinks(data, url_path):
-    new_data = []
-    for element in data:
-        cargo, address = element
-        link = url_for(url_path, address=address, _external=True)
-        cargo['link'] = link
-        new_data.append(cargo)
-    return new_data
 
 
 def allowed_file(filename):
@@ -347,20 +329,43 @@ mtxq_fields = ns.inherit("mtxq_fields", utxq_fields, {
     'utxq_address': fields.String(required=True)
 })
 
+#
+#   Match post process utilities
+#
+
+
+def matchprep(result, agreement, eprefix):
+    """Sets endpoint link in results"""
+    for element in result["data"]:
+        element["link"] = url_for(
+            eprefix,
+            agreement=agreement,
+            address=element.pop("address"),
+            _external=True)
+
 
 #
 #   UTXQ management
 #
 
 
+@ns.route('/utxq/<string:agreement>/<string:address>', endpoint='utxq')
+@ns.param('agreement', 'The trading agreement')
+@ns.param('address', 'The UTXQ address')
+class UTXQDecode(Resource):
+    def get(self, agreement, address):
+        """Returns specific UTXQ"""
+        result = decode_match_initiate(address, agreement)
+        return result, 200
+
+
 @ns.route('/utxqs/<string:agreement>')
 @ns.param('agreement', 'The trading agreement')
-class UTXQDecode(Resource):
+class UTXQSDecode(Resource):
     def get(self, agreement):
         """Returns all UTXQs"""
-        result = decode_match_types(utxq_addresser, agreement)
-        # new_data = matchlinks(result['data'], 'operation', 'utxq_')
-        # result['data'] = new_data
+        result = decode_match_initiate_list(agreement)
+        matchprep(result, agreement, 'utxq')
         return result, 200
 
 
@@ -368,9 +373,6 @@ class UTXQDecode(Resource):
 class UTXQ_Ingest(Resource):
     @ns.expect(utxq_fields)
     def post(self):
-        # operation = request.path.split('/')[-1]
-        # print("Creating {} transaction".format(operation))
-        # match.create_utxq(operation, request.json)
         match.create_utxq(request.json)
         return {"status": "OK"}, 200
 
@@ -380,14 +382,23 @@ class UTXQ_Ingest(Resource):
 #
 
 
+@ns.route('/mtxq/<string:agreement>/<string:address>', endpoint='mtxq')
+@ns.param('agreement', 'The trading agreement')
+@ns.param('address', 'The MTXQ address')
+class MTXQDecode(Resource):
+    def get(self, agreement, address):
+        """Returns specific UTXQ"""
+        result = decode_match_reciprocate(address, agreement)
+        return result, 200
+
+
 @ns.route('/mtxqs/<string:agreement>')
 @ns.param('agreement', 'The trading agreement')
-class MTXQDecode(Resource):
+class MTXQSDecode(Resource):
     def get(self, agreement):
         """Returns all match response transactions"""
-        result = decode_match_types(mtxq_addresser, agreement)
-        # new_data = matchlinks(result['data'], 'operation', 'mtxq_')
-        # result['data'] = new_data
+        result = decode_match_reciprocate_list(agreement)
+        matchprep(result, agreement, 'mtxq')
         return result, 200
 
 

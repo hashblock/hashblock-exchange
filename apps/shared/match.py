@@ -194,7 +194,7 @@ def __create_initiate_payload(ingest):
             public_key(request['minus'])))
     return (request['plus'], MatchPayload(
         udata=encrypted,
-        ukey=utxq_addresser.utxq_unmatched(operation, str(uuid.uuid4)),
+        ukey=utxq_addresser.utxq_unmatched(operation, str(uuid.uuid4())),
         type=MatchPayload.UTXQ))
 
 
@@ -203,6 +203,7 @@ def __create_initiate_inputs_outputs(ingest):
     signer, payload = ingest
     inputs = []
     outputs = [payload.ukey]
+    print("NEW INITIATE ADDRESS => {}".format(payload.ukey))
     return (
         signer,
         utxq_addresser,
@@ -244,7 +245,7 @@ def __create_reciprocate_payload(ingest):
     return (request['plus'], MatchPayload(
         type=MatchPayload.MTXQ,
         ukey=matched_uaddr,
-        mkey=mtxq_addresser.mtxq_address(operation, str(uuid.uuid4)),
+        mkey=mtxq_addresser.mtxq_address(operation, str(uuid.uuid4())),
         mdata=e_mtxq,
         udata=e_utxq,
         pairings=pairing.encode(),

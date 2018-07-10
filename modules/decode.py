@@ -341,54 +341,64 @@ def decode_match_types(addresser, agreement):
     }
 
 
-def decode_match_initiate_list(address, agreement):
+def decode_match_initiate(address, agreement):
+    sec = agreement_secret(agreement)
+    return __decode_match(
+        address,
+        __get_encrypted_leaf(address, sec)['data'])
+
+
+def decode_match_initiate_list(agreement):
     """Decorate initiates with text conversions"""
     sec = agreement_secret(agreement)
-    results = __get_encrypted_list_data(address, sec)['data']
-    ops = "filler"
-
+    results = __get_encrypted_list_data(
+        utxq_addresser.mtype_address, sec)['data']
     data = []
     for element in results:
         ladd = element['address']
         utxq = UTXQ()
-        utxq.ParseFromString(__get_encrypted_leaf(ladd, sec)['data'])
-        data.append((
+        utxq.ParseFromString(element['data'])
+        data.append(
             {
                 "plus": key_owner(utxq.plus.decode("utf-8")),
                 "minus": key_owner(utxq.minus.decode("utf-8")),
-                "text": __format_quantity(utxq.quantity),
-                "matched": utxq_addresser.is_matched(ladd)
-            },
-            ladd))
+                "operation": utxq.operation,
+                "matched": utxq_addresser.is_matched(ladd),
+                "address": ladd
+            })
     return {
         'family': 'match',
         'dimension': 'utxq',
-        'operation': ops,
         'data': data
     }
 
 
-def decode_match_reciprocate_list(address, agreement):
+def decode_match_reciprocate(address, agreement):
+    sec = agreement_secret(agreement)
+    return __decode_match(
+        address,
+        __get_encrypted_leaf(address, sec)['data'])
+
+
+def decode_match_reciprocate_list(agreement):
     """Decorate reciprocates with text conversions"""
     sec = agreement_secret(agreement)
-    results = __get_encrypted_list_data(address, sec)['data']
-    ops = "filler"
+    results = __get_encrypted_list_data(
+        mtxq_addresser.mtype_address, sec)['data']
 
     data = []
     for element in results:
         ladd = element['address']
         mtxq = MTXQ()
-        mtxq.ParseFromString(__get_encrypted_leaf(ladd, sec)['data'])
-        data.append(({
+        mtxq.ParseFromString(element['data'])
+        data.append({
             "plus": key_owner(mtxq.plus.decode("utf-8")),
             "minus": key_owner(mtxq.minus.decode("utf-8")),
-            # "text": '{} for {}'.format(
-            #     __format_quantity(mtxq.quantity))
-            #  __format_quantity(mtxq.unmatched.quantity))
-        }, ladd))
+            "operation": mtxq.operation,
+            "address": ladd
+        })
     return {
         'family': 'match',
         'dimension': 'mtxq',
-        'operation': ops,
         'data': data
     }
