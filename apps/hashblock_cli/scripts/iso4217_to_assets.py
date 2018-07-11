@@ -16,24 +16,53 @@
 
 import urllib.request
 from xml.dom import minidom
+from functools import reduce
+
+
+def get_element(parent_node, elname):
+    el = parent_node.getElementsByTagName(elname)
+    if len(el) == 0:
+        return "Unknown"
+    else:
+        return el[0].childNodes[0].nodeValue
 
 
 def get_key(parent_node):
     """Fetches the node tag value for 'Ccy'"""
-    ccys = parent_node.getElementsByTagName('Ccy')
-    if len(ccys) == 0:
-        return "Unknown"
-    else:
-        return ccys[0].childNodes[0].nodeValue
+    return get_element(parent_node, 'Ccy')
+
+
+def get_code(parent_node):
+    """Fetches the node tag value for 'CcyNbr'"""
+    return get_element(parent_node, 'CcyNbr')
 
 
 def get_precision(parent_node):
     """Fetches the node tag value for 'CcyMnrUnts' which is precision"""
-    cmus = parent_node.getElementsByTagName('CcyMnrUnts')
-    if len(cmus) == 0:
-        return "Unknown"
+    el = get_element(parent_node, 'CcyMnrUnts')
+    return el if el != "N.A." else "0"
+
+
+def __dedupe(rdict, parent):
+    res_key = get_key(parent)
+    # If main element is Unknown, skip it
+    if res_key == "Unknown":
+        return rdict
     else:
-        return cmus[0].childNodes[0].nodeValue
+        res_code = get_code(parent)
+        # If already in set of codes, skip it
+        if res_code in rdict["set"]:
+            return rdict
+        else:
+            rdict["set"].add(res_code)
+            rdict["array"].append(
+                {
+                    "system": "iso4217",
+                    "key": res_key,
+                    "prime": "",
+                    "precision": get_precision(parent)
+                })
+            return rdict
 
 
 def geniso4217():
@@ -43,25 +72,12 @@ def geniso4217():
     dom = minidom.parseString(ucum)
     codes = dom.getElementsByTagName('CcyNtry')
     genesis_array = []
-    for c in codes:
-        res_key = get_key(c)
-        if res_key != "Unknown":
-            res_minor = get_precision(c)
-            if res_minor == "N.A.":
-                res_minor = "0"
-        else:
-            res_key = None
-        if res_key:
-            genesis_array.append(
-                {
-                    "system": "iso4217",
-                    "key": res_key,
-                    "prime": "",
-                    "precision": res_minor
-                })
+    ident_set = set()
+    red_dict = {"array": genesis_array, "set": ident_set}
+    reduce(__dedupe, codes, red_dict)
     return genesis_array
 
 
 if __name__ == '__main__':
     x = geniso4217()
-    print("{}".format(x))
+    print("Assets => {}".format(x))
