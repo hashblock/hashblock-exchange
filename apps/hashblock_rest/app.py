@@ -186,18 +186,12 @@ class ASDecode(Resource):
 
 @ns.route('/asset-create')
 class CreateASIngest(Resource):
-    def prep_asset_properties(self, intake):
-        if "properties" in intake:
-            intake["properties"] = \
-                {d['name']: d['value'] for d in intake["properties"]}
-        return intake
-
     @ns.expect(asset_fields)
     def post(self):
         """Create an asset and publish on the chain"""
         try:
             asset_id = asset.create_direct_asset(
-                self.prep_asset_properties(request.json))
+                asset.property_list_generalize(request.json))
             return {"Asset ID": asset_id, "status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400

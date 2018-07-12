@@ -147,6 +147,13 @@ def __validate_unit_vote(data, ignoreAddress=False):
     return __validate_vote(UNIT_ADDRESSER, data, ignoreAddress)
 
 
+def property_list_generalize(intake):
+    if "properties" in intake:
+        intake["properties"] = \
+            {d['name']: d['value'] for d in intake["properties"]}
+    return intake
+
+
 def __property_list(data):
     """Extract properties, if they exist to Property"""
     return [Property(
@@ -162,7 +169,7 @@ def __create_asset(ingest):
         system=data['system'],
         key=data['key'],
         value=proposal_id[-44:],
-        properties=__property_list(data)))
+        properties=__property_list(property_list_generalize(data))))
 
 
 def __create_unit(ingest):
