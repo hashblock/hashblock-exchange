@@ -33,7 +33,7 @@ from modules.decode import (
     decode_unit_list, decode_asset_list, decode_proposals)
 
 from protobuf.asset_pb2 import (
-    AssetPayload, AssetProposal, AssetVote, Asset)
+    AssetPayload, AssetProposal, AssetVote, Asset, Property)
 
 from protobuf.unit_pb2 import (
     UnitPayload, UnitProposal, UnitVote, Unit)
@@ -71,8 +71,9 @@ def __validate_signer(signer):
 
 
 def __validate_element(key_set, data, gen_prime=False):
-    if set(data.keys()) != key_set:
-        raise DataException("{} not in {}".format(data.keys(), key_set))
+    if not key_set <= data.keys():
+        raise DataException(
+            "Keys {} are not in expected keys {}".format(data.keys(), key_set))
     __validate_signer(data['signer'])
     if gen_prime:
         return __get_prime()
@@ -146,13 +147,22 @@ def __validate_unit_vote(data, ignoreAddress=False):
     return __validate_vote(UNIT_ADDRESSER, data, ignoreAddress)
 
 
+def __property_list(data):
+    """Extract properties, if they exist to Property"""
+    return [Property(
+        name=x.encode(),
+        value=y.encode()) for (x, y) in data["properties"].items()] \
+        if "properties" in data else []
+
+
 def __create_asset(ingest):
     """Create a asset"""
     signatore, proposal_id, address, data = ingest
     return (signatore, proposal_id, address, Asset(
         system=data['system'],
         key=data['key'],
-        value=proposal_id[-44:]))
+        value=proposal_id[-44:],
+        properties=__property_list(data)))
 
 
 def __create_unit(ingest):
@@ -401,11 +411,12 @@ def create_unit_genesis(signer, unit_list):
         create_transaction, __create_inputs_outputs,
         __create_unit_genesis_payload, __create_unit)
     for data in unit_list:
+        data["signer"] = signer
         prime_id = data.pop("prime")
         if not prime_id:
-            prime_id = __get_prime()
+            prime_id = __validate_element(UNIT_KEY_SET, data, True)
         else:
-            pass
+            __validate_element(UNIT_KEY_SET, data)
         txns.append(
             genesis((
                 signer,
@@ -423,11 +434,12 @@ def create_asset_genesis(signer, asset_list):
         create_transaction, __create_inputs_outputs,
         __create_asset_genesis_payload, __create_asset)
     for data in asset_list:
+        data["signer"] = signer
         prime_id = data.pop("prime")
         if not prime_id:
-            prime_id = __get_prime()
+            prime_id = __validate_element(ASSET_KEY_SET, data, True)
         else:
-            pass
+            __validate_element(ASSET_KEY_SET, data)
         txns.append(
             genesis((
                 signer,

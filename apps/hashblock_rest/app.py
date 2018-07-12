@@ -57,11 +57,11 @@ application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 api = Api(
     application,
     validate=True,
-    version='0.1.0',
+    version='0.2.0',
     title='hashblock-rest',
-    description='REST for hashblock-exchange')
+    description='Convenience REST for hashblock-exchange')
 
-ns = api.namespace('hashblock', description='hashblock state operations')
+ns = api.namespace('hashblock', description='hashblock operations')
 
 # Utility functions
 
@@ -87,21 +87,48 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+property_fields = ns.model(
+    'property', {
+        'name': fields.String(description='The name (key) of the property'),
+        'value': fields.String(
+            description='The value associated to the property name')
+    })
+
 asset_fields = ns.model('asset', {
     'system': fields.String(
         required=True, description='The asset classification'),
     'key': fields.String(
         required=True, description='The asset key',),
     'signer': fields.String(
-        required=True, description='The authorized proposer')})
+        required=True, description='The authorized proposer'),
+    'properties': fields.List(
+        fields.Nested(
+            property_fields, skip_none=True))})
 
 asset_vote_fields = ns.model('asset-vote', {
     'proposal_id': fields.String(
-        required=True, description='The asset proposal to vote on'),
+        required=True, description='The asset proposal ID to vote on'),
     'vote': fields.String(
         required=True, description='The vote for proposal_id',),
     'signer': fields.String(
         required=True, description='The authorized voter')})
+
+unit_fields = ns.model('unit', {
+    'system': fields.String(
+        required=True, description='The unit classification'),
+    'key': fields.String(
+        required=True, description='The unit key',),
+    'signer': fields.String(
+        required=True, description='The authorized proposer')})
+
+unit_vote_fields = ns.model('unit-vote', {
+    'proposal_id': fields.String(
+        required=True, description='The unit proposal ID to vote on'),
+    'vote': fields.String(
+        required=True, description='The vote for proposal_id',),
+    'signer': fields.String(
+        required=True, description='The authorized voter')})
+
 
 batch_propose_upload_parser = ns.parser()
 batch_propose_upload_parser.add_argument(
@@ -159,11 +186,18 @@ class ASDecode(Resource):
 
 @ns.route('/asset-create')
 class CreateASIngest(Resource):
+    def prep_asset_properties(self, intake):
+        if "properties" in intake:
+            intake["properties"] = \
+                {d['name']: d['value'] for d in intake["properties"]}
+        return intake
+
     @ns.expect(asset_fields)
     def post(self):
         """Create an asset and publish on the chain"""
         try:
-            asset_id = asset.create_direct_asset(request.json)
+            asset_id = asset.create_direct_asset(
+                self.prep_asset_properties(request.json))
             return {"Asset ID": asset_id, "status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400
@@ -231,7 +265,7 @@ class UNDecode(Resource):
 
 @ns.route('/unit-create')
 class CreateUNIngest(Resource):
-    @ns.expect(asset_fields)
+    @ns.expect(unit_fields)
     def post(self):
         """Create a unit and publish on the chain"""
         try:
@@ -246,7 +280,7 @@ class CreateUNIngest(Resource):
 
 @ns.route('/unit-propose')
 class PropUNIngest(Resource):
-    @ns.expect(asset_fields)
+    @ns.expect(unit_fields)
     def post(self):
         """Propose a unit for publishing on the chain"""
         try:
@@ -268,7 +302,7 @@ class UNPropDecode(Resource):
 
 @ns.route('/unit-vote')
 class VoteUNIngest(Resource):
-    @ns.expect(asset_vote_fields)
+    @ns.expect(unit_vote_fields)
     def post(self):
         """Vote on unit proposal"""
         try:

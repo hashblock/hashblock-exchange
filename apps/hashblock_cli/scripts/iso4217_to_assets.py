@@ -60,7 +60,10 @@ def __dedupe(rdict, parent):
                     "system": "iso4217",
                     "key": res_key,
                     "prime": "",
-                    "precision": get_precision(parent)
+                    "properties": {
+                        "currency_precision": get_precision(parent),
+                        "country_code": res_code
+                    }
                 })
             return rdict
 

@@ -132,17 +132,6 @@ def __unit_key_lookup(prime_value):
         format(int.from_bytes(prime_value, byteorder='little'))).key
 
 
-def __format_quantity(quantity):
-    """Replaces primes with asset information"""
-    magnitude = int.from_bytes(quantity.value, byteorder='little')
-    unit = __unit_key_lookup(quantity.unit)
-    resource = __asset_key_lookup(quantity.resource)
-    return '{} {} of {}'.format(
-        magnitude,
-        unit,
-        resource)
-
-
 def __decode_settings(address, data):
     """Decode a settings address
     """
@@ -248,12 +237,14 @@ def decode_asset_list(address=None):
     for element in results:
         asset = Asset()
         asset.ParseFromString(element['data'])
+        am = MessageToDict(asset)
         data.append({
             'link': element['address'],
             'type': 'asset',
             'system': asset.system,
             'name': asset.key,
-            'value': asset.value
+            'value': asset.value,
+            'properties': am["properties"] if "properties" in am else []
         })
     return {
         'family': 'asset',
@@ -280,6 +271,17 @@ def decode_unit_list(address=None):
         'family': 'unit',
         'data': data
     }
+
+
+def __format_quantity(quantity):
+    """Replaces primes with asset information"""
+    magnitude = int.from_bytes(quantity.value, byteorder='little')
+    unit = __unit_key_lookup(quantity.unit)
+    resource = __asset_key_lookup(quantity.resource)
+    return '{} {} of {}'.format(
+        magnitude,
+        unit,
+        resource)
 
 
 def __decode_match(address, data):

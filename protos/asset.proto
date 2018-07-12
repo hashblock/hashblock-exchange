@@ -20,14 +20,20 @@ option java_package = "hashblock.asset.protobuf";
 
 // On chain resource
 
+message Property {
+    string name = 1;
+    string value = 2;
+}
+
 message Asset {
     string system = 1;
     string key = 2;
     string value = 3;
+    repeated Property properties = 4;
 }
 
 // Asset Payload
-// - Contains either a proposal or a vote.
+// - Contains a proposal, vote or asset (for direct and genesis).
 
 message AssetPayload {
     // The action indicates data is contained within this payload
