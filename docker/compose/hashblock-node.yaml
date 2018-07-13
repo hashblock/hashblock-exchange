@@ -82,6 +82,25 @@ services:
       \""
     stop_signal: SIGKILL
 
+  track-processor:
+    image: hashblock/hashblock-track-tp:latest
+    container_name: hashblock-track-tp-latest
+    restart: always
+    volumes:
+        - /sawtooth:/sawtooth
+    environment:
+      - HASHBLOCK_KEYS=/sawtooth/keys
+      - HASHBLOCK_CONFIG=/sawtooth/config
+      - PYTHONPATH=/project/hashblock-exchange
+    depends_on:
+      - asset-processor
+    command: "bash -c \"\
+        sleep 1 && \
+        track-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
   hashblock_rest:
     image: hashblock/hashblock-rest:latest
     container_name: hashblock-rest

@@ -124,6 +124,24 @@ services:
       \""
     stop_signal: SIGKILL
 
+  track-processor:
+    image: hashblock-dev-generic-tp
+    container_name: hashblock-dev-track-tp
+    volumes:
+      - ../..:/project/hashblock-exchange
+    environment:
+      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
+      - PYTHONPATH=/project/hashblock-exchange
+    depends_on:
+      - validator
+    command: "bash -c \"\
+        sleep 1 &&
+        track-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
     container_name: sawtooth-settings-tp-local

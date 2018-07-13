@@ -31,6 +31,7 @@ class Address(ABC):
     FAMILY_ASSET = "asset"
     FAMILY_MATCH = "match"
     FAMILY_SETTING = "setting"
+    FAMILY_TRACK = "track"
 
     # Dimensions, used by families
     MATCH_TYPE_UTXQ = "utxq"
@@ -54,6 +55,10 @@ class Address(ABC):
     @classmethod
     def setting_addresser(cls):
         return SettingAddress()
+
+    @classmethod
+    def track_addresser(cls):
+        return TrackAddress()
 
     @classmethod
     def unit_addresser(cls):
@@ -186,6 +191,32 @@ class SettingAddress(BaseAddress):
         return self.family_ns_hash \
             + self.hashup(stype)[0:6] \
             + self._filler_hash26
+
+
+class TrackAddress(BaseAddress):
+    """TrackAddress provides the track TP address support
+
+    oracle observations of some property of an asset
+    """
+    def __init__(self):
+        super().__init__(self.FAMILY_TRACK, ["0.1.0"])
+
+    # E.g. hashblock.track.???.???
+    # 0-2 namespace             6/6
+    # 3-5 family                6/12
+    # 6-28 ident (from asset)   44/56
+    # 28-34 property            14/70
+    def track(self, ident, property):
+        """Create the stype (asset/unit) settings address using key
+        """
+        if ident is None or len(ident) != 44:
+            raise AssetIdRange(
+                "Invalid ident {} for  {} {} {}"
+                .format(ident, self._family, ident, property))
+
+        return self.family_ns_hash \
+            + ident \
+            + self.hashup(property)[0:14]
 
 
 class VotingAddress(BaseAddress):

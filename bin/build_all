@@ -33,7 +33,7 @@ usage() {
     echo ""
     echo "Optional build targets:"
     echo "  -d     tps,rest,admin"
-    echo "  -p     asset,unit, match,setting,rest,admin"
+    echo "  -p     asset,unit,match,setting,track,rest,admin"
     echo ""
     echo "Examples:"
     echo "  build_all                   "
@@ -76,6 +76,7 @@ PRD_CHOICES=$(echo "hashblock-asset-tp;
 hashblock-unit-tp;
 hashblock-match-tp;
 hashblock-setting-tp;
+hashblock-track-tp;
 hashblock-rest;
 hashblock-admin;"|tr -d '\n')
 PRD_LOOKUP="asset;unit;match;setting;rest;admin"

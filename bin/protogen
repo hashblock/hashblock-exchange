@@ -58,6 +58,10 @@ def main(args=None):
         proto_dir,
         "families/setting",
         "hashblock_setting/protobuf")
+    protoc_python(
+        proto_dir,
+        "families/track",
+        "hashblock_track/protobuf")
 
 
 def protoc_python(src_dir, base_dir, pkg):
