@@ -32,8 +32,8 @@ from modules.state import State
 from modules.exceptions import AuthException
 from modules.address import Address
 
-from protobuf.match_pb2 import UTXQ
-from protobuf.match_pb2 import MTXQ
+from protobuf.exchange_pb2 import UTXQ
+from protobuf.exchange_pb2 import MTXQ
 from protobuf.setting_pb2 import Settings
 from protobuf.unit_pb2 import Unit
 from protobuf.unit_pb2 import UnitCandidates
@@ -43,8 +43,8 @@ from protobuf.asset_pb2 import AssetCandidates
 asset_addresser = Address.asset_addresser()
 unit_addresser = Address.unit_addresser()
 setting_addresser = Address.setting_addresser()
-utxq_addresser = Address.match_utxq_addresser()
-mtxq_addresser = Address.match_mtxq_addresser()
+utxq_addresser = Address.exchange_utxq_addresser()
+mtxq_addresser = Address.exchange_mtxq_addresser()
 
 
 STATE_CRYPTO = State()
@@ -284,7 +284,7 @@ def __format_quantity(quantity):
         resource)
 
 
-def __decode_match(address, data):
+def __decode_exchange(address, data):
     """Detail decode a unmatched or matched address"""
     def quantity_to_prime(quantity, rquant):
         quantity['value'] = \
@@ -327,10 +327,10 @@ def get_utxq_obj_json(address, secret):
     utxq_obj = __get_encrypted_leaf(address, secret)['data']
     utxq = UTXQ()
     utxq.ParseFromString(utxq_obj)
-    return (utxq, __decode_match(address, utxq_obj))
+    return (utxq, __decode_exchange(address, utxq_obj))
 
 
-def decode_match_types(addresser, agreement):
+def decode_exchange_types(addresser, agreement):
     sec = agreement_secret(agreement)
     results = __get_encrypted_list_data(addresser.mtype_address, sec)['data']
     data = []
@@ -338,19 +338,19 @@ def decode_match_types(addresser, agreement):
         data.append((element['address']))
     return {
         'family': 'match',
-        'match_type': addresser.mtype,
+        'exchange_type': addresser.mtype,
         'data': data
     }
 
 
-def decode_match_initiate(address, agreement):
+def decode_exchange_initiate(address, agreement):
     sec = agreement_secret(agreement)
-    return __decode_match(
+    return __decode_exchange(
         address,
         __get_encrypted_leaf(address, sec)['data'])
 
 
-def decode_match_initiate_list(agreement):
+def decode_exchange_initiate_list(agreement):
     """Decorate initiates with text conversions"""
     sec = agreement_secret(agreement)
     results = __get_encrypted_list_data(
@@ -375,14 +375,14 @@ def decode_match_initiate_list(agreement):
     }
 
 
-def decode_match_reciprocate(address, agreement):
+def decode_exchange_reciprocate(address, agreement):
     sec = agreement_secret(agreement)
-    return __decode_match(
+    return __decode_exchange(
         address,
         __get_encrypted_leaf(address, sec)['data'])
 
 
-def decode_match_reciprocate_list(agreement):
+def decode_exchange_reciprocate_list(agreement):
     """Decorate reciprocates with text conversions"""
     sec = agreement_secret(agreement)
     results = __get_encrypted_list_data(

@@ -23,7 +23,7 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from modules.state import State, StateDataNotFound
 from modules.hashblock_zksnark import zksnark_verify
 
-from protobuf.match_pb2 import (MatchPayload)
+from protobuf.exchange_pb2 import (ExchangePayload)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class BaseService(Service):
     def __init__(self, txn, state):
         self._txn = txn
         self._state = state
-        self._payload = MatchPayload()
+        self._payload = ExchangePayload()
         self._payload.ParseFromString(txn.payload)
 
     @property
@@ -89,14 +89,14 @@ class BaseService(Service):
         return self._payload
 
     def process(self, initiateFn, reciprocateFn):
-        if self.payload.type == MatchPayload.UTXQ:
+        if self.payload.type == ExchangePayload.UTXQ:
             initiateFn()
-        elif self.payload.type == MatchPayload.MTXQ:
+        elif self.payload.type == ExchangePayload.MTXQ:
             reciprocateFn()
         else:
             raise InvalidTransaction(
                 "Payload 'type' must be one of: {} or {}".
-                format([MatchPayload.UTXQ, MatchPayload.MTXQ]))
+                format([ExchangePayload.UTXQ, ExchangePayload.MTXQ]))
 
 
 class V020apply(BaseService):
@@ -114,7 +114,7 @@ class V020apply(BaseService):
         try:
             self.state.get_state_data(self.payload.ukey)
             raise InvalidTransaction(
-                "UTXQ {} already matched".format(self.payload.ukey))
+                "UTXQ {} already exchangeed".format(self.payload.ukey))
         except StateDataNotFound:
             pass
 
@@ -128,7 +128,7 @@ class V020apply(BaseService):
             self.state.set(self.payload.mdata, self.payload.mkey)
         else:
             raise InvalidTransaction(
-                "Invalid zksnark match with reciprocating")
+                "Invalid zksnark exchange with reciprocating")
 
     def apply(self):
         self.process(self.initiate, self.reciprocate)

@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 option java_multiple_files = true;
-option java_package = "hashblock.match.protobuf";
+option java_package = "hashblock.exchange.protobuf";
 
 // Resource quantity
 message Quantity {
@@ -74,7 +74,7 @@ message MTXQ {
     string operation = 7;
 }
 
-message MatchPayload {
+message ExchangePayload {
     enum Type {
         UTXQ = 0;
         MTXQ = 1;

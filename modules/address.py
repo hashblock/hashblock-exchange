@@ -29,7 +29,7 @@ class Address(ABC):
     # hashblock TP Families
     FAMILY_UNIT = "unit"
     FAMILY_ASSET = "asset"
-    FAMILY_MATCH = "match"
+    FAMILY_EXCHANGE = "exchange"
     FAMILY_SETTING = "setting"
     FAMILY_TRACK = "track"
 
@@ -69,12 +69,12 @@ class Address(ABC):
         return AssetAddress()
 
     @classmethod
-    def match_utxq_addresser(cls):
-        return MatchUTXQAddress()
+    def exchange_utxq_addresser(cls):
+        return ExchangeUTXQAddress()
 
     @classmethod
-    def match_mtxq_addresser(cls):
-        return MatchMTXQAddress()
+    def exchange_mtxq_addresser(cls):
+        return ExchangeMTXQAddress()
 
     @classmethod
     def valid_address(cls, address):
@@ -280,10 +280,10 @@ class AssetAddress(VotingAddress):
         return self.asset_address(system, key, ident)
 
 
-class MatchAddress(BaseAddress):
+class ExchangeAddress(BaseAddress):
     """MatchAddress is base for UTXQ/MTXQ address support"""
     def __init__(self, mtype):
-        super().__init__(self.FAMILY_MATCH, ["0.3.0"])
+        super().__init__(self.FAMILY_EXCHANGE, ["0.3.0"])
         self._mtype = mtype
         self._mtype_address = self.family_ns_hash + \
             self.hashup(mtype)[0:6]
@@ -303,7 +303,7 @@ class MatchAddress(BaseAddress):
         return self.mtype_address + self.hashup(operation)[0:6]
 
 
-class MatchUTXQAddress(MatchAddress):
+class ExchangeUTXQAddress(ExchangeAddress):
     """MatchUTXQAddress is concrete for UTXQ address support"""
     def __init__(self):
         super().__init__(self.MATCH_TYPE_UTXQ)
@@ -316,7 +316,7 @@ class MatchUTXQAddress(MatchAddress):
         return True if address[24] == '1' else False
 
 
-class MatchMTXQAddress(MatchAddress):
+class ExchangeMTXQAddress(ExchangeAddress):
     """MatchMTXQAddress is concrete for MTXQ address support"""
     def __init__(self):
         super().__init__(self.MATCH_TYPE_MTXQ)

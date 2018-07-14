@@ -135,8 +135,12 @@ test_asset() {
     run_docker_test ./families/asset/tests/test_tp_asset.yaml
 }
 
-test_match() {
-    run_docker_test ./families/match/tests/test_tp_match.yaml
+test_unit() {
+    run_docker_test ./families/unit/tests/test_tp_unit.yaml
+}
+
+test_exchange() {
+    run_docker_test ./families/exchange/tests/test_tp_exchange.yaml
 }
 
 test_setting() {
@@ -145,7 +149,8 @@ test_setting() {
 
 test_all() {
     test_asset
-    test_match
+    test_unit
+    test_exchange
     test_setting
 }
 

@@ -52,8 +52,8 @@ def main(args=None):
         "hashblock_unit/protobuf")
     protoc_python(
         proto_dir,
-        "families/match",
-        "hashblock_match/protobuf")
+        "families/exchange",
+        "hashblock_exchange/protobuf")
     protoc_python(
         proto_dir,
         "families/setting",

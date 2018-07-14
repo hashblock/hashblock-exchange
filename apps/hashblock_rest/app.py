@@ -26,15 +26,15 @@ from modules.exceptions import DataException, AuthException, NotPrimeException
 from modules.config import load_hashblock_config
 from modules.address import Address
 from modules.decode import (
-    decode_match_initiate,
-    decode_match_initiate_list,
-    decode_match_reciprocate,
-    decode_match_reciprocate_list,
+    decode_exchange_initiate,
+    decode_exchange_initiate_list,
+    decode_exchange_reciprocate,
+    decode_exchange_reciprocate_list,
     decode_asset, decode_unit,
     decode_asset_list, decode_unit_list,
     decode_proposals, decode_settings)
 import shared.asset as asset
-import shared.match as match
+import shared.exchange as exchange
 
 LOGGER = logging.getLogger(__name__)
 
@@ -325,19 +325,19 @@ class AU_Decode(Resource):
                 "data": ""}, 400
 
 #
-# Match data model
+# Exchange data models
 #
 
 
-match_fields = ns.model('quantity detail', {
+exchange_fields = ns.model('quantity detail', {
     'system': fields.String(required=True),
     'key': fields.String(required=True),
 })
 
 quantity_fields = ns.model('quantity_list', {
     'value': fields.String(required=True),
-    'unit': fields.Nested(match_fields, required=True),
-    'asset': fields.Nested(match_fields, required=True)
+    'unit': fields.Nested(exchange_fields, required=True),
+    'asset': fields.Nested(exchange_fields, required=True)
 })
 
 ratio_fields = ns.model('ratio', {
@@ -362,7 +362,7 @@ mtxq_fields = ns.inherit("mtxq_fields", utxq_fields, {
 #
 
 
-def matchprep(result, agreement, eprefix):
+def exchangeprep(result, agreement, eprefix):
     """Sets endpoint link in results"""
     for element in result["data"]:
         element["link"] = url_for(
@@ -383,7 +383,7 @@ def matchprep(result, agreement, eprefix):
 class UTXQDecode(Resource):
     def get(self, agreement, address):
         """Returns specific UTXQ"""
-        result = decode_match_initiate(address, agreement)
+        result = decode_exchange_initiate(address, agreement)
         return result, 200
 
 
@@ -392,8 +392,8 @@ class UTXQDecode(Resource):
 class UTXQSDecode(Resource):
     def get(self, agreement):
         """Returns all UTXQs"""
-        result = decode_match_initiate_list(agreement)
-        matchprep(result, agreement, 'utxq')
+        result = decode_exchange_initiate_list(agreement)
+        exchangeprep(result, agreement, 'utxq')
         return result, 200
 
 
@@ -401,7 +401,7 @@ class UTXQSDecode(Resource):
 class UTXQ_Ingest(Resource):
     @ns.expect(utxq_fields)
     def post(self):
-        match.create_utxq(request.json)
+        exchange.create_utxq(request.json)
         return {"status": "OK"}, 200
 
 
@@ -416,7 +416,7 @@ class UTXQ_Ingest(Resource):
 class MTXQDecode(Resource):
     def get(self, agreement, address):
         """Returns specific UTXQ"""
-        result = decode_match_reciprocate(address, agreement)
+        result = decode_exchange_reciprocate(address, agreement)
         return result, 200
 
 
@@ -425,8 +425,8 @@ class MTXQDecode(Resource):
 class MTXQSDecode(Resource):
     def get(self, agreement):
         """Returns all match response transactions"""
-        result = decode_match_reciprocate_list(agreement)
-        matchprep(result, agreement, 'mtxq')
+        result = decode_exchange_reciprocate_list(agreement)
+        exchangeprep(result, agreement, 'mtxq')
         return result, 200
 
 
@@ -436,7 +436,7 @@ class MTXQ_Ingest(Resource):
     def post(self):
         """Create a matching transaction"""
         try:
-            match.create_mtxq(request.json)
+            exchange.create_mtxq(request.json)
             return {"status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400

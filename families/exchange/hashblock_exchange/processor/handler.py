@@ -28,10 +28,10 @@ LOGGER = logging.getLogger(__name__)
 load_hashblock_config()
 
 
-class MatchTransactionHandler(TransactionHandler):
+class ExchangeTransactionHandler(TransactionHandler):
 
     def __init__(self):
-        self._addresser = Address.match_utxq_addresser()
+        self._addresser = Address.exchange_utxq_addresser()
 
     @property
     def addresser(self):
@@ -50,7 +50,7 @@ class MatchTransactionHandler(TransactionHandler):
         return [self.addresser.family_ns_hash]
 
     def apply(self, transaction, context):
-        """match-tp transaction handling entry point"""
+        """exchange-tp transaction handling entry point"""
         Service.factory(
             self.addresser,
             transaction,

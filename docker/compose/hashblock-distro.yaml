@@ -67,9 +67,9 @@ services:
      \""
     stop_signal: SIGKILL
 
-  match-processor:
-    image: hashblock/hashblock-match-tp:latest
-    container_name: hashblock-match-tp-latest
+  exchange-processor:
+    image: hashblock/hashblock-exchange-tp:latest
+    container_name: hashblock-exchange-tp-latest
     restart: always
     volumes:
       - ../../../hbruntime:/project/private
@@ -81,7 +81,7 @@ services:
       - asset-processor
     command: "bash -c \"\
         sleep 1 && \
-        match-tp -vv \
+        exchange-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL
@@ -97,7 +97,7 @@ services:
       - HASHBLOCK_CONFIG=/project/private
       - PYTHONPATH=/project/hashblock-exchange
     depends_on:
-      - asset-processor
+      - exchange-processor
     command: "bash -c \"\
         sleep 1 && \
         track-tp -vv \

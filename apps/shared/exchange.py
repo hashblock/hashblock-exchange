@@ -42,8 +42,8 @@ from modules.decode import (
 from modules.exceptions import (
     AuthException, RestException, DataException,
     AssetNotExistException, UnitNotExistException)
-from protobuf.match_pb2 import (
-    MatchPayload, UTXQ, MTXQ, Quantity, Ratio)
+from protobuf.exchange_pb2 import (
+    ExchangePayload, UTXQ, MTXQ, Quantity, Ratio)
 
 
 def __validate_partners(plus, minus):
@@ -192,10 +192,10 @@ def __create_initiate_payload(ingest):
             data.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
-    return (request['plus'], MatchPayload(
+    return (request['plus'], ExchangePayload(
         udata=encrypted,
         ukey=utxq_addresser.utxq_unmatched(operation, str(uuid.uuid4())),
-        type=MatchPayload.UTXQ))
+        type=ExchangePayload.UTXQ))
 
 
 def __create_initiate_inputs_outputs(ingest):
@@ -242,8 +242,8 @@ def __create_reciprocate_payload(ingest):
             payload.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
-    return (request['plus'], MatchPayload(
-        type=MatchPayload.MTXQ,
+    return (request['plus'], ExchangePayload(
+        type=ExchangePayload.MTXQ,
         ukey=matched_uaddr,
         mkey=mtxq_addresser.mtxq_address(operation, str(uuid.uuid4())),
         mdata=e_mtxq,

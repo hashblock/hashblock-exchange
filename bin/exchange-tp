@@ -20,7 +20,7 @@ import sys
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'families/match/hashblock_match'))
+    'families/exchange/hashblock_exchange'))
 
 
 from processor.main import main
