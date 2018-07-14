@@ -88,7 +88,7 @@ RUN	mkdir -p /project/hashblock-exchange && \
 COPY --from=base /builder/bin/exchange-tp /project/hashblock-exchange/bin
 COPY libs/hbzksnark /project/hashblock-exchange/bin
 COPY --from=base /builder/modules /project/hashblock-exchange/modules
-COPY --from=base /builder/families/exchange/hashblock_match /project/hashblock-exchange/families/exchange/hashblock_exchange
+COPY --from=base /builder/families/exchange/hashblock_exchange /project/hashblock-exchange/families/exchange/hashblock_exchange
 
 WORKDIR /project/hashblock-exchange
 ENV PATH $PATH:/project/hashblock-exchange/bin
