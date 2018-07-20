@@ -135,6 +135,41 @@ class Address(ABC):
         pass
 
 
+class SimpleAddress(Address):
+    def __init__(self, family, version_list):
+        self._family = family
+        self._versions = version_list
+        self._family_hash = self.hashup(family)[0:6]
+        self._reghash = self._namespace_hash + self._family_hash
+
+    @property
+    def family(self):
+        return self._family
+
+    @property
+    def family_ns_name(self):
+        return self.family
+
+    @property
+    def family_ns_hash(self):
+        return self._reghash
+
+    @property
+    def family_hash(self):
+        return self._family_hash
+
+    @property
+    def family_versions(self):
+        return self._versions
+
+    @property
+    def family_current_version(self):
+        return self.family_versions[0]
+
+    def is_family(self, address):
+        return self.family_ns_hash == address[0:6]
+
+
 class BaseAddress(Address):
     """BaseAddress provides the fundemental address primatives for TPs"""
 

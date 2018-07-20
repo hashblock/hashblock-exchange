@@ -16,6 +16,9 @@
 
 from __future__ import print_function
 
+from sawtooth_sdk.protobuf.genesis_pb2 import GenesisData
+
+from scripts.hbsawset import gensawset
 from scripts.ucum_to_assets import genucum
 from scripts.iso4217_to_assets import geniso4217
 from modules.exceptions import CliException
@@ -93,23 +96,27 @@ def do_genesis(args, config):
 
     std_units = genucum()
     iso4217_assets = geniso4217()
-    # print("Standard units count {}".format(len(std_units)))
 
-    txns = create_settings_genesis(
+    txns = gensawset(args.signer)
+
+    txns.extend(create_settings_genesis(
         args.signer, args.resource_keys, args.resource_threshold,
-        args.unit_keys, args.unit_threshold)
+        args.unit_keys, args.unit_threshold))
 
     txns.extend(create_unit_genesis(args.signer, std_units))
     txns.extend(create_asset_genesis(args.signer, iso4217_assets))
 
     # # Combine setting txns with assets txns in batchlist
 
-    batch = create_batch_list([create_batch((args.signer, txns))])
+    output_data = GenesisData(batches=[create_batch((args.signer, txns))])
+    # batch = create_batch_list([create_batch((args.signer, txns))])
+    # output_data = GenesisData(batches=[batch])
 
     if args.output:
         try:
             with open(args.output, 'wb') as batch_file:
-                batch_file.write(batch.SerializeToString())
+                batch_file.write(output_data.SerializeToString())
+                # batch_file.write(batch.SerializeToString())
             print('Generated {}'.format(args.output))
         except IOError as e:
             raise CliException(

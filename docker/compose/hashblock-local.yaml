@@ -162,8 +162,7 @@ services:
       - "4004:4004"
     entrypoint: "bash -c \"\
         sawadm keygen && \
-        sawset genesis -k /project/keys/signer1.priv -o /etc/config-settings.batch && \
-        sawadm genesis /etc/config-settings.batch /project/genbatch/hashblock.batch && \
+        cp /project/genbatch/genesis.batch /var/lib/sawtooth/genesis.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \

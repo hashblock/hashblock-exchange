@@ -28,14 +28,14 @@ info 'Generating hashblock.batch genesis transaction file'
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-mkdir $top_dir/samplegenesis
+mkdir -p $top_dir/samplegenesis
 
 docker run -it --rm \
 	-v $top_dir/:/project/hashblock-exchange \
 	-e "PYTHONPATH=/project/hashblock-exchange:/project/hashblock-exchange/apps" \
 	-e "HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys" \
 	-e "HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig" \
-	-e "GENESIS_BATCH=/project/hashblock-exchange/samplegenesis/hashblock.batch" \
+	-e "GENESIS_BATCH=/project/hashblock-exchange/samplegenesis/genesis.batch" \
 	hashblock-dev-admin \
 	bash -c "hbadm genesis -o \$GENESIS_BATCH"
 
