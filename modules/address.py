@@ -170,38 +170,15 @@ class SimpleAddress(Address):
         return self.family_ns_hash == address[0:6]
 
 
-class BaseAddress(Address):
-    """BaseAddress provides the fundemental address primatives for TPs"""
+class BaseAddress(SimpleAddress):
+    """BaseAddress provides the base address for hashblock TPs"""
 
     def __init__(self, family, version_list):
-        self._family = family
-        self._versions = version_list
-        self._family_hash = self.hashup(family)[0:6]
-        self._reghash = self._namespace_hash + self._family_hash
-
-    @property
-    def family(self):
-        return self._family
+        super().__init__(family, version_list)
 
     @property
     def family_ns_name(self):
         return self.NAMESPACE + "_" + self.family
-
-    @property
-    def family_ns_hash(self):
-        return self._reghash
-
-    @property
-    def family_hash(self):
-        return self._family_hash
-
-    @property
-    def family_versions(self):
-        return self._versions
-
-    @property
-    def family_current_version(self):
-        return self.family_versions[0]
 
     def is_family(self, address):
         return self.family_ns_hash == address[0:6]
@@ -339,7 +316,7 @@ class ExchangeAddress(BaseAddress):
 
 
 class ExchangeUTXQAddress(ExchangeAddress):
-    """MatchUTXQAddress is concrete for UTXQ address support"""
+    """ExchangeUTXQAddress is concrete for UTXQ address support"""
     def __init__(self):
         super().__init__(self.MATCH_TYPE_UTXQ)
 
@@ -352,7 +329,7 @@ class ExchangeUTXQAddress(ExchangeAddress):
 
 
 class ExchangeMTXQAddress(ExchangeAddress):
-    """MatchMTXQAddress is concrete for MTXQ address support"""
+    """ExchangeMTXQAddress is concrete for MTXQ address support"""
     def __init__(self):
         super().__init__(self.MATCH_TYPE_MTXQ)
 
