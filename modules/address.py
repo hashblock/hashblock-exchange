@@ -151,10 +151,6 @@ class SimpleAddress(Address):
         return self.family
 
     @property
-    def family_ns_hash(self):
-        return self._reghash
-
-    @property
     def family_hash(self):
         return self._family_hash
 
@@ -180,8 +176,9 @@ class BaseAddress(SimpleAddress):
     def family_ns_name(self):
         return self.NAMESPACE + "_" + self.family
 
-    def is_family(self, address):
-        return self.family_ns_hash == address[0:6]
+    @property
+    def family_ns_hash(self):
+        return self._reghash
 
 
 class SettingAddress(BaseAddress):
