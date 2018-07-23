@@ -308,8 +308,10 @@ class ExchangeAddress(BaseAddress):
     def is_mtype_prefix(self, address):
         return address[0:18] == self.mtype_address
 
-    def operation_address(self, operation):
-        return self.mtype_address + self.hashup(operation)[0:6]
+    def ns_operation_address(self, ns_operation):
+        return self.mtype_address \
+            + self.hashup(ns_operation[0])[0:3] \
+            + self.hashup(ns_operation[1])[0:3]
 
 
 class ExchangeUTXQAddress(ExchangeAddress):
@@ -317,8 +319,8 @@ class ExchangeUTXQAddress(ExchangeAddress):
     def __init__(self):
         super().__init__(self.MATCH_TYPE_UTXQ)
 
-    def utxq_unmatched(self, operation, ident):
-        return self.operation_address(operation) \
+    def utxq_unmatched(self, ns_operation, ident):
+        return self.ns_operation_address(ns_operation) \
             + '0' + self.hashup(ident)[0:45]
 
     def is_matched(self, address):
@@ -330,8 +332,8 @@ class ExchangeMTXQAddress(ExchangeAddress):
     def __init__(self):
         super().__init__(self.MATCH_TYPE_MTXQ)
 
-    def mtxq_address(self, operation, ident):
-        return self.operation_address(operation) \
+    def mtxq_address(self, ns_operation, ident):
+        return self.ns_operation_address(ns_operation) \
             + '0' + self.hashup(ident)[0:45]
 
     def set_utxq_matched(self, address):

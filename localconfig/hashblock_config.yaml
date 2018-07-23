@@ -33,7 +33,6 @@ rest:
 
   # Trade agreements between partners
   agreements:
-    "standard":
+    standard:  # Also references duality namespace
       - church
       - turing
-

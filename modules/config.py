@@ -19,6 +19,7 @@ import os
 from yaml import load
 
 from modules.state import State
+from modules.dualities import Duality
 from modules.exceptions import CliException, AuthException
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
@@ -30,12 +31,12 @@ REST_CONFIG = None
 KEYS_PATH = None
 ENVIRONMENT_KEYS_PATH = 'HASHBLOCK_KEYS'
 ENVIRONMENT_CFGR_PATH = 'HASHBLOCK_CONFIG'
+DUALITIES_SPECIFICATIONS = "dualities.yaml"
 DEFAULT_KEYS_PATH = '/project/keys'
 DEFAULT_CFGR_PATH = '/project/configs'
 CFGR_FILE = 'hashblock_config.yaml'
 UNKNOWN_OWNER = '__unknown_key_owner_value__'
-UNKNOWN_SIGNER = '__unknown_key_signer_value__'
-UNKNOWN_SUBMITTER = '__unknown_key_submitter_value__'
+UNKNOWN_AGREEMENT = '__unknown_agreement__'
 
 
 def keys_path():
@@ -122,7 +123,8 @@ def agreement_secret(agreement_name):
             result = value[2]
             break
     if not result:
-        raise AuthException
+        raise AuthException(
+            '{} < {}'.format(UNKNOWN_AGREEMENT, agreement_name))
     return result
 
 
@@ -268,5 +270,6 @@ def load_hashblock_config():
     KEYS_PATH = DEFAULT_KEYS_PATH + '/'
 
     sys.path.append(DEFAULT_CFGR_PATH)
+    Duality.load_dualities(ENVIRONMENT_CFGR_PATH, DUALITIES_SPECIFICATIONS)
     REST_CONFIG = __load_cfg_and_keys(CFGR_FILE)
     return REST_CONFIG

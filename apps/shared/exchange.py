@@ -25,6 +25,7 @@ from shared.transactions import (
     submit_single_txn, create_transaction, compose_builder)
 
 from modules.hashblock_zksnark import zksnark_genproof
+from modules.dualities import Duality
 from modules.config import (
     public_key, private_key,
     keys_path,
@@ -53,6 +54,15 @@ def __validate_partners(plus, minus):
     else:
         AuthException(
             "No partnership for {} and {}".format(plus, minus))
+
+
+def __validate_operation(request):
+    ops = request.pop('operation')
+    if Duality.is_valid_verb(ops):
+        return ops
+    else:
+        raise DataException(
+            "Verb {} not found in duality configuration".format(ops))
 
 
 def __validate_references(value, unit, asset):
@@ -101,8 +111,7 @@ def __get_and_validate_utxq(address, secret):
         except RestException:
             pass
     try:
-        utxq = get_utxq_obj_json(address, secret)
-        return utxq
+        return get_utxq_obj_json(address, secret)
     except RestException:
         raise DataException('Invalid initiate (utxq) address')
 
@@ -117,13 +126,20 @@ def __validate_utxq(request):
     return (quantity_assets)
 
 
-def __validate_mtxq(request):
+def __validate_mtxq(operation, request):
     """Validate the content for mtxq"""
     __validate_partners(request["plus"], request["minus"])
-    utxq, json = __get_and_validate_utxq(
+    utxq, ujson = __get_and_validate_utxq(
         request["utxq_address"],
         partnership_secret(request["plus"], request["minus"]))
-    utxq_qblock = json['data']['quantity']
+    rdo = Duality.reciprocate_depends_on(operation)
+    if rdo == utxq.operation:
+        pass
+    else:
+        raise DataException(
+            'Reciprocate depends on {}, found {}'.format(
+                rdo, utxq.operation))
+    utxq_qblock = ujson['data']['quantity']
     quantity_assets = __validate_references(
         request['quantity']['value'],
         request['quantity']['unit'],
@@ -194,7 +210,8 @@ def __create_initiate_payload(ingest):
             public_key(request['minus'])))
     return (request['plus'], ExchangePayload(
         udata=encrypted,
-        ukey=utxq_addresser.utxq_unmatched(operation, str(uuid.uuid4())),
+        ukey=utxq_addresser.utxq_unmatched(
+            Duality.breakqname(operation), str(uuid.uuid4())),
         type=ExchangePayload.UTXQ))
 
 
@@ -225,7 +242,8 @@ def __create_mtxq(ingest):
                 data['ratio']['numerator']['value'], numerator),
             denominator=__create_quantity(
                 data['ratio']['denominator']['value'], denominator)),
-        utxq_addr=matched_uaddr.encode()))
+        utxq_addr=matched_uaddr.encode(),
+        operation=operation))
 
 
 def __create_reciprocate_payload(ingest):
@@ -245,7 +263,8 @@ def __create_reciprocate_payload(ingest):
     return (request['plus'], ExchangePayload(
         type=ExchangePayload.MTXQ,
         ukey=matched_uaddr,
-        mkey=mtxq_addresser.mtxq_address(operation, str(uuid.uuid4())),
+        mkey=mtxq_addresser.mtxq_address(
+            Duality.breakqname(operation), str(uuid.uuid4())),
         mdata=e_mtxq,
         udata=e_utxq,
         pairings=pairing.encode(),
@@ -266,7 +285,7 @@ def __create_reciprocate_inputs_outputs(ingest):
 
 def create_utxq(request):
     """Create utxq transaction"""
-    operation = request['operation']
+    operation = __validate_operation(request)
     print("Processing UTXQ create with operation => {}".format(operation))
     quant = __validate_utxq(request)
     utxq_build = compose_builder(
@@ -278,8 +297,8 @@ def create_utxq(request):
 
 def create_mtxq(request):
     """Create mtxq transaction"""
-    qnd = __validate_mtxq(request)
-    operation = request['operation']
+    operation = __validate_operation(request)
+    qnd = __validate_mtxq(operation, request)
     mtxq_build = compose_builder(
         submit_single_txn, create_transaction,
         __create_reciprocate_inputs_outputs, __create_reciprocate_payload,
