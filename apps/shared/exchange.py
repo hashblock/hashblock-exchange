@@ -29,6 +29,7 @@ from modules.dualities import Duality
 from modules.config import (
     public_key, private_key,
     keys_path,
+    HB_OPERATOR,
     valid_partnership, partnership_secret)
 from modules.decode import (
     asset_addresser,
@@ -208,7 +209,7 @@ def __create_initiate_payload(ingest):
             data.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
-    return (request['plus'], ExchangePayload(
+    return (HB_OPERATOR, ExchangePayload(
         udata=encrypted,
         ukey=utxq_addresser.utxq_unmatched(
             Duality.breakqname(operation), str(uuid.uuid4())),
@@ -220,7 +221,6 @@ def __create_initiate_inputs_outputs(ingest):
     signer, payload = ingest
     inputs = []
     outputs = [payload.ukey]
-    print("NEW INITIATE ADDRESS => {}".format(payload.ukey))
     return (
         signer,
         utxq_addresser,
@@ -260,7 +260,7 @@ def __create_reciprocate_payload(ingest):
             payload.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
-    return (request['plus'], ExchangePayload(
+    return (HB_OPERATOR, ExchangePayload(
         type=ExchangePayload.MTXQ,
         ukey=matched_uaddr,
         mkey=mtxq_addresser.mtxq_address(

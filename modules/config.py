@@ -29,6 +29,7 @@ from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 REST_CONFIG = None
 KEYS_PATH = None
+HB_OPERATOR = '__ZZZ_fff_hashblock_OPERATOR'
 ENVIRONMENT_KEYS_PATH = 'HASHBLOCK_KEYS'
 ENVIRONMENT_CFGR_PATH = 'HASHBLOCK_CONFIG'
 DUALITIES_SPECIFICATIONS = "dualities.yaml"
@@ -193,6 +194,16 @@ def __read_signer(signing_key):
     return crypto_factory.new_signer(private_key)
 
 
+def __fabricate_signer():
+    """Fabricate private, public and signer keys"""
+    context = create_context('secp256k1')
+    private_key = context.new_random_private_key()
+    public_key = context.get_public_key(private_key)
+    crypto_factory = CryptoFactory(context)
+    signer_key = crypto_factory.new_signer(private_key)
+    return (public_key.as_hex(), private_key.as_hex(), signer_key)
+
+
 def __load_cfg_and_keys(configfile):
     """Reads the configuration file and converts any priv keys to public"""
     print("Reading {} from {}".format(configfile, DEFAULT_CFGR_PATH))
@@ -214,6 +225,12 @@ def __load_cfg_and_keys(configfile):
         private_keys[key] = private
         signer_keys[key] = public
         submitter_keys[key] = __read_signer(private)
+
+    public, private, signer = __fabricate_signer()
+    public_keys[HB_OPERATOR] = public
+    private_keys[HB_OPERATOR] = private
+    signer_keys[HB_OPERATOR] = public
+    submitter_keys[HB_OPERATOR] = signer
 
     doc['rest']['public_keys'] = public_keys
     doc['rest']['private_keys'] = private_keys
