@@ -1,0 +1,4 @@
+#!/bin/bash
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+docker run -it --rm -v $top_dir/zkPROC/hashblock_zkproc/:/project/hashblock_exchange hashblock-dev-zkproc

@@ -1,0 +1,19 @@
+
+FROM ubuntu:xenial
+
+WORKDIR /root
+
+# install prerequisite
+RUN apt-get update && \
+    apt-get install -y \
+    wget unzip curl \
+    build-essential cmake git nano autoconf automake libtool pkg-config \
+    bsdmainutils libssl-dev libevent-dev libgmp3-dev libzmq-dev && \
+    git clone https://github.com/Electric-Coin-Company/dev-ci-zcash.git
+
+
+WORKDIR /root/dev-ci-zcash
+
+RUN ./zcutil/build.sh -j$(nproc)
+
+WORKDIR /project/hashblock_exchange
