@@ -14,6 +14,7 @@ RUN apt-get update && \
 
 WORKDIR /root/dev-ci-zcash
 
-RUN ./zcutil/build.sh -j$(nproc)
+RUN ./zcutil/build.sh -j$(nproc) && \
+    ./zcutil/fetch-params.sh --testnet
 
 WORKDIR /project/hashblock_exchange
