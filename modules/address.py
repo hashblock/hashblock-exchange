@@ -32,6 +32,7 @@ class Address(ABC):
     FAMILY_EXCHANGE = "exchange"
     FAMILY_SETTING = "setting"
     FAMILY_TRACK = "track"
+    FAMILY_COMMIT = "commit"
 
     # Dimensions, used by families
     MATCH_TYPE_UTXQ = "utxq"
@@ -59,6 +60,10 @@ class Address(ABC):
     @classmethod
     def track_addresser(cls):
         return TrackAddress()
+
+    @classmethod
+    def commit_addresser(cls):
+        return CommitAddress()
 
     @classmethod
     def unit_addresser(cls):
@@ -186,6 +191,7 @@ class SettingAddress(BaseAddress):
 
     Both Unit and Asset use internally as they are VotingAddress types
     """
+
     def __init__(self):
         super().__init__(self.FAMILY_SETTING, ["0.2.0"])
 
@@ -207,6 +213,7 @@ class TrackAddress(BaseAddress):
 
     oracle observations of some property of an asset
     """
+
     def __init__(self):
         super().__init__(self.FAMILY_TRACK, ["0.1.0"])
 
@@ -228,8 +235,36 @@ class TrackAddress(BaseAddress):
             + self.hashup(property)[0:14]
 
 
+class CommitAddress(BaseAddress):
+    """TrackAddress provides the track TP address support
+
+    oracle observations of some property of an asset
+    """
+
+    def __init__(self):
+        super().__init__(self.FAMILY_COMMIT, ["0.1.0"])
+
+    # E.g. hashblock.track.???.???
+    # 0-2 namespace             6/6
+    # 3-5 family                6/12
+    # 6-28 ident (from asset)   44/56
+    # 28-34 property            14/70
+    def track(self, ident, property):
+        """Create the stype (asset/unit) settings address using key
+        """
+        if ident is None or len(ident) != 44:
+            raise AssetIdRange(
+                "Invalid ident {} for  {} {} {}"
+                .format(ident, self._family, ident, property))
+
+        return self.family_ns_hash \
+            + ident \
+            + self.hashup(property)[0:14]
+
+
 class VotingAddress(BaseAddress):
     """VotingAddress provides the setting and candidate addresses"""
+
     def __init__(self, family, version_list):
         super().__init__(family, version_list)
         self._setting_addy = Address.setting_addresser().settings(family)
@@ -257,6 +292,7 @@ class VotingAddress(BaseAddress):
 
 class UnitAddress(VotingAddress):
     """UnitAddress provides the unit-of-measure TP address support"""
+
     def __init__(self):
         super().__init__(self.FAMILY_UNIT, ["0.3.0"])
 
@@ -274,6 +310,7 @@ class UnitAddress(VotingAddress):
 
 class AssetAddress(VotingAddress):
     """AssetAddress provides asset TP address support"""
+
     def __init__(self):
         super().__init__(self.FAMILY_ASSET, ["0.3.0"])
 
@@ -291,6 +328,7 @@ class AssetAddress(VotingAddress):
 
 class ExchangeAddress(BaseAddress):
     """MatchAddress is base for UTXQ/MTXQ address support"""
+
     def __init__(self, mtype):
         super().__init__(self.FAMILY_EXCHANGE, ["0.3.0"])
         self._mtype = mtype
@@ -316,6 +354,7 @@ class ExchangeAddress(BaseAddress):
 
 class ExchangeUTXQAddress(ExchangeAddress):
     """ExchangeUTXQAddress is concrete for UTXQ address support"""
+
     def __init__(self):
         super().__init__(self.MATCH_TYPE_UTXQ)
 
@@ -329,6 +368,7 @@ class ExchangeUTXQAddress(ExchangeAddress):
 
 class ExchangeMTXQAddress(ExchangeAddress):
     """ExchangeMTXQAddress is concrete for MTXQ address support"""
+
     def __init__(self):
         super().__init__(self.MATCH_TYPE_MTXQ)
 

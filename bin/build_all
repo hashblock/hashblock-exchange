@@ -77,9 +77,10 @@ hashblock-unit-tp;
 hashblock-exchange-tp;
 hashblock-setting-tp;
 hashblock-track-tp;
+hashblock-commit-tp;
 hashblock-rest;
 hashblock-admin;"|tr -d '\n')
-PRD_LOOKUP="asset;unit;exchange;setting;rest;admin"
+PRD_LOOKUP="asset;unit;exchange;track;commit;setting;rest;admin"
 
 
 BLD_DEV_INDEX=0

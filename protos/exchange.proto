@@ -18,17 +18,17 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "hashblock.exchange.protobuf";
 
-// Resource quantity
+// Quantity message
 message Quantity {
 
     //  Quantity amount? - Fixed width integer
-	bytes value = 1;
+    bytes value = 1;
 
     //  Prime # associated to unit of measure
-	bytes unit = 2;
+    bytes unit = 2;
 
     //  Prime # associated to asset
-	bytes asset = 3;
+    bytes asset = 3;
 }
 
 // Quantity ratio data for matching equation
