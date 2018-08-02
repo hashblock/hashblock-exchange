@@ -45,7 +45,7 @@ from modules.exceptions import (
     AuthException, RestException, DataException,
     AssetNotExistException, UnitNotExistException)
 from protobuf.exchange_pb2 import (
-    ExchangePayload, UTXQ, MTXQ, Quantity, Ratio)
+    ExchangePayload, UTXQWrapper, MTXQWrapper, UTXQ, MTXQ, Quantity, Ratio)
 
 
 def __validate_partners(plus, minus):
@@ -209,8 +209,11 @@ def __create_initiate_payload(ingest):
             data.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
+    datablock = UTXQWrapper(
+        utxq=encrypted,
+        commitment="This space reserved").SerializeToString()
     return (HB_OPERATOR, ExchangePayload(
-        udata=encrypted,
+        udata=datablock,
         ukey=utxq_addresser.utxq_unmatched(
             Duality.breakqname(operation), str(uuid.uuid4())),
         type=ExchangePayload.UTXQ))
@@ -255,20 +258,25 @@ def __create_reciprocate_payload(ingest):
             utxq.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
+    w_utxq = UTXQWrapper(
+        utxq=e_utxq,
+        commitment="This space reserved").SerializeToString()
     e_mtxq = binascii.hexlify(
         STATE_CRYPTO.encrypt_from(
             payload.SerializeToString(),
             private_key(request['plus']),
             public_key(request['minus'])))
+    w_mtxq = MTXQWrapper(
+        mtxq=e_mtxq,
+        proof=proof.encode()).SerializeToString()
     return (HB_OPERATOR, ExchangePayload(
         type=ExchangePayload.MTXQ,
         ukey=matched_uaddr,
         mkey=mtxq_addresser.mtxq_address(
             Duality.breakqname(operation), str(uuid.uuid4())),
-        mdata=e_mtxq,
-        udata=e_utxq,
-        pairings=pairing.encode(),
-        proof=proof.encode()))
+        mdata=w_mtxq,
+        udata=w_utxq,
+        pairing=pairing.encode()))
 
 
 def __create_reciprocate_inputs_outputs(ingest):

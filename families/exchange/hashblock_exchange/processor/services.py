@@ -23,7 +23,7 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from modules.state import State, StateDataNotFound
 from modules.hashblock_zksnark import zksnark_verify
 
-from protobuf.exchange_pb2 import (ExchangePayload)
+from protobuf.exchange_pb2 import (ExchangePayload, MTXQWrapper)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -105,8 +105,10 @@ class V020apply(BaseService):
         super().__init__(txn, state)
 
     def initiate(self):
-        """Version 0.2.0 works with enrypted data blobs"""
-        self.state.set(self.payload.udata, self.payload.ukey)
+        """Version 0.3.0 works with wrapper"""
+        self.state.set(
+            self.payload.udata,
+            self.payload.ukey)
 
     def reciprocate(self):
         """Version 0.2.0 works with encrypted data blobs
@@ -117,11 +119,12 @@ class V020apply(BaseService):
                 "UTXQ {} already exchangeed".format(self.payload.ukey))
         except StateDataNotFound:
             pass
-
+        mwrap = MTXQWrapper()
+        mwrap.ParseFromString(self.payload.mdata)
         vres = zksnark_verify(
             KEYS_PATH,
-            self.payload.proof.decode(),
-            self.payload.pairings.decode())
+            mwrap.proof.decode(),
+            self.payload.pairing.decode())
         if vres:
             LOGGER.info("UTXQ and MTXQ Balance!")
             self.state.set(self.payload.udata, self.payload.ukey)

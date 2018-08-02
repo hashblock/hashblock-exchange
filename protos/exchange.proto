@@ -53,6 +53,14 @@ message UTXQ {
     string operation = 4;
 }
 
+//  Wrapper for UTXQ
+message UTXQWrapper {
+    //  Commitment
+    string commitment = 1;
+    //  Encrypted UTXQ
+    bytes utxq = 2;
+}
+
 //  Reciprocating data elements
 message MTXQ {
     //  Key for reciprocator (who am I)
@@ -74,6 +82,17 @@ message MTXQ {
     string operation = 7;
 }
 
+// Wrapper for MTXQ
+message MTXQWrapper {
+
+    //  This is the 'proof' to use in verifying matching equation
+    bytes proof = 1;
+
+    //  Encrypted MTXQ
+    bytes mtxq = 2;
+
+}
+
 message ExchangePayload {
     enum Type {
         UTXQ = 0;
@@ -84,24 +103,23 @@ message ExchangePayload {
     Type type = 1;
 
     //  The initiate address key
-    //  Data is in udata
+    //  unmatched UTXQ is in udata
     string ukey = 2;
 
     //  The reciprocate address key
-    //  Data is in mdata
+    //  Data is in mdata and
+    //  the 'matched' UTXQWrapper is in udata
     string mkey = 3;
 
-    // The encrypted blob of the MTXQ
+    // The MTXQWrapper
     bytes mdata = 4;
 
-    // The encrypted blob of the UTXQ
+    // The UTXQWrapper
     bytes udata = 5;
 
-    // The encrypted blob of the matched UTXQ
-    // if we are processing MTXQ Actions
-    bytes pairings = 6;
+    //  This is the 'pairing' to use in verifying matching equation
+    bytes pairing = 6;
 
-    //  This is the 'proof' to use in verifying matching equation
-    bytes proof = 7;
+
 }
 

@@ -32,8 +32,8 @@ from modules.state import State
 from modules.exceptions import AuthException
 from modules.address import Address
 
-from protobuf.exchange_pb2 import UTXQ
-from protobuf.exchange_pb2 import MTXQ
+from protobuf.exchange_pb2 import UTXQ, UTXQWrapper
+from protobuf.exchange_pb2 import MTXQ, MTXQWrapper
 from protobuf.setting_pb2 import Settings
 from protobuf.unit_pb2 import Unit
 from protobuf.unit_pb2 import UnitCandidates
@@ -54,20 +54,64 @@ def get_node(address):
     return RestClient(sawtooth_rest_host()).get_leaf(address)
 
 
+def __decrypt_leaf(edata, partner_secret):
+    """Fetch encrypted leaf data from chain"""
+    data = binascii.unhexlify(edata.decode())
+    return STATE_CRYPTO.decrypt_object_with(data, partner_secret)
+
+
+def __get_encrypted_UTXQ(address, partner_secret=None):
+    if partner_secret is None:
+        raise AuthException
+    ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
+    w_utxq = UTXQWrapper()
+    w_utxq.ParseFromString(b64decode(ddict['data']))
+    ddict['data'] = __decrypt_leaf(w_utxq.utxq, partner_secret)
+    return ddict
+
+
+def __get_encrypted_UTXQ_list(address, partner_secret=None):
+    """Fetch encrypted list data from chain"""
+    if partner_secret is None:
+        raise AuthException
+    ddict = RestClient(sawtooth_rest_host()).list_state(address)
+    for entry in ddict['data']:
+        w_utxq = UTXQWrapper()
+        w_utxq.ParseFromString(b64decode(entry['data']))
+        entry['data'] = __decrypt_leaf(w_utxq.utxq, partner_secret)
+        # s1 = binascii.unhexlify(b64decode(entry['data']).decode())
+        # entry['data'] = STATE_CRYPTO.decrypt_object_with(s1, partner_secret)
+    return ddict
+
+
+def __get_encrypted_MTXQ(address, partner_secret=None):
+    if partner_secret is None:
+        raise AuthException
+    ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
+    w_mtxq = MTXQWrapper()
+    w_mtxq.ParseFromString(b64decode(ddict['data']))
+    ddict['data'] = __decrypt_leaf(w_mtxq.mtxq, partner_secret)
+    return ddict
+
+
+def __get_encrypted_MTXQ_list(address, partner_secret=None):
+    """Fetch encrypted list data from chain"""
+    if partner_secret is None:
+        raise AuthException
+    ddict = RestClient(sawtooth_rest_host()).list_state(address)
+    for entry in ddict['data']:
+        w_mtxq = MTXQWrapper()
+        w_mtxq.ParseFromString(b64decode(entry['data']))
+        entry['data'] = __decrypt_leaf(w_mtxq.mtxq, partner_secret)
+        # s1 = binascii.unhexlify(b64decode(entry['data']).decode())
+        # entry['data'] = STATE_CRYPTO.decrypt_object_with(s1, partner_secret)
+    return ddict
+
+
 def __get_leaf_data(address, partner_secret=None):
     """Fetch leaf data from chain"""
     ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
     ddict['data'] = b64decode(ddict['data'])
-    return ddict
-
-
-def __get_encrypted_leaf(address, partner_secret=None):
-    """Fetch encrypted leaf data from chain"""
-    if partner_secret is None:
-        raise AuthException
-    ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
-    data = binascii.unhexlify(b64decode(ddict['data']).decode())
-    ddict['data'] = STATE_CRYPTO.decrypt_object_with(data, partner_secret)
     return ddict
 
 
@@ -76,17 +120,6 @@ def __get_list_data(address, partner_secret=None):
     ddict = RestClient(sawtooth_rest_host()).list_state(address)
     for entry in ddict['data']:
         entry['data'] = b64decode(entry['data'])
-    return ddict
-
-
-def __get_encrypted_list_data(address, partner_secret=None):
-    """Fetch encrypted list data from chain"""
-    if partner_secret is None:
-        raise AuthException
-    ddict = RestClient(sawtooth_rest_host()).list_state(address)
-    for entry in ddict['data']:
-        s1 = binascii.unhexlify(b64decode(entry['data']).decode())
-        entry['data'] = STATE_CRYPTO.decrypt_object_with(s1, partner_secret)
     return ddict
 
 
@@ -285,7 +318,7 @@ def __format_quantity(quantity):
 
 
 def __decode_exchange(address, data):
-    """Detail decode a unmatched or matched address"""
+    """Detail decode a UTXQ or MTXQ"""
     def quantity_to_prime(quantity, rquant):
         quantity['value'] = \
             int.from_bytes(rquant.value, byteorder='little')
@@ -317,43 +350,32 @@ def __decode_exchange(address, data):
             match['ratio']['denominator'],
             item.ratio.denominator)
     return {
-        'family': 'match',
+        'family': 'exchange',
         'type': mtype,
         'data': match
     }
 
 
 def get_utxq_obj_json(address, secret):
-    utxq_obj = __get_encrypted_leaf(address, secret)['data']
+    """Fetch the UTXQWrapper and then de-encrypt UTXQ"""
+    utxq_obj = __get_encrypted_UTXQ(address, secret)['data']
+    # utxq_obj = __get_encrypted_leaf(address, secret)['data']
     utxq = UTXQ()
     utxq.ParseFromString(utxq_obj)
     return (utxq, __decode_exchange(address, utxq_obj))
-
-
-def decode_exchange_types(addresser, agreement):
-    sec = agreement_secret(agreement)
-    results = __get_encrypted_list_data(addresser.mtype_address, sec)['data']
-    data = []
-    for element in results:
-        data.append((element['address']))
-    return {
-        'family': 'match',
-        'exchange_type': addresser.mtype,
-        'data': data
-    }
 
 
 def decode_exchange_initiate(address, agreement):
     sec = agreement_secret(agreement)
     return __decode_exchange(
         address,
-        __get_encrypted_leaf(address, sec)['data'])
+        __get_encrypted_UTXQ(address, sec)['data'])
 
 
 def decode_exchange_initiate_list(agreement):
     """Decorate initiates with text conversions"""
     sec = agreement_secret(agreement)
-    results = __get_encrypted_list_data(
+    results = __get_encrypted_UTXQ_list(
         utxq_addresser.mtype_address, sec)['data']
     data = []
     for element in results:
@@ -369,7 +391,7 @@ def decode_exchange_initiate_list(agreement):
                 "address": ladd
             })
     return {
-        'family': 'match',
+        'family': 'exchange',
         'dimension': 'utxq',
         'data': data
     }
@@ -379,13 +401,13 @@ def decode_exchange_reciprocate(address, agreement):
     sec = agreement_secret(agreement)
     return __decode_exchange(
         address,
-        __get_encrypted_leaf(address, sec)['data'])
+        __get_encrypted_MTXQ(address, sec)['data'])
 
 
 def decode_exchange_reciprocate_list(agreement):
     """Decorate reciprocates with text conversions"""
     sec = agreement_secret(agreement)
-    results = __get_encrypted_list_data(
+    results = __get_encrypted_MTXQ_list(
         mtxq_addresser.mtype_address, sec)['data']
 
     data = []
@@ -400,7 +422,7 @@ def decode_exchange_reciprocate_list(agreement):
             "address": ladd
         })
     return {
-        'family': 'match',
+        'family': 'exchange',
         'dimension': 'mtxq',
         'data': data
     }
