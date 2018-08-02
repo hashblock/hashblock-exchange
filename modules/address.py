@@ -152,6 +152,10 @@ class SimpleAddress(Address):
         return self._family
 
     @property
+    def family_ns_hash(self):
+        return self._reghash
+
+    @property
     def family_ns_name(self):
         return self.family
 
