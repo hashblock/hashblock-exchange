@@ -124,7 +124,7 @@ class V020apply(BaseService):
         vres = zksnark_verify(
             KEYS_PATH,
             mwrap.proof.decode(),
-            self.payload.pairing.decode())
+            mwrap.pairing.decode())
         if vres:
             LOGGER.info("UTXQ and MTXQ Balance!")
             self.state.set(self.payload.udata, self.payload.ukey)

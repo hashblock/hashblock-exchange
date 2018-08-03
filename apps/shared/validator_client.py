@@ -112,7 +112,6 @@ class Validator(object):
         """Uses an executor to send an asynchronous ZMQ request to the
         validator with the handler's Connection
         """
-        print("In _send_request")
         try:
             return await self._connection.send(
                 message_type=request_type,
@@ -131,8 +130,6 @@ class Validator(object):
     async def _query_validator(
         self, request_type, response_proto, payload, error_traps=None):
         """Sends a request to the validator and parses the response."""
-
-        print('Sending %s request to validator {}'.format(request_type))
 
         payload_bytes = payload.SerializeToString()
         response = await self._send_request(request_type, payload_bytes)
@@ -165,7 +162,10 @@ class Validator(object):
             client_state_pb2.ClientStateGetResponse,
             validator_query)
 
-        return {'address': addy, 'data': response['value']}
+        return {
+            'address': addy,
+            'data': response['value'] if response['status'] == 'OK'
+            else None}
 
     def get_state_leaf(self, address):
         """Get a data leaf from state"""
@@ -195,7 +195,6 @@ class Validator(object):
         fetch_more = True
         entries = []
         paging_controls = self._get_paging_controls()
-        print("List request with starting address => {}".format(addy))
 
         while fetch_more:
             response = await self._get_next(addy=addy, paging=paging_controls)
