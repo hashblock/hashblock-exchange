@@ -27,14 +27,27 @@ from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
 from sawtooth_sdk.protobuf.batch_pb2 import Batch
 from sawtooth_sdk.protobuf.batch_pb2 import BatchList
 
-from shared.rest_client import RestClient
-from modules.config import sawtooth_rest_host, valid_submitter, valid_signer
+from shared.validator_client import Validator
+from modules.config import (
+    sawtooth_validator_host, valid_submitter, valid_signer)
+
+TXN_VALIDATOR = None
 
 
 def compose_builder(*functions):
     """Construct composition"""
     return functools.reduce(
         lambda f, g: lambda x: f(g(x)), functions, lambda x: x)
+
+
+def get_txn_vc():
+    """Return the validator instance"""
+    return TXN_VALIDATOR
+
+
+def initialize_txn_vc():
+    global TXN_VALIDATOR
+    TXN_VALIDATOR = Validator(sawtooth_validator_host())
 
 
 def create_transaction(ingest):
@@ -96,8 +109,9 @@ def create_batch_list(batches):
 def submit_batch(batches):
     """Submit transaction batches using default client URL"""
     batch_list = create_batch_list(batches)
-    client = RestClient(sawtooth_rest_host())
-    return client.send_batches(batch_list)
+    # client = RestClient(sawtooth_rest_host())
+    # return client.send_batches(batch_list)
+    return TXN_VALIDATOR.submit_batches(batch_list)
 
 
 def submit_single_txn(ingest):

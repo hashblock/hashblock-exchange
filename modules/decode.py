@@ -24,10 +24,7 @@ from functools import lru_cache
 from base64 import b64decode
 
 from google.protobuf.json_format import MessageToDict
-from shared.validator_client import Validator
-
-from modules.config import (
-    sawtooth_validator_host, key_owner, agreement_secret)
+from modules.config import (key_owner, agreement_secret)
 
 from modules.state import State
 from modules.exceptions import AuthException
@@ -42,6 +39,8 @@ from protobuf.unit_pb2 import (
 from protobuf.asset_pb2 import (
     Asset, AssetCandidates)
 
+from shared.transactions import get_txn_vc
+
 asset_addresser = Address.asset_addresser()
 unit_addresser = Address.unit_addresser()
 setting_addresser = Address.setting_addresser()
@@ -53,9 +52,9 @@ STATE_CRYPTO = State()
 VALIDATOR = None
 
 
-def initialize_vc():
+def initialize_decode():
     global VALIDATOR
-    VALIDATOR = Validator(sawtooth_validator_host())
+    VALIDATOR = get_txn_vc()
 
 
 def get_node(address):

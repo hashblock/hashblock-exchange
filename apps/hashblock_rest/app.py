@@ -25,8 +25,9 @@ from werkzeug.utils import secure_filename
 from modules.exceptions import DataException, AuthException, NotPrimeException
 from modules.config import load_hashblock_config
 from modules.address import Address
+from shared.transactions import initialize_txn_vc
 from modules.decode import (
-    initialize_vc,
+    initialize_decode,
     decode_exchange_initiate,
     decode_exchange_initiate_list,
     decode_exchange_reciprocate,
@@ -39,14 +40,15 @@ import shared.exchange as exchange
 
 LOGGER = logging.getLogger(__name__)
 
-# Load up our configuration for URLs and keys
-
+# Initialize configuration
 load_hashblock_config()
 print("Succesfully loaded hasblock-rest configuration")
 
-# Setup ZMQ
-initialize_vc()
+# Initialize ZMQ
+initialize_txn_vc()
 print("Succesfully initialized ZMQ connection")
+# Initialize decoder
+initialize_decode()
 
 # Setup upload location for batch submissions
 UPLOAD_FOLDER = '/uploads/files/'

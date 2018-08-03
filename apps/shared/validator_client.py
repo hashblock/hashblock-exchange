@@ -24,7 +24,8 @@ import asyncio
 import logging
 
 from zmq.asyncio import ZMQEventLoop
-from sawtooth_sdk.protobuf import (client_state_pb2)
+from sawtooth_sdk.protobuf import (
+    client_state_pb2, client_batch_submit_pb2)
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import DecodeError
@@ -167,10 +168,9 @@ class Validator(object):
         return {'address': addy, 'data': response['value']}
 
     def get_state_leaf(self, address):
+        """Get a data leaf from state"""
         result = asyncio.get_event_loop().run_until_complete(
             self._state_leaf(address))
-        # result = self._loop.run_until_complete(self.state_leaf(address))
-        # print("RESULT = {}".format(result))
         return result
 
     async def _get_next(self, root=None, addy=None, paging=None):
@@ -211,6 +211,30 @@ class Validator(object):
         return {'data': entries}
 
     def get_state_list(self, address):
+        """Get a listing of data from state"""
         result = asyncio.get_event_loop().run_until_complete(
             self._state_list(address))
+        return result
+
+    async def _submit_batches(self, batch_list):
+        """Accepts a BatchList and submits it to the validator.
+        batch_list:
+        Response:
+        """
+        # Query validator
+        # error_traps = [error_handlers.BatchInvalidTrap,
+        #                error_handlers.BatchQueueFullTrap]
+        validator_query = client_batch_submit_pb2.ClientBatchSubmitRequest(
+            batches=batch_list.batches)
+
+        return await self._query_validator(
+            Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            client_batch_submit_pb2.ClientBatchSubmitResponse,
+            validator_query)
+
+    def submit_batches(self, batch_list):
+        """Get a data leaf from state"""
+        result = asyncio.get_event_loop().run_until_complete(
+            self._submit_batches(batch_list))
+        print("Batch submit result = {}".format(result))
         return result

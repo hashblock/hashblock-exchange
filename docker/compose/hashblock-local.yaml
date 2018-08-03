@@ -32,7 +32,6 @@ services:
       - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
     depends_on:
       - validator
-      - rest-api
     command: "bash -c \"\
         tail -f /dev/null \
         \""
@@ -45,6 +44,8 @@ services:
       - ../..:/project/hashblock-exchange
     ports:
       - '8000:8000'
+    depends_on:
+      - validator
     environment:
       - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
       - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
@@ -188,12 +189,12 @@ services:
           --bind network:tcp://eth0:8800 \
         \""
 
-  rest-api:
-    image: hyperledger/sawtooth-rest_api:latest
-    container_name: sawtooth-rest-api-local
-    ports:
-      - "8008:8008"
-    depends_on:
-      - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
-    stop_signal: SIGKILL
+  # rest-api:
+  #   image: hyperledger/sawtooth-rest_api:latest
+  #   container_name: sawtooth-rest-api-local
+  #   ports:
+  #     - "8008:8008"
+  #   depends_on:
+  #     - validator
+  #   command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
+  #   stop_signal: SIGKILL
