@@ -19,7 +19,9 @@ version: '2.1'
 rest:
   hosts:
     # sawtooth rest-api url and port, should match your setup
-    swrest-connect: http://rest-api:8008
+    swrest-connect: http://rest-api:8008  # DEPRECATED
+    # sawtooth validator and port, should match your setup
+    stval-connect: tcp://validator:4004
 
   # Signing keys for batch/transaction submissions
   signers:

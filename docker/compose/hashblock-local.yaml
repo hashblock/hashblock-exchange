@@ -72,6 +72,7 @@ services:
       \""
     stop_signal: SIGKILL
 
+
   asset-processor:
     image: hashblock-dev-generic-tp
     container_name: hashblock-dev-asset-tp
@@ -138,6 +139,24 @@ services:
     command: "bash -c \"\
         sleep 1 &&
         track-tp -vv \
+          -C tcp://validator:4004 \
+      \""
+    stop_signal: SIGKILL
+
+  commit-processor:
+    image: hashblock-dev-generic-tp
+    container_name: hashblock-dev-commit-tp
+    volumes:
+      - ../..:/project/hashblock-exchange
+    environment:
+      - HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys
+      - HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig
+      - PYTHONPATH=/project/hashblock-exchange
+    depends_on:
+      - exchange-processor
+    command: "bash -c \"\
+        sleep 1 &&
+        commit-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL

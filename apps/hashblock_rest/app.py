@@ -26,6 +26,7 @@ from modules.exceptions import DataException, AuthException, NotPrimeException
 from modules.config import load_hashblock_config
 from modules.address import Address
 from modules.decode import (
+    initialize_vc,
     decode_exchange_initiate,
     decode_exchange_initiate_list,
     decode_exchange_reciprocate,
@@ -42,6 +43,10 @@ LOGGER = logging.getLogger(__name__)
 
 load_hashblock_config()
 print("Succesfully loaded hasblock-rest configuration")
+
+# Setup ZMQ
+initialize_vc()
+print("Succesfully initialized ZMQ connection")
 
 # Setup upload location for batch submissions
 UPLOAD_FOLDER = '/uploads/files/'

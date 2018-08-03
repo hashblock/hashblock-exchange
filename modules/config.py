@@ -49,6 +49,11 @@ def sawtooth_rest_host():
     return REST_CONFIG['rest']['hosts']['swrest-connect']
 
 
+def sawtooth_validator_host():
+    """Retrieve sawtooth rest-api url"""
+    return REST_CONFIG['rest']['hosts']['stval-connect']
+
+
 def valid_signer(signer_name):
     """Attempts to resolve a singer key by name"""
     result = None

@@ -24,21 +24,23 @@ from functools import lru_cache
 from base64 import b64decode
 
 from google.protobuf.json_format import MessageToDict
-from shared.rest_client import RestClient
+from shared.validator_client import Validator
 
-from modules.config import sawtooth_rest_host
-from modules.config import key_owner, agreement_secret
+from modules.config import (
+    sawtooth_validator_host, key_owner, agreement_secret)
+
 from modules.state import State
 from modules.exceptions import AuthException
 from modules.address import Address
 
-from protobuf.exchange_pb2 import UTXQ, UTXQWrapper
-from protobuf.exchange_pb2 import MTXQ, MTXQWrapper
+from protobuf.exchange_pb2 import (
+    UTXQ, UTXQWrapper, MTXQ, MTXQWrapper)
+
 from protobuf.setting_pb2 import Settings
-from protobuf.unit_pb2 import Unit
-from protobuf.unit_pb2 import UnitCandidates
-from protobuf.asset_pb2 import Asset
-from protobuf.asset_pb2 import AssetCandidates
+from protobuf.unit_pb2 import (
+    Unit, UnitCandidates)
+from protobuf.asset_pb2 import (
+    Asset, AssetCandidates)
 
 asset_addresser = Address.asset_addresser()
 unit_addresser = Address.unit_addresser()
@@ -48,10 +50,16 @@ mtxq_addresser = Address.exchange_mtxq_addresser()
 
 
 STATE_CRYPTO = State()
+VALIDATOR = None
+
+
+def initialize_vc():
+    global VALIDATOR
+    VALIDATOR = Validator(sawtooth_validator_host())
 
 
 def get_node(address):
-    return RestClient(sawtooth_rest_host()).get_leaf(address)
+    return VALIDATOR.get_state_leaf(address)
 
 
 def __decrypt_leaf(edata, partner_secret):
@@ -63,7 +71,8 @@ def __decrypt_leaf(edata, partner_secret):
 def __get_encrypted_UTXQ(address, partner_secret=None):
     if partner_secret is None:
         raise AuthException
-    ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
+    ddict = VALIDATOR.get_state_leaf(address)
+    # ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
     w_utxq = UTXQWrapper()
     w_utxq.ParseFromString(b64decode(ddict['data']))
     ddict['data'] = __decrypt_leaf(w_utxq.utxq, partner_secret)
@@ -74,7 +83,7 @@ def __get_encrypted_UTXQ_list(address, partner_secret=None):
     """Fetch encrypted list data from chain"""
     if partner_secret is None:
         raise AuthException
-    ddict = RestClient(sawtooth_rest_host()).list_state(address)
+    ddict = VALIDATOR.get_state_list(address)
     for entry in ddict['data']:
         w_utxq = UTXQWrapper()
         w_utxq.ParseFromString(b64decode(entry['data']))
@@ -87,7 +96,8 @@ def __get_encrypted_UTXQ_list(address, partner_secret=None):
 def __get_encrypted_MTXQ(address, partner_secret=None):
     if partner_secret is None:
         raise AuthException
-    ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
+    ddict = VALIDATOR.get_state_leaf(address)
+    # ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
     w_mtxq = MTXQWrapper()
     w_mtxq.ParseFromString(b64decode(ddict['data']))
     ddict['data'] = __decrypt_leaf(w_mtxq.mtxq, partner_secret)
@@ -98,7 +108,7 @@ def __get_encrypted_MTXQ_list(address, partner_secret=None):
     """Fetch encrypted list data from chain"""
     if partner_secret is None:
         raise AuthException
-    ddict = RestClient(sawtooth_rest_host()).list_state(address)
+    ddict = VALIDATOR.get_state_list(address)
     for entry in ddict['data']:
         w_mtxq = MTXQWrapper()
         w_mtxq.ParseFromString(b64decode(entry['data']))
@@ -110,14 +120,15 @@ def __get_encrypted_MTXQ_list(address, partner_secret=None):
 
 def __get_leaf_data(address, partner_secret=None):
     """Fetch leaf data from chain"""
-    ddict = RestClient(sawtooth_rest_host()).get_leaf(address)
+    ddict = VALIDATOR.get_state_leaf(address)
     ddict['data'] = b64decode(ddict['data'])
     return ddict
 
 
 def __get_list_data(address, partner_secret=None):
     """Fetch list data from chain"""
-    ddict = RestClient(sawtooth_rest_host()).list_state(address)
+    ddict = VALIDATOR.get_state_list(address)
+    # ddict = RestClient(sawtooth_rest_host()).list_state(address)
     for entry in ddict['data']:
         entry['data'] = b64decode(entry['data'])
     return ddict
@@ -183,10 +194,8 @@ def __decode_settings(address, data):
     }
 
 
-def decode_settings(address, data=None):
+def decode_settings(address):
     """Prepare settings json"""
-    if not data:
-        data = __get_leaf_data(address)
     return __decode_settings(
         address,
         __get_leaf_data(address)['data'])
