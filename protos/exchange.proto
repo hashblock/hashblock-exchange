@@ -88,8 +88,11 @@ message MTXQWrapper {
     //  This is the 'proof' to use in verifying matching equation
     bytes proof = 1;
 
+    //  This is the 'pairing' to use in verifying matching equation
+    bytes pairing = 2;
+
     //  Encrypted MTXQ
-    bytes mtxq = 2;
+    bytes mtxq = 3;
 
 }
 
@@ -116,10 +119,6 @@ message ExchangePayload {
 
     // The UTXQWrapper
     bytes udata = 5;
-
-    //  This is the 'pairing' to use in verifying matching equation
-    bytes pairing = 6;
-
 
 }
 

@@ -105,12 +105,10 @@ def __get_and_validate_utxq(address, secret):
         raise DataException(
             'Attempt to match using already matched utxq address')
     else:
-        try:
-            get_node(mtxq_addresser.set_utxq_matched(address))
+        result = get_node(mtxq_addresser.set_utxq_matched(address))['data']
+        if result:
             raise DataException(
                 'UTXQ is already matched')
-        except RestException:
-            pass
     try:
         return get_utxq_obj_json(address, secret)
     except RestException:
@@ -268,6 +266,7 @@ def __create_reciprocate_payload(ingest):
             public_key(request['minus'])))
     w_mtxq = MTXQWrapper(
         mtxq=e_mtxq,
+        pairing=pairing.encode(),
         proof=proof.encode()).SerializeToString()
     return (HB_OPERATOR, ExchangePayload(
         type=ExchangePayload.MTXQ,
@@ -275,8 +274,7 @@ def __create_reciprocate_payload(ingest):
         mkey=mtxq_addresser.mtxq_address(
             Duality.breakqname(operation), str(uuid.uuid4())),
         mdata=w_mtxq,
-        udata=w_utxq,
-        pairing=pairing.encode()))
+        udata=w_utxq))
 
 
 def __create_reciprocate_inputs_outputs(ingest):
