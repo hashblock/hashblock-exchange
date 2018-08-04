@@ -38,17 +38,6 @@ from modules.decode import (
 import shared.asset as asset
 import shared.exchange as exchange
 
-LOGGER = logging.getLogger(__name__)
-
-# Initialize configuration
-load_hashblock_config()
-print("Succesfully loaded hasblock-rest configuration")
-
-# Initialize ZMQ
-initialize_txn_vc()
-print("Succesfully initialized ZMQ connection")
-# Initialize decoder
-initialize_decode()
 
 # Setup upload location for batch submissions
 UPLOAD_FOLDER = '/uploads/files/'
@@ -61,6 +50,11 @@ if not os.path.exists(UPLOAD_FOLDER):
 application = Flask(__name__)
 application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    application.logger.handlers = gunicorn_logger.handlers
+    application.logger.setLevel(gunicorn_logger.level)
+
 api = Api(
     application,
     validate=True,
@@ -70,7 +64,17 @@ api = Api(
 
 ns = api.namespace('hashblock', description='hashblock operations')
 
-# Utility functions
+LOGGER = application.logger
+
+# Initialize configuration
+load_hashblock_config()
+LOGGER.info("Succesfully loaded hasblock-rest configuration")
+
+# Initialize ZMQ
+initialize_txn_vc()
+LOGGER.info("Succesfully initialized ZMQ connection")
+# Initialize decoder
+initialize_decode()
 
 
 def assetlinks(data):

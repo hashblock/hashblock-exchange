@@ -16,19 +16,18 @@ set(SOURCES src/hbzkproc.c)
 set(CMAKE_C_FLAGS "-Wall -std=c99 -Wall -Wextra -Wfatal-errors -O2")
 
 # Link settings
-find_library(HB_LIBUNIVALUE NAMES libunivalue)
-find_library(HB_LIBMEMENV NAMES libmemenv)
-find_library(HB_LIBSNARK NAMES libsnark PATHS /root/zcash/src/snark)
-find_library(HB_LIBBITCOIN_CRYPTO NAMES libbitcoin_crypto)
-find_library(HB_LIBSECP256K1 NAMES libsecp256k1)
-find_library(HB_LIBBITCOIN_UTIL NAMES libbitcoin_util)
-find_library(HB_LIBBITCOIN_CLI NAMES libbitcoin_cli)
-find_library(HB_LIBZCASH NAMES libzcash)
+find_library(HB_LIBUNIVALUE NAMES univalue PATHS /root/zcash/src/univalue/.libs)
+find_library(HB_LIBMEMENV NAMES memenv PATHS /root/zcash/src/leveldb)
+find_library(HB_LIBSNARK NAMES snark PATHS /root/zcash/src/snark)
+find_library(HB_LIBBITCOIN_CRYPTO NAMES bitcoin_crypto PATHS /root/zcash/src/crypto)
+find_library(HB_LIBSECP256K1 NAMES secp256k1 PATHS /root/zcash/src/secp256k1/.libs)
+find_library(HB_LIBBITCOIN_UTIL NAMES bitcoin_util PATHS /root/zcash/src)
+find_library(HB_LIBBITCOIN_CLI NAMES bitcoin_cli PATHS /root/zcash/src)
+find_library(HB_LIBZCASH NAMES zcash)
 
 
 add_executable(hbzkproc ${SOURCES})
 target_link_libraries(hbzkproc
-	-rdynamic
 	-std=c99 -Wall -Wextra -Wfatal-errors
 	${HB_LIBUNIVALUE}
 	${HB_LIBMEMENV}

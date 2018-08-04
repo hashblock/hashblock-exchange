@@ -15,18 +15,21 @@
 # ------------------------------------------------------------------------------
 
 import os
+import logging
 from yaml import load
 from abc import ABC, abstractmethod
+
+LOGGER = logging
 
 
 def _load_dualities(cfg_path, configfile):
     """Reads the duality configuration file"""
-    print("Reading {} from {}".format(configfile, cfg_path))
+    LOGGER.info("Reading {} from {}".format(configfile, cfg_path))
     try:
         with open(os.path.join(cfg_path, configfile), 'r') as f:
             doc = load(f)
     except IOError:
-        print("Could not read {}".format(configfile))
+        LOGGER.error("Could not read {}".format(configfile))
         raise
     return doc
 

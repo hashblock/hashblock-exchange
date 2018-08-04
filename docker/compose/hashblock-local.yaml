@@ -53,6 +53,7 @@ services:
     command: >
       gunicorn -b 0.0.0.0:8000
       --access-logfile -
+      --log-level=debug
       --reload
       "hashblock_rest.app:application"
     stop_signal: SIGKILL

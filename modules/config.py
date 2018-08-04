@@ -16,6 +16,7 @@
 
 import sys
 import os
+import logging
 from yaml import load
 
 from modules.state import State
@@ -38,6 +39,8 @@ DEFAULT_CFGR_PATH = '/project/configs'
 CFGR_FILE = 'hashblock_config.yaml'
 UNKNOWN_OWNER = '__unknown_key_owner_value__'
 UNKNOWN_AGREEMENT = '__unknown_agreement__'
+
+LOGGER = logging
 
 
 def keys_path():
@@ -211,12 +214,12 @@ def __fabricate_signer():
 
 def __load_cfg_and_keys(configfile):
     """Reads the configuration file and converts any priv keys to public"""
-    print("Reading {} from {}".format(configfile, DEFAULT_CFGR_PATH))
+    LOGGER.debug("Reading {} from {}".format(configfile, DEFAULT_CFGR_PATH))
     try:
         with open(os.path.join(DEFAULT_CFGR_PATH, configfile), 'r') as f:
             doc = load(f)
     except IOError:
-        print("Could not read {}".format(configfile))
+        LOGGER.error("Could not read {}".format(configfile))
         raise
 
     signer_keys = {}
