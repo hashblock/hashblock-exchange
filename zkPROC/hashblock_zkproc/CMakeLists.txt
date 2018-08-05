@@ -17,7 +17,7 @@ include_directories(/usr/local/include
 	/root/zcash/depends/x86_64-unknown-linux-gnu/include)
 
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -Wextra -Wfatal-errors -O2 -fwrapv -fno-strict-aliasing -enable-glibc-back-compat")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -Wextra -Wfatal-errors -O2")
 set(SOURCES src/hbzkproc.cpp)
 
 # Link settings
