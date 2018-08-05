@@ -22,14 +22,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -Wextra -Wfatal-errors 
 set(SOURCES src/hbzkproc.cpp src/base64.cpp)
 
 # Link settings
+find_library(HB_LIBSSL NAMES event_openssl)
 find_library(HB_LIBUNIVALUE NAMES univalue PATHS /root/zcash/src/univalue/.libs)
 find_library(HB_LIBMEMENV NAMES memenv PATHS /root/zcash/src/leveldb)
 find_library(HB_LIBSNARK NAMES snark PATHS /root/zcash/src/snark)
 find_library(HB_LIBSECP256K1 NAMES secp256k1 PATHS /root/zcash/src/secp256k1/.libs)
 find_library(HB_LIBBITCOIN_COMMON NAMES bitcoin_common PATHS /root/zcash/src)
 find_library(HB_LIBBITCOIN_UTIL NAMES bitcoin_util PATHS /root/zcash/src)
-#find_library(HB_LIBBITCOIN_CLI NAMES bitcoin_cli PATHS /root/zcash/src)
+find_library(HB_LIBBITCOIN_CLI NAMES bitcoin_cli PATHS /root/zcash/src)
 find_library(HB_LIBBITCOIN_CRYPTO NAMES bitcoin_crypto PATHS /root/zcash/src/crypto)
+find_library(HB_LIB_SODIUM NAMES sodium PATHS /root/zcash/depends/x86_64-unknown-linux-gnu/lib)
 find_library(HB_LIBZCASH NAMES zcash PATHS /root/zcash/src)
 find_library(HB_LIBRUSTZCASH NAMES rustzcash PATHS /root/zcash/depends/x86_64-unknown-linux-gnu/lib)
 find_library(HB_LIBBOOST NAMES boost_system PATHS /root/zcash/depends/x86_64-unknown-linux-gnu/lib)
@@ -41,17 +43,19 @@ CHECK_SYMBOL_EXISTS(bswap_16 "byteswap.h" HAVE_DECL_BSWAP_16)
 target_compile_definitions(hbzkproc PUBLIC HAVE_ENDIAN_H HAVE_DECL_HTOBE16 HAVE_DECL_BSWAP_16)
 
 target_link_libraries(hbzkproc
-	-rdynamic
 	-Wl,--no-as-needed
 	-ldl
+	${HB_LIBZCASH}
+	${HB_LIBRUSTZCASH}
 	${HB_LIBUNIVALUE}
 	${HB_LIBMEMENV}
 	${HB_LIBSNARK}
 	${HB_LIBBITCOIN_CRYPTO}
 	${HB_LIBSECP256K1}
 	${HB_LIBBITCOIN_UTIL}
-#	${HB_LIBBITCOIN_CLI}
+	${HB_LIBBITCOIN_CLI}
 	${HB_LIBBITCOIN_COMMON}
-	${HB_ZCASH}
-	${HB_LIBRUSTZCASH}
-	${HB_LIBBOOST})
+	${HB_LIBBOOST}
+	${HB_LIB_SODIUM}
+	${HB_LIBSSL}
+	)
