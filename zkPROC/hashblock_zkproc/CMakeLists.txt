@@ -25,10 +25,11 @@ set(SOURCES src/hbzkproc.cpp src/base64.cpp)
 find_library(HB_LIBUNIVALUE NAMES univalue PATHS /root/zcash/src/univalue/.libs)
 find_library(HB_LIBMEMENV NAMES memenv PATHS /root/zcash/src/leveldb)
 find_library(HB_LIBSNARK NAMES snark PATHS /root/zcash/src/snark)
-find_library(HB_LIBBITCOIN_CRYPTO NAMES bitcoin_crypto PATHS /root/zcash/src/crypto)
 find_library(HB_LIBSECP256K1 NAMES secp256k1 PATHS /root/zcash/src/secp256k1/.libs)
+find_library(HB_LIBBITCOIN_COMMON NAMES bitcoin_common PATHS /root/zcash/src)
 find_library(HB_LIBBITCOIN_UTIL NAMES bitcoin_util PATHS /root/zcash/src)
 #find_library(HB_LIBBITCOIN_CLI NAMES bitcoin_cli PATHS /root/zcash/src)
+find_library(HB_LIBBITCOIN_CRYPTO NAMES bitcoin_crypto PATHS /root/zcash/src/crypto)
 find_library(HB_LIBZCASH NAMES zcash PATHS /root/zcash/src)
 find_library(HB_LIBRUSTZCASH NAMES rustzcash PATHS /root/zcash/depends/x86_64-unknown-linux-gnu/lib)
 find_library(HB_LIBBOOST NAMES boost_system PATHS /root/zcash/depends/x86_64-unknown-linux-gnu/lib)
@@ -50,6 +51,7 @@ target_link_libraries(hbzkproc
 	${HB_LIBSECP256K1}
 	${HB_LIBBITCOIN_UTIL}
 #	${HB_LIBBITCOIN_CLI}
+	${HB_LIBBITCOIN_COMMON}
 	${HB_ZCASH}
 	${HB_LIBRUSTZCASH}
 	${HB_LIBBOOST})
