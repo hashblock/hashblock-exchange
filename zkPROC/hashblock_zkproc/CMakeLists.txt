@@ -23,6 +23,7 @@ set(SOURCES src/hbzkproc.cpp src/base64.cpp)
 
 # Link settings
 find_library(HB_LIBSSL NAMES event_openssl)
+find_library(HB_LIBCRYPTO NAMES crypto)
 find_library(HB_LIBUNIVALUE NAMES univalue PATHS /root/zcash/src/univalue/.libs)
 find_library(HB_LIBMEMENV NAMES memenv PATHS /root/zcash/src/leveldb)
 find_library(HB_LIBSNARK NAMES snark PATHS /root/zcash/src/snark)
@@ -58,4 +59,4 @@ target_link_libraries(hbzkproc
 	${HB_LIBBOOST}
 	${HB_LIB_SODIUM}
 	${HB_LIBSSL}
-	)
+	${HB_LIBCRYPTO})
