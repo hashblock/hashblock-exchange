@@ -46,12 +46,16 @@ int main( int c , char *argv[]) {
 
     // Test commitment
     SaplingNote note = SaplingNote(diversifier, pk_d, v, r);
-    SaplingNote n = note;
-    note.cm();
+    if (cm == note.cm()) {
+        cout << "Note compares OK" << endl;
+    }
     //ASSERT_EQ(note.cm(), cm);
 
     // Test nullifier
     SaplingSpendingKey spendingKey(sk);
+    if ( note.nullifier(spendingKey.full_viewing_key(), note_pos) == nf) {
+        cout << "Nullifier compares OK" << endl;
+    }
     //ASSERT_EQ(note.nullifier(spendingKey, note_pos), nf);
 
 	return 0;
