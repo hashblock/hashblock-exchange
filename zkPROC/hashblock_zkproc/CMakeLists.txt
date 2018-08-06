@@ -14,6 +14,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------
 
+# Useful build commands
 # Run: rm -R build && mkdir build && cd build && cmake .. && make
 
 # Minimum version

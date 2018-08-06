@@ -14,17 +14,18 @@
 # limitations under the License.
 */
 
-#include <config/bitcoin-config.h>
-#include <endian.h>
-#include "uint256.h"
-#include "zcash/Zcash.h"
-#include "zcash/Address.hpp"
-#include "zcash/Note.hpp"
 #include <array>
 #include <iostream>
 #include <sstream>
+
+#include <config/bitcoin-config.h>
+#include <endian.h>
+#include <uint256.h>
+#include <zcash/Zcash.h>
+#include <zcash/Address.hpp>
+#include <zcash/Note.hpp>
+#include <sodium.h>
 #include "secp256k1.h"
-#include "sodium.h"
 
 using namespace std;
 using namespace libzcash;
@@ -56,6 +57,7 @@ int main( int c , char *argv[]) {
 
     uint256 sk_256 = uint256S(reinterpret_cast<const char*>(seckey));
     SaplingSpendingKey spendingKey(sk_256);
+
     auto fvk = spendingKey.full_viewing_key();
     auto ivk = fvk.in_viewing_key();
     auto address = *ivk.address(d);
