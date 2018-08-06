@@ -14,9 +14,12 @@
 # limitations under the License.
 */
 
+#include <string>
 #include <array>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
+
 
 //  ZCash functions
 #include <config/bitcoin-config.h>
@@ -34,11 +37,28 @@
 using namespace std;
 using namespace libzcash;
 
+// Utilities
+
 template <class T, size_t N>
 ostream& operator<<(ostream& o, const array<T, N>& arr)
 {
     copy(arr.cbegin(), arr.cend(), ostream_iterator<T>(o, " "));
     return o;
+}
+
+uint64_t hexToUint(char *hex) {
+    char *str, *end;
+    uint64_t result;
+    errno = 0;
+    result = strtoull(hex, &end, 16);
+    if (result == 0 && end == hex) {
+        /* str was not a number */
+    } else if (result == ULLONG_MAX && errno) {
+        /* the value of str does not fit in unsigned long long */
+    } else if (*end) {
+        /* str began with a number but has junk left over at the end */
+    }
+    return result;
 }
 
 vector<unsigned char> HexToBytes(const string& hex) {
@@ -53,47 +73,111 @@ vector<unsigned char> HexToBytes(const string& hex) {
   return bytes;
 }
 
+template<typename TInputIter>
+string make_hex_string(TInputIter first, TInputIter last, bool use_uppercase = false, bool insert_spaces = false)
+{
+    ostringstream ss;
+    ss << hex << setfill('0');
+    if (use_uppercase)
+        ss << uppercase;
+    while (first != last)
+    {
+        ss << setw(2) << static_cast<int>(*first++);
+        if (insert_spaces && first != last)
+            ss << " ";
+    }
+    return ss.str();
+}
+
+bool verifyPrivateKey(std::string& private_str) {
+    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+    int sk_verify = secp256k1_ec_seckey_verify(ctx, (const unsigned char*) private_str.c_str());
+    return sk_verify == 1;
+}
+
+std::string hexKeyToString(char *key) {
+    std::string ks(key);
+    vector<unsigned char> k = HexToBytes(ks);
+    std::string result(k.begin(), k.end());
+    return result;
+}
+
+std::string valueNoteCommitment(const string& private_key, uint64_t value) {
+    SaplingSpendingKey spendingKey(uint256S(private_key));
+    auto note = SaplingNote(spendingKey.default_address(), value);
+    uint256 u = *(note.cm());
+    return u.GetHex();
+}
+
+
 int main( int c , char *argv[]) {
 
-    uint64_t v = 13;
+    uint64_t qv = 5;
+    char *qa = "0F2538C94209E2E2C98D319352C3630FCDA76F802E1F";
+    char *qu = "0E77546B264D97ED79C0E8A00BF62F7C2A0F8BA6BE3D";
+    //  Match what is happening in hashblock
+    char  *private_key = "59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1";
+    std::string private_str = hexKeyToString(private_key);
+    if( verifyPrivateKey(private_str) ) {
+        std::string commitmentV = valueNoteCommitment(private_str, qv);
+        cout << "Quanity value " << qv << " comitment: " << commitmentV << endl;
+        std::string commitmentA = valueNoteCommitment(private_str, hexToUint(qa));
+        cout << "Quanity asset " << qa << " comitment: " << commitmentA << endl;
+        std::string commitmentU = valueNoteCommitment(private_str, hexToUint(qu));
+        cout << "Quanity unit " << qu << " comitment: " << commitmentU << endl;
+
+    }
+
+    //  Get the spending key and the full viewing key
     uint64_t note_pos = 0;
 
-    string private_key = "59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1";
-    vector<unsigned char> priv_k = HexToBytes(private_key);
+    //auto nullifier = note.nullifier(spendingKey.full_viewing_key(), note_pos);
 
-    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-    int sk_verify = secp256k1_ec_seckey_verify(ctx, priv_k.data());
+	return 0;
+}
 
-    if(sk_verify == 1)
-    {
+
+/*    Dead (potentially resurected) code
+
+    // Verifying private key
+
+    // Public key from private
         int to_pub;
+        unsigned char ser_33[33];
+        size_t iser_33 = 33;
+        unsigned char ser_66[66];
+        size_t iser_66 = 66;
+
         uint256 pub_key;
+        secp256k1_pubkey pubkey;
 
-        cout << "Verified secret key" << endl;
-        // unsigned char *cpublic_key = (unsigned char *) "02d3543108be0b401184a574e17d271124679391fdff1f73a2f93ea99f3bea3b53";
-        // secp256k1_pubkey pubkey;
-        // to_pub = secp256k1_ec_pubkey_parse(ctx, &pubkey, cpublic_key, 33);
-        // if(to_pub == 1) {
-        //     pub_key = uint256S(reinterpret_cast<const char*>(pubkey.data));
-        //     cout << "Pubkey (as uint256) = " << pub_key.GetHex() << endl;
-        // }
-    }
+        to_pub = secp256k1_ec_pubkey_create(ctx, &pubkey, priv_k.data());
+        cout << "pubkey create result " << to_pub << endl;
+        secp256k1_ec_pubkey_serialize(ctx, ser_33, &iser_33, &pubkey, SECP256K1_EC_COMPRESSED);
+        secp256k1_ec_pubkey_serialize(ctx, ser_66, &iser_66, &pubkey, SECP256K1_EC_UNCOMPRESSED);
+        cout << "i33 = " << iser_33 << " i66 = " << iser_66 << endl;
+        auto from_array_33 = make_hex_string(begin(ser_33), std::end(ser_33));
+        auto from_array_66 = make_hex_string(begin(ser_66), std::end(ser_66));
+        cout << "ser33 = " << from_array_33 << endl;
+        cout << "ser66 = " << from_array_66 << endl;
+        uint256 pub_256 = uint256S((const char *) pubkey.data);
+        cout << "pub_256 = " << pub_256.GetHex() << endl;
 
-    //std::array<uint8_t, 11> d{0xf1, 0x9d, 0x9b, 0x79, 0x7e, 0x39, 0xf3, 0x37, 0x44, 0x58, 0x39};
-    std::array<uint8_t, 11> d;
-    char v_d[11];
-    randombytes_buf(v_d, 11);
-    for (int i = 0; i < 11; i++)
-    {
-        d[i] = uint8_t(v_d[i]);
-    }
+        //std::array<uint8_t, 11> d{0xf1, 0x9d, 0x9b, 0x79, 0x7e, 0x39, 0xf3, 0x37, 0x44, 0x58, 0x39};
+        std::array<uint8_t, 11> d;
+        char v_d[11];
+        randombytes_buf(v_d, 11);
+        for (int i = 0; i < 11; i++)
+        {
+            d[i] = uint8_t(v_d[i]);
+        }
 
-    SaplingSpendingKey spendingKey(uint256S(reinterpret_cast<const char*>(priv_k.data())));
 
     auto fvk = spendingKey.full_viewing_key();
+
     auto ivk = fvk.in_viewing_key();
-    cout << "Fetching address" << endl;
-    SaplingPaymentAddress spa = *ivk.address(d);
+
+    //SaplingPaymentAddress spa = *ivk.address(d);
     cout << "Fetching pk_d" << endl;
     auto pk_d = spa.pk_d;
     cout << "Key from address = " << pk_d.GetHex() << endl;
@@ -117,12 +201,6 @@ int main( int c , char *argv[]) {
     cout << "Creating note" << endl;
     cout << "in v = " << v << endl;
     cout << "in r = " << r.GetHex() << endl;
-
     auto note = SaplingNote(d, pk_d, v, r);
-    uint256 u = *(note.cm());
-    cout << "Note comitment: " << u.GetHex() << endl;
 
-    //auto nullifier = note.nullifier(spendingKey.full_viewing_key(), note_pos);
-
-	return 0;
-}
+*/
