@@ -1,62 +1,72 @@
-#include "gtest.h"
 #include <config/bitcoin-config.h>
 #include <endian.h>
 #include "uint256.h"
 #include "zcash/Zcash.h"
 #include "zcash/Address.hpp"
 #include "zcash/Note.hpp"
-#include "librustzcash.h"
 #include <array>
-#include "base64.h"
 #include <iostream>
+#include <sstream>
+#include "secp256k1.h"
+#include "sodium.h"
 
 using namespace std;
 using namespace libzcash;
 
 int main( int c , char *argv[]) {
 
-    uint64_t v = 0;
+    uint64_t v = 13;
     uint64_t note_pos = 0;
-    std::array<uint8_t, 11> diversifier{0xf1, 0x9d, 0x9b, 0x79, 0x7e, 0x39, 0xf3, 0x37, 0x44, 0x58, 0x39};
-    std::vector<uint8_t> v_sk{
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00};
-    std::vector<uint8_t> v_pk_d{
-        0xdb, 0x4c, 0xd2, 0xb0, 0xaa, 0xc4, 0xf7, 0xeb, 0x8c, 0xa1, 0x31, 0xf1, 0x65, 0x67,
-        0xc4, 0x45, 0xa9, 0x55, 0x51, 0x26, 0xd3, 0xc2, 0x9f, 0x14, 0xe3, 0xd7, 0x76, 0xe8,
-        0x41, 0xae, 0x74, 0x15};
-    std::vector<uint8_t> v_r{
-        0x39, 0x17, 0x6d, 0xac, 0x39, 0xac, 0xe4, 0x98, 0x0e, 0xcc, 0x8d, 0x77, 0x8e, 0x89,
-        0x86, 0x02, 0x55, 0xec, 0x36, 0x15, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00};
-    std::vector<uint8_t> v_cm{
-        0xcb, 0x3c, 0xf9, 0x15, 0x32, 0x70, 0xd5, 0x7e, 0xb9, 0x14, 0xc6, 0xc2, 0xbc, 0xc0,
-        0x18, 0x50, 0xc9, 0xfe, 0xd4, 0x4f, 0xce, 0x08, 0x06, 0x27, 0x8f, 0x08, 0x3e, 0xf2,
-        0xdd, 0x07, 0x64, 0x39};
-    std::vector<uint8_t> v_nf{
-        0x44, 0xfa, 0xd6, 0x56, 0x4f, 0xfd, 0xec, 0x9f, 0xa1, 0x9c, 0x43, 0xa2, 0x8f, 0x86,
-        0x1d, 0x5e, 0xbf, 0x60, 0x23, 0x46, 0x00, 0x7d, 0xe7, 0x62, 0x67, 0xd9, 0x75, 0x27,
-        0x47, 0xab, 0x40, 0x63};
-    uint256 sk(v_sk);
-    uint256 pk_d(v_pk_d);
+
+    unsigned char seckey[32];
+    randombytes_buf(seckey, 32);
+
+    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+    int sk_verify = secp256k1_ec_seckey_verify(ctx, seckey);
+
+    if(sk_verify > 0)
+    {
+        cout << "Verified secret key.\n";
+    }
+
+    //std::array<uint8_t, 11> d{0xf1, 0x9d, 0x9b, 0x79, 0x7e, 0x39, 0xf3, 0x37, 0x44, 0x58, 0x39};
+    std::array<uint8_t, 11> d;
+    char v_d[11];
+    randombytes_buf(v_d, 11);
+    for (int i = 0; i < 11; i++)
+    {
+        d[i] = uint8_t(v_d[i]);
+    }
+
+    uint256 sk_256 = uint256S(reinterpret_cast<const char*>(seckey));
+    SaplingSpendingKey spendingKey(sk_256);
+    auto fvk = spendingKey.full_viewing_key();
+    auto ivk = fvk.in_viewing_key();
+    auto address = *ivk.address(d);
+    auto pk_d = address.pk_d;
+
+    char v_r_c[32];
+    randombytes_buf(v_r_c, 32);
+    std::vector<uint8_t> v_r;
+    for (int i = 0; i < 32; i++)
+    {
+        if(i<23) // I do not know why this cannot be 32 yet
+        {
+        v_r.push_back(uint8_t(v_r_c[i]));
+        }
+        else
+        {
+            v_r.push_back(0);
+        }
+
+    }
     uint256 r(v_r);
-    uint256 cm(v_cm);
-    uint256 nf(v_nf);
 
-    // Test commitment
-    SaplingNote note = SaplingNote(diversifier, pk_d, v, r);
-    if (cm == note.cm()) {
-        cout << "Note compares OK" << endl;
-    }
-    //ASSERT_EQ(note.cm(), cm);
+    auto note = SaplingNote(d, pk_d, v, r);
+    uint256 u = *(note.cm());
+    cout << "Note comitment: " << u.GetHex() << "\n";
 
-    // Test nullifier
-    SaplingSpendingKey spendingKey(sk);
-    if ( note.nullifier(spendingKey.full_viewing_key(), note_pos) == nf) {
-        cout << "Nullifier compares OK" << endl;
-    }
-    //ASSERT_EQ(note.nullifier(spendingKey, note_pos), nf);
+    //auto nullifier = note.nullifier(spendingKey.full_viewing_key(), note_pos);
 
 	return 0;
 }
