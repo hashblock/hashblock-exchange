@@ -18,6 +18,7 @@
 #include <iostream>
 #include <sstream>
 
+//  ZCash functions
 #include <config/bitcoin-config.h>
 #include <endian.h>
 #include <uint256.h>
@@ -25,25 +26,57 @@
 #include <zcash/Address.hpp>
 #include <zcash/Note.hpp>
 #include <sodium.h>
-#include "secp256k1.h"
+#include <secp256k1.h>
+
+//  Our functions
+#include "base64.h"
 
 using namespace std;
 using namespace libzcash;
+
+template <class T, size_t N>
+ostream& operator<<(ostream& o, const array<T, N>& arr)
+{
+    copy(arr.cbegin(), arr.cend(), ostream_iterator<T>(o, " "));
+    return o;
+}
+
+vector<unsigned char> HexToBytes(const string& hex) {
+  vector<unsigned char> bytes;
+
+  for (unsigned int i = 0; i < hex.length(); i += 2) {
+    string byteString = hex.substr(i, 2);
+    unsigned char byte = (unsigned char) strtol(byteString.c_str(), NULL, 16);
+    bytes.push_back(byte);
+  }
+
+  return bytes;
+}
 
 int main( int c , char *argv[]) {
 
     uint64_t v = 13;
     uint64_t note_pos = 0;
 
-    unsigned char seckey[32];
-    randombytes_buf(seckey, 32);
+    string private_key = "59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1";
+    vector<unsigned char> priv_k = HexToBytes(private_key);
 
     secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-    int sk_verify = secp256k1_ec_seckey_verify(ctx, seckey);
+    int sk_verify = secp256k1_ec_seckey_verify(ctx, priv_k.data());
 
-    if(sk_verify > 0)
+    if(sk_verify == 1)
     {
-        cout << "Verified secret key.\n";
+        int to_pub;
+        uint256 pub_key;
+
+        cout << "Verified secret key" << endl;
+        // unsigned char *cpublic_key = (unsigned char *) "02d3543108be0b401184a574e17d271124679391fdff1f73a2f93ea99f3bea3b53";
+        // secp256k1_pubkey pubkey;
+        // to_pub = secp256k1_ec_pubkey_parse(ctx, &pubkey, cpublic_key, 33);
+        // if(to_pub == 1) {
+        //     pub_key = uint256S(reinterpret_cast<const char*>(pubkey.data));
+        //     cout << "Pubkey (as uint256) = " << pub_key.GetHex() << endl;
+        // }
     }
 
     //std::array<uint8_t, 11> d{0xf1, 0x9d, 0x9b, 0x79, 0x7e, 0x39, 0xf3, 0x37, 0x44, 0x58, 0x39};
@@ -55,13 +88,15 @@ int main( int c , char *argv[]) {
         d[i] = uint8_t(v_d[i]);
     }
 
-    uint256 sk_256 = uint256S(reinterpret_cast<const char*>(seckey));
-    SaplingSpendingKey spendingKey(sk_256);
+    SaplingSpendingKey spendingKey(uint256S(reinterpret_cast<const char*>(priv_k.data())));
 
     auto fvk = spendingKey.full_viewing_key();
     auto ivk = fvk.in_viewing_key();
-    auto address = *ivk.address(d);
-    auto pk_d = address.pk_d;
+    cout << "Fetching address" << endl;
+    SaplingPaymentAddress spa = *ivk.address(d);
+    cout << "Fetching pk_d" << endl;
+    auto pk_d = spa.pk_d;
+    cout << "Key from address = " << pk_d.GetHex() << endl;
 
     char v_r_c[32];
     randombytes_buf(v_r_c, 32);
@@ -79,10 +114,13 @@ int main( int c , char *argv[]) {
 
     }
     uint256 r(v_r);
+    cout << "Creating note" << endl;
+    cout << "in v = " << v << endl;
+    cout << "in r = " << r.GetHex() << endl;
 
     auto note = SaplingNote(d, pk_d, v, r);
     uint256 u = *(note.cm());
-    cout << "Note comitment: " << u.GetHex() << "\n";
+    cout << "Note comitment: " << u.GetHex() << endl;
 
     //auto nullifier = note.nullifier(spendingKey.full_viewing_key(), note_pos);
 
