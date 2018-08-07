@@ -26,6 +26,32 @@ def prime_gen():
     return x.stdout[:-1]
 
 
+def zkproc_quantity_cm(secret, value, unit, asset):
+    """Generates the commitments for quantity"""
+    qcm_gen = subprocess.run(
+        ['hbzkproc', '-qc', secret, value, unit, asset],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if qcm_gen.returncode == 0:
+        return qcm_gen.stderr.decode("utf-8").split()
+    else:
+        raise InternalError(
+            "hbzkproc quantity commitment failed with {}".
+            format(qcm_gen.returncode))
+
+
+def zkproc_quantity_null(secret, value, unit, asset):
+    """Generates the commitment nullifiers for quantity"""
+    qucm_gen = subprocess.run(
+        ['hbzkproc', '-nc', secret, value, unit, asset],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if qucm_gen.returncode == 0:
+        return qucm_gen.stderr.decode("utf-8").split()
+    else:
+        raise InternalError(
+            "hbzkproc quantity commitment failed with {}".
+            format(qucm_gen.returncode))
+
+
 def zksnark_genkeys(file_path, secret_str):
     """Generates the proover and verifyer 'keys'"""
     key_gen = subprocess.run(

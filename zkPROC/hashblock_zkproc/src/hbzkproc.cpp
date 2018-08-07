@@ -130,19 +130,22 @@ int mintQuantity(const std::string& secret_key, uint64_t value, uint64_t unit, u
         string cV = valueNoteCommitment(secret_key, value);
         string cU = valueNoteCommitment(secret_key, unit);
         string cA = valueNoteCommitment(secret_key, asset);
-        cout << "Value: " << value << " cm: " << cV << endl;
-        cout << "Unit: " << unit << " cm: " << cU << endl;
-        cout << "Asset: " << asset << " cm: " << cA << endl;
-        return 1;
+        // cout << "Value: " << value << " cm: " << cV << endl;
+        // cout << "Unit: " << unit << " cm: " << cU << endl;
+        // cout << "Asset: " << asset << " cm: " << cA << endl;
+        cout << "Setting results" << endl;
+        cerr << cV << ' ' << cU << ' ' << cA;
+        return 0;
     }
     else {
-        return 0;
+        cout << "Secret failure" << endl;
+        return 2;
     }
 }
 
 
 int main( int argc , char *argv[]) {
-    int result=0;
+    int result=1;
     cout << endl;
     if ( argc < 2 )
         return result;

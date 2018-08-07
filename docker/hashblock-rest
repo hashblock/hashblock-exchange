@@ -70,6 +70,7 @@ WORKDIR /project/hashblock-exchange
 RUN touch __init__.py
 COPY modules modules
 COPY libs/hbzksnark /project/hashblock-exchange/bin/hbzksnark
+COPY libs/hbzkproc /project/hashblock-exchange/bin/hbzkproc
 COPY apps/shared apps/shared
 COPY --from=base /builder/apps/protobuf apps/protobuf
 COPY apps/hashblock_rest apps/hashblock_rest
