@@ -117,19 +117,25 @@ std::string hexKeyToString(const char *key) {
     return result;
 }
 
-std::string valueNoteCommitment(const string& private_key, uint64_t value) {
-    SaplingSpendingKey spendingKey(uint256S(private_key));
-    auto note = SaplingNote(spendingKey.default_address(), value);
-    uint256 u = *(note.cm());
-    return u.GetHex();
+// std::string valueNoteNullifier(const string& private_key, char *notecm, uint64_t note_pos) {
+//     SaplingSpendingKey spendingKey(uint256S(private_key));
+//     //  Get the spending key and the full viewing key
+//     //auto nullifier = note.nullifier(spendingKey.full_viewing_key(), note_pos);
+// }
+
+std::string valueNoteCommitment(const SaplingPaymentAddress& spa, uint64_t value) {
+    auto note = SaplingNote(spa, value);
+    return (*(note.cm())).GetHex();
 }
 
 int mintQuantity(const std::string& secret_key, uint64_t value, uint64_t unit, uint64_t asset) {
     cout << endl;
     if( verifyPrivateKey(secret_key) ) {
-        string cV = valueNoteCommitment(secret_key, value);
-        string cU = valueNoteCommitment(secret_key, unit);
-        string cA = valueNoteCommitment(secret_key, asset);
+        SaplingSpendingKey spendingKey(uint256S(secret_key));
+        SaplingPaymentAddress spa = spendingKey.default_address();
+        string cV = valueNoteCommitment(spa, value);
+        string cU = valueNoteCommitment(spa, unit);
+        string cA = valueNoteCommitment(spa, asset);
         // cout << "Value: " << value << " cm: " << cV << endl;
         // cout << "Unit: " << unit << " cm: " << cU << endl;
         // cout << "Asset: " << asset << " cm: " << cA << endl;
@@ -155,18 +161,28 @@ int main( int argc , char *argv[]) {
         */
         if (strcmp(argv[1], "-qc") == 0) {
             if (argc < 5) {
-                cout << "hbzkproc -qc secret value unit asset" << endl;
+                cerr << "hbzkproc -qc secret value unit asset" << endl;
                 return result;
             }
             else {
                 return mintQuantity(hexKeyToString(argv[2]), charToUint(argv[3]), hexToUint(argv[4]), hexToUint(argv[5]));
             }
         }
+        else if (strcmp(argv[1], "-nc") == 0) {
+            if (argc < 5) {
+                cerr << "hbzkproc -nc scm vcm ucm acm" << endl;
+                return result;
+            }
+            else {
+                return 0;
+                //return mintQuantity(hexKeyToString(argv[2]), charToUint(argv[3]), hexToUint(argv[4]), hexToUint(argv[5]));
+            }
+        }
+        else {
+            cerr << "hbzkproc -[qc nc] args...";
+            return result;
+        }
     }
-    //  Get the spending key and the full viewing key
-    uint64_t note_pos = 0;
-
-    //auto nullifier = note.nullifier(spendingKey.full_viewing_key(), note_pos);
 
 	return result;
 }
