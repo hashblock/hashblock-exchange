@@ -59,6 +59,7 @@ RUN apt-get update \
     automake \
     pkg-config \
     libtool \
+    libevent-openssl-2.0-5 \
     libffi-dev
 
 RUN mkdir -p /project/hashblock-exchange && \

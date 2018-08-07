@@ -27,6 +27,7 @@ RUN apt-get update \
     automake \
     pkg-config \
     libtool \
+    libevent-openssl-2.0-5 \
     libffi-dev
 
 RUN pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
