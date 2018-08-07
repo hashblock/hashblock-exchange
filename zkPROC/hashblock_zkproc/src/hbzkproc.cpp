@@ -46,15 +46,30 @@ ostream& operator<<(ostream& o, const array<T, N>& arr)
     return o;
 }
 
-uint64_t hexToUint(char *hex) {
-    char *str, *end;
+uint64_t charToUint(const char *num) {
+    char *end;
+    uint64_t result;
+    errno = 0;
+    result = strtoull(num, &end, 10);
+    if (result == 0 && end == num) {
+        /* str was not a number */
+    } else if (result == ULLONG_MAX && errno) {
+        /* the value of str does not fit in unsigned long long */
+    } else if (*end) {
+        /* str began with a number but has junk left over at the end */
+    }
+    return result;
+}
+
+uint64_t hexToUint(const char *hex) {
+    char *end;
     uint64_t result;
     errno = 0;
     result = strtoull(hex, &end, 16);
     if (result == 0 && end == hex) {
         /* str was not a number */
     } else if (result == ULLONG_MAX && errno) {
-        /* the value of str does not fit in unsigned long long */
+        cout << hex << " larger than uint64_t capacity" << endl;
     } else if (*end) {
         /* str began with a number but has junk left over at the end */
     }
@@ -89,13 +104,13 @@ string make_hex_string(TInputIter first, TInputIter last, bool use_uppercase = f
     return ss.str();
 }
 
-bool verifyPrivateKey(std::string& private_str) {
+bool verifyPrivateKey(const std::string& private_str) {
     secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     int sk_verify = secp256k1_ec_seckey_verify(ctx, (const unsigned char*) private_str.c_str());
     return sk_verify == 1;
 }
 
-std::string hexKeyToString(char *key) {
+std::string hexKeyToString(const char *key) {
     std::string ks(key);
     vector<unsigned char> k = HexToBytes(ks);
     std::string result(k.begin(), k.end());
@@ -109,31 +124,48 @@ std::string valueNoteCommitment(const string& private_key, uint64_t value) {
     return u.GetHex();
 }
 
-
-int main( int c , char *argv[]) {
-
-    uint64_t qv = 5;
-    char *qa = "0F2538C94209E2E2C98D319352C3630FCDA76F802E1F";
-    char *qu = "0E77546B264D97ED79C0E8A00BF62F7C2A0F8BA6BE3D";
-    //  Match what is happening in hashblock
-    char  *private_key = "59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1";
-    std::string private_str = hexKeyToString(private_key);
-    if( verifyPrivateKey(private_str) ) {
-        std::string commitmentV = valueNoteCommitment(private_str, qv);
-        cout << "Quanity value " << qv << " comitment: " << commitmentV << endl;
-        std::string commitmentA = valueNoteCommitment(private_str, hexToUint(qa));
-        cout << "Quanity asset " << qa << " comitment: " << commitmentA << endl;
-        std::string commitmentU = valueNoteCommitment(private_str, hexToUint(qu));
-        cout << "Quanity unit " << qu << " comitment: " << commitmentU << endl;
-
+int mintQuantity(const std::string& secret_key, uint64_t value, uint64_t unit, uint64_t asset) {
+    cout << endl;
+    if( verifyPrivateKey(secret_key) ) {
+        string cV = valueNoteCommitment(secret_key, value);
+        string cU = valueNoteCommitment(secret_key, unit);
+        string cA = valueNoteCommitment(secret_key, asset);
+        cout << "Value: " << value << " cm: " << cV << endl;
+        cout << "Unit: " << unit << " cm: " << cU << endl;
+        cout << "Asset: " << asset << " cm: " << cA << endl;
+        return 1;
     }
+    else {
+        return 0;
+    }
+}
 
+
+int main( int argc , char *argv[]) {
+    int result=0;
+    cout << endl;
+    if ( argc < 2 )
+        return result;
+    else {
+        /*
+        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0E77546B264D97ED79C0E8A00BF62F7C2A0F8BA6BE3D 0F2538C94209E2E2C98D319352C3630FCDA76F802E1F
+        */
+        if (strcmp(argv[1], "-qc") == 0) {
+            if (argc < 5) {
+                cout << "hbzkproc -qc secret value unit asset" << endl;
+                return result;
+            }
+            else {
+                return mintQuantity(hexKeyToString(argv[2]), charToUint(argv[3]), hexToUint(argv[4]), hexToUint(argv[5]));
+            }
+        }
+    }
     //  Get the spending key and the full viewing key
     uint64_t note_pos = 0;
 
     //auto nullifier = note.nullifier(spendingKey.full_viewing_key(), note_pos);
 
-	return 0;
+	return result;
 }
 
 
