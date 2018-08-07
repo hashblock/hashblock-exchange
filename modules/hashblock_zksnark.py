@@ -21,9 +21,9 @@ from sawtooth_sdk.processor.exceptions import InternalError
 def prime_gen():
     """Returns prime based on 172 bit range. Results is 44 char"""
     x = subprocess.run(
-        ['openssl', 'prime', '-generate', '-bits', '172', '-hex'],
+        ['openssl', 'prime', '-generate', '-bits', '64', '-hex'],
         stdout=subprocess.PIPE)
-    return x.stdout[:-1]
+    return x.stdout[:-1].zfill(44)
 
 
 def zkproc_quantity_cm(secret, value, unit, asset):
@@ -37,19 +37,6 @@ def zkproc_quantity_cm(secret, value, unit, asset):
         raise InternalError(
             "hbzkproc quantity commitment failed with {}".
             format(qcm_gen.returncode))
-
-
-def zkproc_quantity_null(secret, value, unit, asset):
-    """Generates the commitment nullifiers for quantity"""
-    qucm_gen = subprocess.run(
-        ['hbzkproc', '-nc', secret, value, unit, asset],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if qucm_gen.returncode == 0:
-        return qucm_gen.stderr.decode("utf-8").split()
-    else:
-        raise InternalError(
-            "hbzkproc quantity commitment failed with {}".
-            format(qucm_gen.returncode))
 
 
 def zksnark_genkeys(file_path, secret_str):

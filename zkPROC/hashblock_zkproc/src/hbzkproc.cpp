@@ -117,12 +117,6 @@ std::string hexKeyToString(const char *key) {
     return result;
 }
 
-// std::string valueNoteNullifier(const string& private_key, char *notecm, uint64_t note_pos) {
-//     SaplingSpendingKey spendingKey(uint256S(private_key));
-//     //  Get the spending key and the full viewing key
-//     //auto nullifier = note.nullifier(spendingKey.full_viewing_key(), note_pos);
-// }
-
 std::string valueNoteCommitment(const SaplingPaymentAddress& spa, uint64_t value) {
     auto note = SaplingNote(spa, value);
     return (*(note.cm())).GetHex();
@@ -157,7 +151,7 @@ int main( int argc , char *argv[]) {
         return result;
     else {
         /*
-        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0E77546B264D97ED79C0E8A00BF62F7C2A0F8BA6BE3D 0F2538C94209E2E2C98D319352C3630FCDA76F802E1F
+        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0000000000000000000000000000fcc1cb47ddc86179 ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0000000000000000000000000000fcc1cb47ddc86179 0000000000000000000000000000eb50c37a09093a83
         */
         if (strcmp(argv[1], "-qc") == 0) {
             if (argc < 5) {
@@ -168,18 +162,8 @@ int main( int argc , char *argv[]) {
                 return mintQuantity(hexKeyToString(argv[2]), charToUint(argv[3]), hexToUint(argv[4]), hexToUint(argv[5]));
             }
         }
-        else if (strcmp(argv[1], "-nc") == 0) {
-            if (argc < 5) {
-                cerr << "hbzkproc -nc scm vcm ucm acm" << endl;
-                return result;
-            }
-            else {
-                return 0;
-                //return mintQuantity(hexKeyToString(argv[2]), charToUint(argv[3]), hexToUint(argv[4]), hexToUint(argv[5]));
-            }
-        }
         else {
-            cerr << "hbzkproc -[qc nc] args...";
+            cerr << "hbzkproc [-qc] args...";
             return result;
         }
     }
