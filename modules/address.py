@@ -32,7 +32,7 @@ class Address(ABC):
     FAMILY_EXCHANGE = "exchange"
     FAMILY_SETTING = "setting"
     FAMILY_TRACK = "track"
-    FAMILY_COMMIT = "commit"
+    FAMILY_COMMIT = "hashblock.commit"
 
     # Dimensions, used by families
     MATCH_TYPE_UTXQ = "utxq"
@@ -145,15 +145,10 @@ class SimpleAddress(Address):
         self._family = family
         self._versions = version_list
         self._family_hash = self.hashup(family)[0:6]
-        self._reghash = self._namespace_hash + self._family_hash
 
     @property
     def family(self):
         return self._family
-
-    @property
-    def family_ns_hash(self):
-        return self._reghash
 
     @property
     def family_ns_name(self):
@@ -162,6 +157,10 @@ class SimpleAddress(Address):
     @property
     def family_hash(self):
         return self._family_hash
+
+    @property
+    def family_ns_hash(self):
+        return self.family_hash
 
     @property
     def family_versions(self):
@@ -175,11 +174,32 @@ class SimpleAddress(Address):
         return self.family_ns_hash == address[0:6]
 
 
+class CommitAddress(SimpleAddress):
+    """CommitAddress provides the pederson commitment TP address support
+    """
+
+    def __init__(self):
+        super().__init__(self.FAMILY_COMMIT, ["0.1.0"])
+
+    # E.g. hashblock-commit.commit
+    # 0-2 namespace             6/6
+    def commit(self, ident):
+        """Create the stype (asset/unit) settings address using key
+        """
+        if ident is None or len(ident) != 64:
+            raise AssetIdRange(
+                "Invalid ident {} for  {} {}"
+                .format(ident, self._family, ident))
+
+        return self.family_ns_hash + ident
+
+
 class BaseAddress(SimpleAddress):
     """BaseAddress provides the base address for hashblock TPs"""
 
     def __init__(self, family, version_list):
         super().__init__(family, version_list)
+        self._reghash = self._namespace_hash + self._family_hash
 
     @property
     def family_ns_name(self):
@@ -220,33 +240,6 @@ class TrackAddress(BaseAddress):
 
     def __init__(self):
         super().__init__(self.FAMILY_TRACK, ["0.1.0"])
-
-    # E.g. hashblock.track.???.???
-    # 0-2 namespace             6/6
-    # 3-5 family                6/12
-    # 6-28 ident (from asset)   44/56
-    # 28-34 property            14/70
-    def track(self, ident, property):
-        """Create the stype (asset/unit) settings address using key
-        """
-        if ident is None or len(ident) != 44:
-            raise AssetIdRange(
-                "Invalid ident {} for  {} {} {}"
-                .format(ident, self._family, ident, property))
-
-        return self.family_ns_hash \
-            + ident \
-            + self.hashup(property)[0:14]
-
-
-class CommitAddress(BaseAddress):
-    """TrackAddress provides the track TP address support
-
-    oracle observations of some property of an asset
-    """
-
-    def __init__(self):
-        super().__init__(self.FAMILY_COMMIT, ["0.1.0"])
 
     # E.g. hashblock.track.???.???
     # 0-2 namespace             6/6

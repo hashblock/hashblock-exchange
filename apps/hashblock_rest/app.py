@@ -37,6 +37,7 @@ from modules.decode import (
     decode_proposals, decode_settings)
 import shared.asset as asset
 import shared.exchange as exchange
+import shared.commit as mint
 
 
 # Setup upload location for batch submissions
@@ -335,7 +336,7 @@ class AU_Decode(Resource):
                 "data": ""}, 400
 
 #
-# Exchange data models
+# Commit and Exchange data models
 #
 
 
@@ -366,6 +367,27 @@ mtxq_fields = ns.inherit("mtxq_fields", utxq_fields, {
     'ratio': fields.Nested(ratio_fields, required=True),
     'utxq_address': fields.String(required=True)
 })
+
+commit_fields = ns.model('minted_quantity', {
+    'owner': fields.String(required=True),
+    'quantity': fields.Nested(quantity_fields, required=True)
+})
+
+#
+#   Commit
+#
+
+
+@ns.route('/mint-quantity')
+class COMMint(Resource):
+    @ns.expect(commit_fields)
+    def post(self):
+        """Mint a quantity and create commitment"""
+        try:
+            mint.create_minted_quantity(request.json)
+            return {"status": "OK"}, 200
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
 
 #
 #   Match post process utilities
