@@ -15,10 +15,10 @@
 // -----------------------------------------------------------------------------
 
 syntax = "proto3";
-option java_multiple_files = true;
 option java_package = "hashblock.commit.protobuf";
 
-// Mint value message
+// Mint value message. This portion is encrypted on the chain
+// see CommitWrapper below
 message Mint {
 
     //  Fixed width integer
@@ -32,7 +32,8 @@ message Mint {
 }
 
 
-// Commit data container for on-chain Minted commitments
+// Commit data container for on-chain Minted commitments?
+// Not used at the moment
 
 message MintedValue {
 
@@ -57,15 +58,14 @@ message CommitWrapper {
 
     //  Identifier
     string id = 1;
-
-    //  Commitment 'K'
-    string k_commitment = 2;
-
-    //  Commitment
-    string mint_commitment = 3;
-
-    //  Encrypted MintedValue Secrets
-    bytes minted_value = 4;
+    //  Commitment 'v'
+    string v_commitment = 2;
+    //  Commitment 'u'
+    string u_commitment = 3;
+    //  Commitment 'a'
+    string a_commitment = 4;
+    //  Encrypted Mint
+    bytes minted_value = 5;
 
 }
 
