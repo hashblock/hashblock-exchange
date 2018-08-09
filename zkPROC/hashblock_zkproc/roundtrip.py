@@ -39,7 +39,7 @@ def commit_run(secret, tree, value, unit, asset):
         return new_tree
     else:
         print("Turing's quantity commitment fault {}".format(qcm_gen.stderr))
-        return tree_initial
+        return tree_i
 
 
 def main():
