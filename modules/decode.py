@@ -46,7 +46,7 @@ unit_addresser = Address.unit_addresser()
 setting_addresser = Address.setting_addresser()
 utxq_addresser = Address.exchange_utxq_addresser()
 mtxq_addresser = Address.exchange_mtxq_addresser()
-commit_addresser = Address.commit_addresser()
+ledger_addresser = Address.ledger_addresser()
 
 
 STATE_CRYPTO = State()

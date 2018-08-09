@@ -64,8 +64,8 @@ def main(args=None):
         "hashblock_track/protobuf")
     protoc_python(
         proto_dir,
-        "families/commit",
-        "hashblock_commit/protobuf")
+        "families/ledger",
+        "hashblock_ledger/protobuf")
 
 
 def protoc_python(src_dir, base_dir, pkg):

@@ -15,10 +15,10 @@
 // -----------------------------------------------------------------------------
 
 syntax = "proto3";
-option java_package = "hashblock.commit.protobuf";
+option java_package = "hashblock.ledger.protobuf";
 
 // Mint value message. This portion is encrypted on the chain
-// see CommitWrapper below
+// see LedgerWrapper below
 message Mint {
 
     //  Fixed width integer
@@ -31,6 +31,20 @@ message Mint {
     bytes asset = 3;
 }
 
+message LedgerWrapper {
+
+    //  Identifier
+    string id = 1;
+    //  Commitment 'v'
+    string v_commitment = 2;
+    //  Commitment 'u'
+    string u_commitment = 3;
+    //  Commitment 'a'
+    string a_commitment = 4;
+    //  Encrypted Mint
+    bytes minted_value = 5;
+
+}
 
 // Commit data container for on-chain Minted commitments?
 // Not used at the moment
@@ -54,33 +68,24 @@ message MintedValue {
 
 }
 
-message CommitWrapper {
-
-    //  Identifier
-    string id = 1;
-    //  Commitment 'v'
-    string v_commitment = 2;
-    //  Commitment 'u'
-    string u_commitment = 3;
-    //  Commitment 'a'
-    string a_commitment = 4;
-    //  Encrypted Mint
-    bytes minted_value = 5;
-
+message LedgerMerkleTrie {
+    string trie = 1;
 }
 
-// Commit Payload
+// Ledger Payload
 
-message CommitPayload {
+message LedgerPayload {
     // The action indicates data is contained within this payload
     enum Action {
         //
-        MINT_COMMITMENT = 0;
+        MERKLE_GENESIS = 0;
+        MINT_COMMITMENT = 1;
     }
     // The action of this payload
     Action action = 1;
 
-    // The CommitWrapper of this payload
+    // Action = 0 - LedgerMerkleTrie
+    // Action = 1 - LedgerWrapper
     bytes data = 2;
 }
 

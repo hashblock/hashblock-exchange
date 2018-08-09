@@ -30,14 +30,14 @@ from sawtooth_sdk.processor.log import log_configuration
 from sawtooth_sdk.processor.config import get_log_config
 from sawtooth_sdk.processor.config import get_log_dir
 from sawtooth_sdk.processor.config import get_config_dir
-from processor.handler import CommitTransactionHandler
-from processor.config.commit import (
-    CommitConfig,
-    load_default_commit_config,
-    load_toml_commit_config,
-    merge_commit_config)
+from processor.handler import LedgerTransactionHandler
+from processor.config.ledger import (
+    LedgerConfig,
+    load_default_ledger_config,
+    load_toml_ledger_config,
+    merge_ledger_config)
 
-DISTRIBUTION_NAME = 'hashblock-commit'
+DISTRIBUTION_NAME = 'hashblock-ledger'
 
 
 def create_console_handler(verbose_level):
@@ -69,11 +69,11 @@ def create_console_handler(verbose_level):
 
 
 def setup_loggers(verbose_level, processor):
-    log_config = get_log_config(filename="commit_log_config.toml")
+    log_config = get_log_config(filename="ledger_log_config.toml")
 
     # If no toml, try loading yaml
     if log_config is None:
-        log_config = get_log_config(filename="commit_log_config.yaml")
+        log_config = get_log_config(filename="ledger_log_config.yaml")
 
     if log_config is not None:
         log_configuration(log_config=log_config)
@@ -82,7 +82,7 @@ def setup_loggers(verbose_level, processor):
         # use the transaction processor zmq identity for filename
         log_configuration(
             log_dir=log_dir,
-            name="commit-" + str(processor.zmq_id)[2:-1])
+            name="ledger-" + str(processor.zmq_id)[2:-1])
 
     init_console_logging(verbose_level=verbose_level)
 
@@ -90,8 +90,8 @@ def setup_loggers(verbose_level, processor):
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
         prog=prog_name,
-        description='Starts a hashblock-commit transaction processor.',
-        epilog='This process is required to commit oracle updates ',
+        description='Starts a hashblock-ledger transaction processor.',
+        epilog='This process is required to ledger oracle updates ',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
@@ -120,16 +120,16 @@ def create_parser(prog_name):
     return parser
 
 
-def load_commits_config(first_config):
-    default_commits_config = load_default_commit_config()
-    conf_file = os.path.join(get_config_dir(), 'commit.toml')
-    toml_config = load_toml_commit_config(conf_file)
-    return merge_commit_config(
-        configs=[first_config, toml_config, default_commits_config])
+def load_ledgers_config(first_config):
+    default_ledgers_config = load_default_ledger_config()
+    conf_file = os.path.join(get_config_dir(), 'ledger.toml')
+    toml_config = load_toml_ledger_config(conf_file)
+    return merge_ledger_config(
+        configs=[first_config, toml_config, default_ledgers_config])
 
 
-def create_commits_config(args):
-    return CommitConfig(connect=args.connect)
+def create_ledgers_config(args):
+    return LedgerConfig(connect=args.connect)
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
@@ -139,9 +139,9 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
 
-    arg_config = create_commits_config(args)
-    commit_config = load_commits_config(arg_config)
-    processor = TransactionProcessor(url=commit_config.connect)
+    arg_config = create_ledgers_config(args)
+    ledger_config = load_ledgers_config(arg_config)
+    processor = TransactionProcessor(url=ledger_config.connect)
 
     if with_loggers is True:
         if args.verbose is None:
@@ -153,12 +153,12 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     my_logger = logging.getLogger(__name__)
     my_logger.debug("Processor loaded")
 
-    handler = CommitTransactionHandler()
+    handler = LedgerTransactionHandler()
 
     processor.add_handler(handler)
 
     my_logger.debug(
-        "Hashblock commit instantiated, starting commit processor thread...")
+        "Hashblock ledger instantiated, starting ledger processor thread...")
 
     try:
         processor.start()

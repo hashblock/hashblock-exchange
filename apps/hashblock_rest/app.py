@@ -37,7 +37,7 @@ from modules.decode import (
     decode_proposals, decode_settings)
 import shared.asset as asset
 import shared.exchange as exchange
-import shared.commit as mint
+import shared.ledger as ledger
 
 
 # Setup upload location for batch submissions
@@ -384,7 +384,7 @@ class COMMint(Resource):
     def post(self):
         """Mint a quantity and create commitment"""
         try:
-            mint.create_minted_quantity(request.json)
+            ledger.create_minted_quantity(request.json)
             return {"status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400

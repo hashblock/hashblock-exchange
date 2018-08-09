@@ -25,24 +25,24 @@ from sawtooth_sdk.processor.exceptions import LocalConfigurationError
 LOGGER = logging.getLogger(__name__)
 
 
-def load_default_commit_config():
+def load_default_ledger_config():
     """
-    Returns the default CommitConfig
+    Returns the default LedgerConfig
     """
-    return CommitConfig(
+    return LedgerConfig(
         connect='tcp://localhost:4004'
     )
 
 
-def load_toml_commit_config(filename):
-    """Returns a CommitConfig created by loading a TOML file from the
+def load_toml_ledger_config(filename):
+    """Returns a LedgerConfig created by loading a TOML file from the
     filesystem.
 
     Args:
         filename (string): The name of the file to load the config from
 
     Returns:
-        config (CommitConfig): The CommitConfig created from the stored
+        config (LedgerConfig): The LedgerConfig created from the stored
             toml file.
 
     Raises:
@@ -52,7 +52,7 @@ def load_toml_commit_config(filename):
         LOGGER.info(
             "Skipping transaction proccesor config loading from non-existent"
             " config file: %s", filename)
-        return CommitConfig()
+        return LedgerConfig()
 
     LOGGER.info("Loading transaction processor information from config: %s",
                 filename)
@@ -73,25 +73,25 @@ def load_toml_commit_config(filename):
             "Invalid keys in transaction processor config: "
             "{}".format(", ".join(sorted(list(invalid_keys)))))
 
-    config = CommitConfig(
+    config = LedgerConfig(
         connect=toml_config.get("connect", None)
     )
 
     return config
 
 
-def merge_commit_config(configs):
+def merge_ledger_config(configs):
     """
-    Given a list of CommitConfig objects, merges them into a single
-    CommitConfig, giving priority in the order of the configs
+    Given a list of LedgerConfig objects, merges them into a single
+    LedgerConfig, giving priority in the order of the configs
     (first has highest priority).
 
     Args:
-        config (list of CommitConfigs): The list of units configs that
+        config (list of LedgerConfigs): The list of units configs that
             must be merged together
 
     Returns:
-        config (CommitConfig): one CommitConfig that combines all of the
+        config (LedgerConfig): one LedgerConfig that combines all of the
             passed in configs.
     """
     connect = None
@@ -100,10 +100,10 @@ def merge_commit_config(configs):
         if config.connect is not None:
             connect = config.connect
 
-    return CommitConfig(connect=connect)
+    return LedgerConfig(connect=connect)
 
 
-class CommitConfig:
+class LedgerConfig:
     def __init__(self, connect=None):
         self._connect = connect
 

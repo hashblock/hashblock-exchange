@@ -21,8 +21,8 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from protobuf.commit_pb2 import CommitPayload
-from protobuf.commit_pb2 import CommitWrapper
+from protobuf.ledger_pb2 import LedgerPayload
+from protobuf.ledger_pb2 import LedgerWrapper
 
 from modules.address import Address
 
@@ -32,10 +32,10 @@ LOGGER = logging.getLogger(__name__)
 STATE_TIMEOUT_SEC = 10
 
 
-class CommitTransactionHandler(TransactionHandler):
+class LedgerTransactionHandler(TransactionHandler):
 
     def __init__(self):
-        self._addresser = Address.commit_addresser()
+        self._addresser = Address.ledger_addresser()
         self._auth_list = None
         self._action = None
 
@@ -56,21 +56,21 @@ class CommitTransactionHandler(TransactionHandler):
         return [self.addresser.family_ns_hash]
 
     def apply(self, transaction, context):
-        commit_payload = CommitPayload()
-        commit_payload.ParseFromString(transaction.payload)
-        commit = CommitWrapper()
-        commit.ParseFromString(commit_payload.data)
-        # address = self.addresser.commit(commit.id, commit.property)
-        # return self._set_commit(context, commit, address)
+        ledger_payload = LedgerPayload()
+        ledger_payload.ParseFromString(transaction.payload)
+        ledger = LedgerWrapper()
+        ledger.ParseFromString(ledger_payload.data)
+        # address = self.addresser.ledger(ledger.id, ledger.property)
+        # return self._set_ledger(context, ledger, address)
 
-    def _set_commit(self, context, commit, address):
-        """Change the hashblock commits on the block
+    def _set_ledger(self, context, ledger, address):
+        """Change the hashblock ledgers on the block
         """
-        LOGGER.debug("Processing commit payload")
+        LOGGER.debug("Processing ledger payload")
 
         try:
             context.set_state(
-                {address: commit.SerializeToString()},
+                {address: ledger.SerializeToString()},
                 timeout=STATE_TIMEOUT_SEC)
         except FutureTimeoutError:
             LOGGER.warning(
@@ -78,18 +78,18 @@ class CommitTransactionHandler(TransactionHandler):
                 self.address)
             raise InternalError(
                 'Unable to set {}'.format(self.address))
-        if self.action == CommitPayload.CREATE:
+        if self.action == LedgerPayload.CREATE:
             pass
 
 
-def _get_commit(context, address, default_value=None):
-    """Get a hashblock commits from the block
+def _get_ledger(context, address, default_value=None):
+    """Get a hashblock ledgers from the block
     """
-    commit = CommitWrapper()
+    ledger = LedgerWrapper()
     results = _get_state(context, address)
     if results:
-        commit.ParseFromString(results[0].data)
-        return commit
+        ledger.ParseFromString(results[0].data)
+        return ledger
     return default_value
 
 

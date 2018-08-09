@@ -145,9 +145,9 @@ services:
       \""
     stop_signal: SIGKILL
 
-  commit-processor:
+  ledger-processor:
     image: hashblock-dev-generic-tp
-    container_name: hashblock-dev-commit-tp
+    container_name: hashblock-dev-ledger-tp
     volumes:
       - ../..:/project/hashblock-exchange
     environment:
@@ -158,7 +158,7 @@ services:
       - exchange-processor
     command: "bash -c \"\
         sleep 1 &&
-        commit-tp -vv \
+        ledger-tp -vv \
           -C tcp://validator:4004 \
       \""
     stop_signal: SIGKILL

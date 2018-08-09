@@ -32,7 +32,7 @@ class Address(ABC):
     FAMILY_EXCHANGE = "exchange"
     FAMILY_SETTING = "setting"
     FAMILY_TRACK = "track"
-    FAMILY_COMMIT = "hashblock.commit"
+    FAMILY_LEDGER = "ledger"
 
     # Dimensions, used by families
     MATCH_TYPE_UTXQ = "utxq"
@@ -62,8 +62,8 @@ class Address(ABC):
         return TrackAddress()
 
     @classmethod
-    def commit_addresser(cls):
-        return CommitAddress()
+    def ledger_addresser(cls):
+        return LedgerAddress()
 
     @classmethod
     def unit_addresser(cls):
@@ -174,26 +174,6 @@ class SimpleAddress(Address):
         return self.family_ns_hash == address[0:6]
 
 
-class CommitAddress(SimpleAddress):
-    """CommitAddress provides the pederson commitment TP address support
-    """
-
-    def __init__(self):
-        super().__init__(self.FAMILY_COMMIT, ["0.1.0"])
-
-    # E.g. hashblock-commit.commit
-    # 0-2 namespace             6/6
-    def commit(self, ident):
-        """Create the stype (asset/unit) settings address using key
-        """
-        if ident is None or len(ident) != 64:
-            raise AssetIdRange(
-                "Invalid ident {} for  {} {}"
-                .format(ident, self._family, ident))
-
-        return self.family_ns_hash + ident
-
-
 class BaseAddress(SimpleAddress):
     """BaseAddress provides the base address for hashblock TPs"""
 
@@ -257,6 +237,38 @@ class TrackAddress(BaseAddress):
         return self.family_ns_hash \
             + ident \
             + self.hashup(property)[0:14]
+
+
+class LedgerAddress(BaseAddress):
+    """LedgerAddress provides the pederson commitment TP address support
+    """
+
+    def __init__(self):
+        super().__init__(self.FAMILY_LEDGER, ["0.1.0"])
+        self._owner_hash = self.hashup('owner')[0:6]
+        self._merkle_hash = self.family_ns_hash + \
+            self.hashup('merkletrie')[0:58]
+
+    # E.g. hashblock.ledger.merkletrie
+    # 0-2  namespace             6/6
+    # 3-5  ledger                6/12
+    # 6-34 merkletrie            58/70
+    @property
+    def merkle(self):
+        return self._merkle_hash
+
+    # E.g. hashblock.ledger.merkletrie
+    # 0-2  namespace             6/6
+    # 3-5  ledger                6/12
+    # 6-8  owner                 6/18
+    # 9-34 ident                 52/70
+    def owner(self, ident):
+        if ident is None or len(ident) != 52:
+            raise AssetIdRange(
+                "Invalid ident {} for  {}"
+                .format(ident, self._family))
+
+
 
 
 class VotingAddress(BaseAddress):
