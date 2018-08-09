@@ -26,10 +26,10 @@ def prime_gen():
     return x.stdout[:-1].zfill(44)
 
 
-def zkproc_quantity_cm(secret, value, unit, asset):
+def zkproc_quantity_cm(secret, tree, value, unit, asset):
     """Generates the commitments for quantity"""
     qcm_gen = subprocess.run(
-        ['hbzkproc', '-qc', secret, value, unit, asset],
+        ['hbzkproc', '-qc', secret, tree, value, unit, asset],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if qcm_gen.returncode == 0:
         return qcm_gen.stderr.decode("utf-8").split()
