@@ -16,21 +16,37 @@
 
 import subprocess
 
+tree_i = "0000000000000000000000000000000000000000000000000000000000000000"
+
 secret_str = "13dc0ddd3ff7431ea297f517c4878b682655a892da3b38e85da00cefe8975bb3"
-value_str = "5"
+value_str = ["5", "10", "1", "1"]
 unit_str = "0E77546B264D97ED79C0E8A00BF62F7C2A0F8BA6BE3D"
 asset_str = "0F2538C94209E2E2C98D319352C3630FCDA76F802E1F"
 
-qcm_gen = subprocess.run(
-    ['build/hbzkproc', '-qc', secret_str, value_str, unit_str, asset_str],
-    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-if qcm_gen.returncode == 0:
-    val_cm, unit_cm, asset_cm = qcm_gen.stderr.decode("utf-8").split()
-    print("Value CM {}".format(val_cm))
-    print("Unit CM {}".format(unit_cm))
-    print("Asset CM {}".format(asset_cm))
-    print()
-    print("Log {}".format(qcm_gen.stdout.decode("utf-8")))
-else:
-    print("Turing's quantity commitment fault {}".format(qcm_gen.stderr))
+def commit_run(secret, tree, value, unit, asset):
+    """ """
+    qcm_gen = subprocess.run(
+        ['build/hbzkproc', '-qc', secret, tree, value, unit, asset],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    if qcm_gen.returncode == 0:
+        new_tree, val_cm, unit_cm, asset_cm = qcm_gen.stderr.decode("utf-8").split()
+        print("Tree {}".format(new_tree))
+        print("Value CM {}".format(val_cm))
+        print("Unit CM {}".format(unit_cm))
+        print("Asset CM {}".format(asset_cm))
+        return new_tree
+    else:
+        print("Turing's quantity commitment fault {}".format(qcm_gen.stderr))
+        return tree_initial
+
+
+def main():
+    tree = tree_i
+    for v in value_str:
+        tree = commit_run(secret_str, tree, v, unit_str, asset_str)
+
+
+if __name__ == '__main__':
+    main()

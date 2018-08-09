@@ -32,10 +32,7 @@
 #include <zcash/Note.hpp>
 #include <zcash/IncrementalMerkleTree.hpp>
 #include "streams.h"
-#include "utilstrencodings.h"
-
-//  Our functions
-#include "base64.h"
+#include <utilstrencodings.h>
 
 using namespace std;
 using namespace libzcash;
@@ -82,34 +79,6 @@ uint64_t hexToUint(const char *hex) {
     return result;
 }
 
-vector<unsigned char> HexToBytes(const string& hex) {
-  vector<unsigned char> bytes;
-
-  for (unsigned int i = 0; i < hex.length(); i += 2) {
-    string byteString = hex.substr(i, 2);
-    unsigned char byte = (unsigned char) strtol(byteString.c_str(), NULL, 16);
-    bytes.push_back(byte);
-  }
-
-  return bytes;
-}
-
-template<typename TInputIter>
-string make_hex_string(TInputIter first, TInputIter last, bool use_uppercase = false, bool insert_spaces = false)
-{
-    ostringstream ss;
-    ss << hex << setfill('0');
-    if (use_uppercase)
-        ss << uppercase;
-    while (first != last)
-    {
-        ss << setw(2) << static_cast<int>(*first++);
-        if (insert_spaces && first != last)
-            ss << " ";
-    }
-    return ss.str();
-}
-
 bool verifyPrivateKey(const std::string& private_str) {
     secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     int sk_verify = secp256k1_ec_seckey_verify(ctx, (const unsigned char*) private_str.c_str());
@@ -117,8 +86,7 @@ bool verifyPrivateKey(const std::string& private_str) {
 }
 
 std::string hexKeyToString(const char *key) {
-    std::string ks(key);
-    vector<unsigned char> k = HexToBytes(ks);
+    vector<unsigned char> k = ParseHex(key);
     std::string result(k.begin(), k.end());
     return result;
 }
@@ -128,54 +96,56 @@ std::string valueNoteCommitment(const SaplingPaymentAddress& spa, uint64_t value
     return (*(note.cm())).GetHex();
 }
 
-int mintQuantity(const std::string& secret_key, uint64_t value, uint64_t unit, uint64_t asset /*Need to be hex , std:string tree_old_hex */) {
+string treeStats(const SaplingMerkleTree& tree) {
+    cout << endl;
+    cout << "Root = " << tree.root().GetHex() << endl;
+    cout << "Size = " << tree.size() << endl;
+    CDataStream ss_out(SER_NETWORK, PROTOCOL_VERSION);
+    ss_out << tree;
+    string tree_hex = HexStr(ss_out.begin(), ss_out.end());
+    cout << "Serialized hex = " << tree_hex << endl;
+    return tree_hex;
+}
+
+int mintQuantity(const std::string& secret_key, const char* tree, uint64_t value, uint64_t unit, uint64_t asset) {
     cout << endl;
 
     if( verifyPrivateKey(secret_key) ) {
         SaplingSpendingKey spendingKey(uint256S(secret_key));
         SaplingPaymentAddress spa = spendingKey.default_address();
+        uint256 valueCommitment = *(SaplingNote(spa, value).cm());
+        uint256 unitCommitment = *(SaplingNote(spa, unit).cm());
+        uint256 assetCommitment = *(SaplingNote(spa, asset).cm());
 
-        string cV = valueNoteCommitment(spa, value);
-        string cU = valueNoteCommitment(spa, unit);
-        string cA = valueNoteCommitment(spa, asset);
-        // cout << "Value: " << value << " cm: " << cV << endl;
-        // cout << "Unit: " << unit << " cm: " << cU << endl;
-        // cout << "Asset: " << asset << " cm: " << cA << endl;
+        // cout << "Value: " << valueCommitment.GetHex() << " cm: " << cV << endl;
+        // cout << "Unit: " << unitCommitment.GetHex() << " cm: " << cU << endl;
+        // cout << "Asset: " << assetCommitment.GetHex() << " cm: " << cA << endl;
 
-        SaplingMerkleTree tree_old;  // Dummy
+        // Need to populate tree from inbound
+
         SaplingMerkleTree tree_new;
-
-        //Replace below two lines with the next two lines.
-        CDataStream ss_in(SER_NETWORK, PROTOCOL_VERSION);
-        ss_in << tree_old;
-        //Replace abolve two lines with the next two lines.
-
-        //string tree_old_hex = HexStr(tree_old_hex.begin(), tree_old_hex.end());
-        //CDataStream ss_in(tree_old_hex, SER_NETWORK, PROTOCOL_VERSION);
-
-        // This prints out an empty tree. The string value is '000000'.
-        // This needs to be the initial blob at a sawtooth address of
-        // hb.merkletree or something.
-        cout << "\n This is the initial merkel tree hex string\n";
-        string tree_init_hex = HexStr(ss_in.begin(), ss_in.end());
-        cout << "\n" << tree_init_hex << "\n";
-        cout << "\n This is the initial merkel tree string\n";
-
+        CDataStream ss_in(
+            ParseHex(tree),
+            SER_NETWORK, PROTOCOL_VERSION);
         ss_in >> tree_new;
-        auto note = SaplingNote(spa, value);
-        tree_new.append(*(note.cm()));
-        auto cV_anchor = tree_new.root();
-        auto cV_witness = tree_new.witness();
+        tree_new.append(valueCommitment);
+        treeStats(tree_new);
+        tree_new.append(unitCommitment);
+        treeStats(tree_new);
+        tree_new.append(assetCommitment);
+        string final_tree_string = treeStats(tree_new);
 
-        CDataStream ss_out(SER_NETWORK, PROTOCOL_VERSION);
-        ss_out << tree_new;
-        string tree_new_hex = HexStr(ss_out.begin(), ss_out.end());
-        cout << "\n This is the next merket tree\n";
-        cout << "\n" << tree_new_hex << "\n";
-        cout << "\n This is the next merket tree\n";
+        // TBD
+        // auto cV_anchor = tree_new.root();
+        // auto cV_witness = tree_new.witness();
 
-        cout << "Setting results" << endl;
-        cerr << cV << ' ' << cU << ' ' << cA;
+        cout << "Final tree hex = " << final_tree_string << endl << endl;
+
+        cout << "Outputs " << endl;
+        cerr << final_tree_string << ' '
+            << valueCommitment.GetHex() << ' '
+            << unitCommitment.GetHex() << ' '
+            << assetCommitment.GetHex();
         return 0;
     }
     else {
@@ -192,15 +162,21 @@ int main( int argc , char *argv[]) {
         return result;
     else {
         /*
-        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0000000000000000000000000000fcc1cb47ddc86179 0000000000000000000000000000eb50c37a09093a83
+        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 0000000000000000000000000000000000000000000000000000000000000000 5 0000000000000000000000000000fcc1cb47ddc86179 0000000000000000000000000000eb50c37a09093a83
         */
         if (strcmp(argv[1], "-qc") == 0) {
-            if (argc < 5) {
-                cerr << "hbzkproc -qc secret value unit asset" << endl;
+            if (argc < 6) {
+                cerr << "hbzkproc -qc secret tree value unit asset" << endl;
                 return result;
             }
             else {
-                return mintQuantity(hexKeyToString(argv[2]), charToUint(argv[3]), hexToUint(argv[4]), hexToUint(argv[5]));
+                return mintQuantity(
+                    //ParseHex((const char *) argv[2]),
+                    hexKeyToString(argv[2]),
+                    argv[3],
+                    charToUint(argv[4]),
+                    hexToUint(argv[5]),
+                    hexToUint(argv[6]));
             }
         }
         else {
