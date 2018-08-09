@@ -18,24 +18,30 @@
 #include <array>
 #include <iostream>
 #include <iomanip>
-#include <sstream>
 
+// Dependencies
+#include <endian.h>
+#include <config/bitcoin-config.h>
+#include <uint256.h>
+#include <sodium.h>
+#include <secp256k1.h>
 
 //  ZCash functions
-#include <config/bitcoin-config.h>
-#include <endian.h>
-#include <uint256.h>
 #include <zcash/Zcash.h>
 #include <zcash/Address.hpp>
 #include <zcash/Note.hpp>
-#include <sodium.h>
-#include <secp256k1.h>
+#include <zcash/IncrementalMerkleTree.hpp>
+#include "streams.h"
+#include "utilstrencodings.h"
 
 //  Our functions
 #include "base64.h"
 
 using namespace std;
 using namespace libzcash;
+
+typedef IncrementalMerkleTree<SAPLING_INCREMENTAL_MERKLE_TREE_DEPTH, libzcash::PedersenHash> SaplingMerkleTree;
+static const int PROTOCOL_VERSION = 170006;
 
 // Utilities
 
@@ -122,17 +128,52 @@ std::string valueNoteCommitment(const SaplingPaymentAddress& spa, uint64_t value
     return (*(note.cm())).GetHex();
 }
 
-int mintQuantity(const std::string& secret_key, uint64_t value, uint64_t unit, uint64_t asset) {
+int mintQuantity(const std::string& secret_key, uint64_t value, uint64_t unit, uint64_t asset /*Need to be hex , std:string tree_old_hex */) {
     cout << endl;
+
     if( verifyPrivateKey(secret_key) ) {
         SaplingSpendingKey spendingKey(uint256S(secret_key));
         SaplingPaymentAddress spa = spendingKey.default_address();
+
         string cV = valueNoteCommitment(spa, value);
         string cU = valueNoteCommitment(spa, unit);
         string cA = valueNoteCommitment(spa, asset);
         // cout << "Value: " << value << " cm: " << cV << endl;
         // cout << "Unit: " << unit << " cm: " << cU << endl;
         // cout << "Asset: " << asset << " cm: " << cA << endl;
+
+        SaplingMerkleTree tree_old;  // Dummy
+        SaplingMerkleTree tree_new;
+
+        //Replace below two lines with the next two lines.
+        CDataStream ss_in(SER_NETWORK, PROTOCOL_VERSION);
+        ss_in << tree_old;
+        //Replace abolve two lines with the next two lines.
+
+        //string tree_old_hex = HexStr(tree_old_hex.begin(), tree_old_hex.end());
+        //CDataStream ss_in(tree_old_hex, SER_NETWORK, PROTOCOL_VERSION);
+
+        // This prints out an empty tree. The string value is '000000'.
+        // This needs to be the initial blob at a sawtooth address of
+        // hb.merkletree or something.
+        cout << "\n This is the initial merkel tree hex string\n";
+        string tree_init_hex = HexStr(ss_in.begin(), ss_in.end());
+        cout << "\n" << tree_init_hex << "\n";
+        cout << "\n This is the initial merkel tree string\n";
+
+        ss_in >> tree_new;
+        auto note = SaplingNote(spa, value);
+        tree_new.append(*(note.cm()));
+        auto cV_anchor = tree_new.root();
+        auto cV_witness = tree_new.witness();
+
+        CDataStream ss_out(SER_NETWORK, PROTOCOL_VERSION);
+        ss_out << tree_new;
+        string tree_new_hex = HexStr(ss_out.begin(), ss_out.end());
+        cout << "\n This is the next merket tree\n";
+        cout << "\n" << tree_new_hex << "\n";
+        cout << "\n This is the next merket tree\n";
+
         cout << "Setting results" << endl;
         cerr << cV << ' ' << cU << ' ' << cA;
         return 0;
@@ -151,7 +192,7 @@ int main( int argc , char *argv[]) {
         return result;
     else {
         /*
-        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0000000000000000000000000000fcc1cb47ddc86179 ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0000000000000000000000000000fcc1cb47ddc86179 0000000000000000000000000000eb50c37a09093a83
+        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0000000000000000000000000000fcc1cb47ddc86179 0000000000000000000000000000eb50c37a09093a83
         */
         if (strcmp(argv[1], "-qc") == 0) {
             if (argc < 5) {

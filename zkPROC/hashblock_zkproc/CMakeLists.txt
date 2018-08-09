@@ -15,7 +15,7 @@
 # ------------------------------------------------------------------------
 
 # Useful build commands
-# Run: rm -R build && mkdir build && cd build && cmake .. && make
+# Run: cd .. && rm -R build && mkdir build && cd build && cmake .. && make
 
 # Minimum version
 cmake_minimum_required(VERSION 3.5.1)
