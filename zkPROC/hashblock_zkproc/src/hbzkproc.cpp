@@ -96,16 +96,77 @@ std::string valueNoteCommitment(const SaplingPaymentAddress& spa, uint64_t value
     return (*(note.cm())).GetHex();
 }
 
-string treeStats(const SaplingMerkleTree& tree) {
+string treeStats(const uint256& v, const SaplingMerkleTree& tree) {
     cout << endl;
+    cout << "Comm = " << v.GetHex() << endl;
     cout << "Root = " << tree.root().GetHex() << endl;
     cout << "Size = " << tree.size() << endl;
+    cout << "Witness Post = " << tree.witness().position() << endl;
+    cout << "Witness Root = " << tree.witness().root().GetHex() << endl;
+    cout << "Witness Elem = " << tree.witness().element().GetHex() << endl;
     CDataStream ss_out(SER_NETWORK, PROTOCOL_VERSION);
     ss_out << tree;
     string tree_hex = HexStr(ss_out.begin(), ss_out.end());
     cout << "Serialized hex = " << tree_hex << endl;
     return tree_hex;
 }
+
+/*
+    Add commitments to current tree, returns
+    For each commitment: position,commitment <sp>
+    followed by the new serialized tree, so:
+    x,value<sp>y,unit<sp>z,asset<sp> tree
+*/
+
+int commitmentToTree(const char* tree, const char *value, const char *unit, const char *asset) {
+    SaplingMerkleTree tree_new;
+    uint256 u_v = uint256S(value);
+    uint256 u_u = uint256S(unit);
+    uint256 u_a = uint256S(asset);
+    CDataStream ss_in(
+        ParseHex(tree),
+        SER_NETWORK, PROTOCOL_VERSION);
+    ss_in >> tree_new;
+    tree_new.append(u_v);
+    cerr << tree_new.witness().position() << ',' << value << ' ';
+    tree_new.append(u_u);
+    cerr << tree_new.witness().position() << ',' << unit << ' ';
+    tree_new.append(u_a);
+    cerr << tree_new.witness().position()  << ',' << asset<< ' ';
+    CDataStream ss_out(SER_NETWORK, PROTOCOL_VERSION);
+    ss_out << tree_new;
+    string tree_hex = HexStr(ss_out.begin(), ss_out.end());
+    cerr << tree_hex;
+    return 0;
+}
+
+/*
+    Generates commitments for value, unit, asset
+    returns value_commitment<sp>unit_commitment<sp>asset_commitment
+*/
+
+int generateCommitments(const std::string& secret_key, uint64_t value, uint64_t unit, uint64_t asset) {
+    if( verifyPrivateKey(secret_key) ) {
+        SaplingSpendingKey spendingKey(uint256S(secret_key));
+        SaplingPaymentAddress spa = spendingKey.default_address();
+        uint256 valueCommitment = *(SaplingNote(spa, value).cm());
+        uint256 unitCommitment = *(SaplingNote(spa, unit).cm());
+        uint256 assetCommitment = *(SaplingNote(spa, asset).cm());
+        cerr << valueCommitment.GetHex() << ' '
+            << unitCommitment.GetHex() << ' '
+            << assetCommitment.GetHex();
+        return 0;
+    }
+    else {
+        return 2;
+    }
+
+}
+
+/*
+    DEAD CODE FOR REFERENCING
+    Spits commitments and trees
+*/
 
 int mintQuantity(const std::string& secret_key, const char* tree, uint64_t value, uint64_t unit, uint64_t asset) {
     cout << endl;
@@ -129,11 +190,11 @@ int mintQuantity(const std::string& secret_key, const char* tree, uint64_t value
             SER_NETWORK, PROTOCOL_VERSION);
         ss_in >> tree_new;
         tree_new.append(valueCommitment);
-        treeStats(tree_new);
+        treeStats(valueCommitment, tree_new);
         tree_new.append(unitCommitment);
-        treeStats(tree_new);
+        treeStats(unitCommitment, tree_new);
         tree_new.append(assetCommitment);
-        string final_tree_string = treeStats(tree_new);
+        string final_tree_string = treeStats(assetCommitment, tree_new);
 
         // TBD
         // auto cV_anchor = tree_new.root();
@@ -162,21 +223,31 @@ int main( int argc , char *argv[]) {
         return result;
     else {
         /*
-        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 0000000000000000000000000000000000000000000000000000000000000000 5 0000000000000000000000000000fcc1cb47ddc86179 0000000000000000000000000000eb50c37a09093a83
+        ./hbzkproc -qc 59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1 5 0000000000000000000000000000fcc1cb47ddc86179 0000000000000000000000000000eb50c37a09093a83
         */
         if (strcmp(argv[1], "-qc") == 0) {
-            if (argc < 6) {
-                cerr << "hbzkproc -qc secret tree value unit asset" << endl;
+            if (argc < 5) {
+                cerr << "hbzkproc -qc secret value unit asset" << endl;
                 return result;
             }
             else {
-                return mintQuantity(
-                    //ParseHex((const char *) argv[2]),
+                return generateCommitments(
                     hexKeyToString(argv[2]),
-                    argv[3],
-                    charToUint(argv[4]),
-                    hexToUint(argv[5]),
-                    hexToUint(argv[6]));
+                    charToUint(argv[3]),
+                    hexToUint(argv[4]),
+                    hexToUint(argv[5]));
+            }
+        }
+        /*
+        ./hbzkproc -ctm 0000000000000000000000000000000000000000000000000000000000000000 3d5a2ea8fd4fedde0204895ab753867cbf9953047f33b74fbf246e7fcd5a73de 065647602db565583d5f717dc24000209975c24dfedcf2ef0c97812067596f4e 3263e9ab0e2ecc9362ae8f292d7e438058999c461927fa2082fb73b1eb8c23b9
+        */
+        else if (strcmp(argv[1], "-ctm") == 0) {
+            if (argc < 6) {
+                cerr << "hbzkproc -ctm tree value unit asset" << endl;
+                return result;
+            }
+            else {
+                return commitmentToTree(argv[2], argv[3], argv[4], argv[5]);
             }
         }
         else {
