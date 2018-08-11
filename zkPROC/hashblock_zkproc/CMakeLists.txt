@@ -36,7 +36,7 @@ include_directories(/usr/local/include
 
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -Wextra -Wfatal-errors -O2 -pthread")
-set(SOURCES src/hbzkproc.cpp src/base64.cpp)
+set(SOURCES src/hbzkproc.cpp)
 
 # Link settings
 find_library(HB_LIBSSL NAMES event_openssl)
