@@ -248,6 +248,7 @@ class LedgerAddress(BaseAddress):
         self._owner_hash = self.hashup('owner')[0:6]
         self._merkle_hash = self.family_ns_hash + \
             self.hashup('merkletrie')[0:58]
+        self._wallet_hash = self.hashup('wallet')[0:4]
 
     # E.g. hashblock.ledger.merkletrie
     # 0-2  namespace             6/6
@@ -258,17 +259,15 @@ class LedgerAddress(BaseAddress):
         return self._merkle_hash
 
     # E.g. hashblock.ledger.merkletrie
-    # 0-2  namespace             6/6
-    # 3-5  ledger                6/12
-    # 6-8  owner                 6/18
-    # 9-34 ident                 52/70
-    def owner(self, ident):
-        if ident is None or len(ident) != 52:
+    # 0-2  wallet               4/4
+    # 3-34 ident                66/70
+    def wallet(self, ident):
+        if ident is None or len(ident) != 66:
             raise AssetIdRange(
                 "Invalid ident {} for  {}"
                 .format(ident, self._family))
-
-
+        else:
+            return self._wallet_hash + ident
 
 
 class VotingAddress(BaseAddress):

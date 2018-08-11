@@ -15,10 +15,12 @@
 # ------------------------------------------------------------------------------
 
 
-from shared.transactions import (
-    submit_single_txn, create_transaction, compose_builder)
+from shared.transactions import (create_transaction)
+from protobuf.ledger_pb2 import (LedgerPayload, Token)
+from modules.config import (HB_OPERATOR, public_key_values_list)
+from modules.decode import ledger_addresser as _addresser
 
-from modules.decode import ledger_addresser
+_default_merkletrie = '0' * 64
 
 
 def _validate_quantity(data):
@@ -37,7 +39,7 @@ def _create_inputs_outputs(ingest):
     pass
 
 
-def create_minted_quantity(data):
+def mint_token(data):
     return
     # direct = compose_builder(
     #     submit_single_txn, create_transaction, _create_inputs_outputs,
@@ -46,3 +48,24 @@ def create_minted_quantity(data):
     #     data['signer'],
     #     commit_addresser,
     #     data))
+
+
+# Genesis operation
+# //  Create LedgerMerkleTrie txn.outputs[0] has address, data has trie
+# //  Create User Wallets txn.outputs[1-n] have addresses
+# //  data is starting Merkle Trie string (default is 64 '0's)
+
+def create_ledger_genesis(merkletrie=None):
+    payload = LedgerPayload(
+        action=LedgerPayload.WALLET_GENESIS,
+        data=bytes(_default_merkletrie, 'utf8')
+        if not merkletrie else bytes(merkletrie, 'utf8'))
+
+    addresses = [_addresser.wallet(y) for y in public_key_values_list()]
+    addresses.insert(0, _addresser.merkle)
+    perms = {
+        'inputs': addresses,
+        'outputs': addresses
+    }
+    _, txn = create_transaction((HB_OPERATOR, _addresser, perms, payload))
+    return [txn]

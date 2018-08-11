@@ -17,9 +17,8 @@
 syntax = "proto3";
 option java_package = "hashblock.ledger.protobuf";
 
-// Mint value message. This portion is encrypted on the chain
-// see LedgerWrapper below
-message Mint {
+// Value message. This is encrypted quantity on the chain see Token
+message Value {
 
     //  Fixed width integer
     bytes value = 1;
@@ -31,45 +30,48 @@ message Mint {
     bytes asset = 3;
 }
 
-message LedgerWrapper {
+// Token message. A token is a representation
+// of a minted quantity on the chain
 
-    //  Identifier
-    string id = 1;
-    //  Commitment 'v'
-    string v_commitment = 2;
-    //  Commitment 'u'
-    string u_commitment = 3;
-    //  Commitment 'a'
-    string a_commitment = 4;
-    //  Encrypted Mint
-    bytes minted_value = 5;
+message Token {
+
+    //  Commitment 'value'
+    string v_commitment = 1;
+    uint64 v_pos = 2;
+    string v_null = 3;
+
+    //  Commitment 'unit'
+    string u_commitment = 4;
+    uint64 u_pos = 5;
+    string u_null = 6;
+
+    //  Commitment 'asset'
+    string a_commitment = 7;
+    uint64 a_pos = 8;
+    string a_null = 9;
+
+    //  Encrypted Quantity
+    bytes quantity = 10;
 
 }
 
-// Commit data container for on-chain Minted commitments?
-// Not used at the moment
+// Data container for on-chain Minted commitments
 
-message MintedValue {
-
-    //  s Secret
-    string s = 1;
-
-    //  r Secret
-    string r = 2;
-
-    //  p Secret
-    string rho = 3;
-
-    //  pk
-    string pk = 4;
-
-    //  Minted value(s)
-    Mint quantity = 5;
-
+message Wallet {
+    message WalletToken {
+        enum State {
+            MINTED = 0;
+            SPENT = 1;
+        }
+        uint64 id = 1;
+        State state = 2;
+        Token token = 3;
+    }
+    repeated WalletToken tokens = 1;
 }
 
 message LedgerMerkleTrie {
-    string trie = 1;
+    bytes trie = 1;
 }
 
 // Ledger Payload
@@ -78,14 +80,24 @@ message LedgerPayload {
     // The action indicates data is contained within this payload
     enum Action {
         //
-        MERKLE_GENESIS = 0;
-        MINT_COMMITMENT = 1;
+        WALLET_GENESIS = 0;
+        WALLET_ADD = 1;
+        WALLET_MINT_TOKEN = 2;
     }
     // The action of this payload
     Action action = 1;
 
-    // Action = 0 - LedgerMerkleTrie
-    // Action = 1 - LedgerWrapper
+    // Action = 0 - Genesis operation
+    //  Create LedgerMerkleTrie txn.outputs[0] has address, data has trie
+    //  Create User Wallets txn.outputs[1-n] have addresses
+    //  data is starting Merkle Trie string (default is 64 '0's)
+
+    // Action = 2 - Mint Token
+    //  User wallet address in txn.outputs[0]
+    //  Bytes is comma seperated value_commitment, unit commitment, asset commitment
+    //  To push: bytes(','.join(list), 'utf8')
+    //  To pull: data.decode('utf8').split(',') to create list
+
     bytes data = 2;
 }
 

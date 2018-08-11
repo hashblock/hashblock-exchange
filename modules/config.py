@@ -93,6 +93,13 @@ def public_key(name):
     return result
 
 
+def public_key_values_list():
+    """Returns a list of public key values"""
+    return [v
+        for k, v in REST_CONFIG['rest']['public_keys'].items()
+            if k != HB_OPERATOR]
+
+
 def private_key(name):
     """Attempts to resolve a private key by name"""
     result = None

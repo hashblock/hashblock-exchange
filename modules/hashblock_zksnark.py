@@ -26,17 +26,47 @@ def prime_gen():
     return x.stdout[:-1].zfill(44)
 
 
-def zkproc_quantity_cm(secret, tree, value, unit, asset):
-    """Generates the commitments for quantity"""
-    qcm_gen = subprocess.run(
-        ['hbzkproc', '-qc', secret, tree, value, unit, asset],
+def zkproc_quantity_cm(secret, value, unit, asset):
+    """Generates the commitments for quantity
+
+        Returns:
+            [value_commitment, unit_commitment, asset_commitment]
+    """
+    zkp_gen = subprocess.run(
+        ['hbzkproc', '-qc', secret, value, unit, asset],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if qcm_gen.returncode == 0:
-        return qcm_gen.stderr.decode("utf-8").split()
+    if zkp_gen.returncode == 0:
+        return zkp_gen.stderr.decode("utf-8").split()
     else:
         raise InternalError(
-            "hbzkproc quantity commitment failed with {}".
-            format(qcm_gen.returncode))
+            "hbzkproc quantity commitments failed with {}".
+            format(zkp_gen.returncode))
+
+
+def zkproc_insert_cm(tree, value_cm, unit_cm, asset_cm):
+    """Inserts quantity commitments into merkle trie
+
+        Returns:
+            [new_tree,
+                [val tree pos, val_commitment],
+                [unit tree pos, unit_commitment],
+                [asset tree pos, asset_commitment]]
+    """
+    zkp_gen = subprocess.run(
+        ['hbzkproc', '-ctm', tree, value_cm, unit_cm, asset_cm],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if zkp_gen.returncode == 0:
+        val_tup, unit_tup, asset_tup, new_tree = \
+            zkp_gen.stderr.decode("utf-8").split()
+        return [
+            new_tree,
+            val_tup.split(','),
+            unit_tup.split(','),
+            asset_tup.split(',')]
+    else:
+        raise InternalError(
+            "hbzkproc commitments to tree failed with {}".
+            format(zkp_gen.returncode))
 
 
 def zksnark_genkeys(file_path, secret_str):

@@ -21,8 +21,8 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
-from protobuf.ledger_pb2 import LedgerPayload
-from protobuf.ledger_pb2 import LedgerWrapper
+from protobuf.ledger_pb2 import (
+    LedgerPayload, LedgerMerkleTrie, Wallet, Token)
 
 from modules.address import Address
 
@@ -36,8 +36,8 @@ class LedgerTransactionHandler(TransactionHandler):
 
     def __init__(self):
         self._addresser = Address.ledger_addresser()
-        self._auth_list = None
         self._action = None
+        self._context = None
 
     @property
     def addresser(self):
@@ -55,13 +55,37 @@ class LedgerTransactionHandler(TransactionHandler):
     def namespaces(self):
         return [self.addresser.family_ns_hash]
 
+    # Context is stateful per apply call
+    @property
+    def context(self):
+        return self._context
+
+    @context.setter
+    def context(self, ctx):
+        self._context = ctx
+
     def apply(self, transaction, context):
+        """Apply an inbound transaction"""
+        self.context = context
         ledger_payload = LedgerPayload()
         ledger_payload.ParseFromString(transaction.payload)
-        ledger = LedgerWrapper()
-        ledger.ParseFromString(ledger_payload.data)
+        if(ledger_payload.action == LedgerPayload.WALLET_GENESIS):
+            self._genesis(ledger_payload.data, transaction.header.outputs)
+            pass
+        else:
+            pass
         # address = self.addresser.ledger(ledger.id, ledger.property)
         # return self._set_ledger(context, ledger, address)
+
+    def _genesis(self, edata, outputs):
+        """Genesis operations
+
+        Create the merkle trie (outputs[0] address) with data
+        Create empty wallets for users (outputs[1:] addresses)
+        """
+        LOGGER.debug("Creating merkle {}".format(edata.decode()))
+        LOGGER.debug("Creating stuff in {}".format(outputs))
+        pass
 
     def _set_ledger(self, context, ledger, address):
         """Change the hashblock ledgers on the block

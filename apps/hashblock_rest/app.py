@@ -374,17 +374,17 @@ commit_fields = ns.model('minted_quantity', {
 })
 
 #
-#   Commit
+#   Ledger
 #
 
 
-@ns.route('/mint-quantity')
+@ns.route('/mint-token')
 class COMMint(Resource):
     @ns.expect(commit_fields)
     def post(self):
         """Mint a quantity and create commitment"""
         try:
-            ledger.create_minted_quantity(request.json)
+            ledger.mint_token(request.json)
             return {"status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400

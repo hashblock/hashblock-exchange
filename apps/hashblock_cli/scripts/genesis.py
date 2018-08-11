@@ -22,6 +22,7 @@ from scripts.hbsawset import gensawset
 from scripts.ucum_to_assets import genucum
 from scripts.iso4217_to_assets import geniso4217
 from modules.exceptions import CliException
+from shared.ledger import create_ledger_genesis
 from shared.setting import create_settings_genesis
 from shared.asset import create_unit_genesis, create_asset_genesis
 from shared.transactions import create_batch, create_batch_list
@@ -98,6 +99,7 @@ def do_genesis(args, config):
     iso4217_assets = geniso4217()
 
     txns = gensawset(args.signer)
+    txns.extend(create_ledger_genesis())
 
     txns.extend(create_settings_genesis(
         args.signer, args.resource_keys, args.resource_threshold,
