@@ -83,38 +83,20 @@ class LedgerTransactionHandler(TransactionHandler):
         Create the merkle trie (outputs[0] address) with data
         Create empty wallets for users (outputs[1:] addresses)
         """
-        LOGGER.debug("Creating merkle {}".format(edata.decode()))
-        LOGGER.debug("Creating stuff in {}".format(outputs))
-        pass
-
-    def _set_ledger(self, context, ledger, address):
-        """Change the hashblock ledgers on the block
-        """
-        LOGGER.debug("Processing ledger payload")
-
-        try:
-            context.set_state(
-                {address: ledger.SerializeToString()},
-                timeout=STATE_TIMEOUT_SEC)
-        except FutureTimeoutError:
-            LOGGER.warning(
-                'Timeout occured on set_state([%s, <value>])',
-                self.address)
-            raise InternalError(
-                'Unable to set {}'.format(self.address))
-        if self.action == LedgerPayload.CREATE:
-            pass
-
-
-def _get_ledger(context, address, default_value=None):
-    """Get a hashblock ledgers from the block
-    """
-    ledger = LedgerWrapper()
-    results = _get_state(context, address)
-    if results:
-        ledger.ParseFromString(results[0].data)
-        return ledger
-    return default_value
+        is_exist = []
+        for y in outputs:
+            s = _get_state(self.context, y)
+            if s:
+                is_exist.append(s[0])
+        if is_exist:
+            raise InvalidTransaction(
+                "Invalid genesis, stuff exists {}".format(is_exist))
+        else:
+            LOGGER.debug("Setting merkle {} => {}".format(outputs[0], edata))
+            _set_state(self.context, outputs[0], edata)
+            [_set_state(
+                self.context, y, Wallet().SerializeToString())
+                for y in outputs[1:]]
 
 
 def _get_state(context, address):
@@ -125,4 +107,16 @@ def _get_state(context, address):
             'Timeout occured on context.get_state([%s])',
             address)
         raise InternalError('Unable to get {}'.format(address))
+    return results
+
+
+def _set_state(context, address, data):
+    try:
+        results = context.set_state(
+            {address: data}, timeout=STATE_TIMEOUT_SEC)
+    except FutureTimeoutError:
+        LOGGER.warning(
+            'Timeout occured on context.set_state([%s])',
+            address)
+        raise InternalError('Unable to set {}'.format(address))
     return results
