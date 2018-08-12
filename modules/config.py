@@ -17,6 +17,7 @@
 import sys
 import os
 import logging
+import pprint
 from yaml import load
 
 from modules.state import State
@@ -233,19 +234,31 @@ def __load_cfg_and_keys(configfile):
     private_keys = {}
     public_keys = {}
     submitter_keys = {}
+    # Get the operator key
+    # public, private, signer = __fabricate_signer()
+    # public_keys[HB_OPERATOR] = public
+    # private_keys[HB_OPERATOR] = private
+    # signer_keys[HB_OPERATOR] = public
+    # submitter_keys[HB_OPERATOR] = signer
+
+    if not doc['rest']['operator']:
+        raise ValueError("Missing operator settings in config file")
+    else:
+        public, private = __read_keys(
+            os.path.join(DEFAULT_KEYS_PATH, doc['rest']['operator']['sysop']))
+        public_keys[HB_OPERATOR] = public
+        private_keys[HB_OPERATOR] = private
+        signer_keys[HB_OPERATOR] = public
+        submitter_keys[HB_OPERATOR] = __read_signer(private)
+
     # iterate through signers for keys
-    for key, value in doc['rest']['signers'].items():
+    for key, value in doc['rest']['users'].items():
         public, private = __read_keys(os.path.join(DEFAULT_KEYS_PATH, value))
         public_keys[key] = public
         private_keys[key] = private
         signer_keys[key] = public
         submitter_keys[key] = __read_signer(private)
-
-    public, private, signer = __fabricate_signer()
-    public_keys[HB_OPERATOR] = public
-    private_keys[HB_OPERATOR] = private
-    signer_keys[HB_OPERATOR] = public
-    submitter_keys[HB_OPERATOR] = signer
+        doc['rest']['agreements']['wallet_' + key] = [key, HB_OPERATOR]
 
     doc['rest']['public_keys'] = public_keys
     doc['rest']['private_keys'] = private_keys
@@ -272,6 +285,7 @@ def __load_cfg_and_keys(configfile):
         else:
             raise AuthException
     doc['rest']['partners'] = agreements
+    # pprint.pprint(doc)
     return doc
 
 

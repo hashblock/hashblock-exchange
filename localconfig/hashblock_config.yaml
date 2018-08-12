@@ -23,10 +23,13 @@ rest:
     # sawtooth validator and port, should match your setup
     stval-connect: tcp://validator:4004
 
-  # Signing keys for batch/transaction submissions
-  signers:
+  # Users
+  users:
     church: signer1
     turing: signer2
+
+  operator:
+    sysop: sysops
 
   # zksnark prover and verifier keys based on #B balancing equation constraints
   zksnark:

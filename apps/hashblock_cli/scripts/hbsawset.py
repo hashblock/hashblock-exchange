@@ -23,7 +23,11 @@ from protobuf.stsetting_pb2 import SettingProposal
 
 from modules.address import SimpleAddress
 from modules.decode import (
-    setting_addresser, asset_addresser, unit_addresser, utxq_addresser)
+    setting_addresser,
+    asset_addresser,
+    unit_addresser,
+    ledger_addresser,
+    utxq_addresser)
 from shared.transactions import create_transaction, compose_builder
 from modules.config import public_key
 
@@ -140,6 +144,7 @@ def gensawset(signer):
         setting_addresser,
         asset_addresser,
         unit_addresser,
+        ledger_addresser,
         utxq_addresser]
     families = [
         {"family": a.family_ns_name, "version": a.family_current_version}
