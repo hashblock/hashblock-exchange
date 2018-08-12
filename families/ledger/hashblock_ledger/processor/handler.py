@@ -16,6 +16,7 @@
 
 import logging
 
+from google.protobuf.json_format import MessageToDict
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
@@ -97,7 +98,8 @@ class LedgerTransactionHandler(TransactionHandler):
             raise InvalidTransaction("No merkle trie found")
         else:
             merkle.ParseFromString(mtree_res[0].data)
-        # LOGGER.debug("Wallet => {}".format(wallet))
+        # LOGGER.debug("Wallet => {}".format(
+        #     MessageToDict(wallet)))
         # LOGGER.debug("Merkle => {}".format(merkle))
         # Insert commitments to merkle trie
         try:
@@ -128,7 +130,7 @@ class LedgerTransactionHandler(TransactionHandler):
         # Set updated merkle trie
         _set_state(self.context, outputs[1], merkle.SerializeToString())
         # Add token to wallet
-        wlen = len(wallet.tokens) if not first_entry else 0
+        wlen = len(wallet.tokens) + 1 if not first_entry else 1
         wallet.tokens.add(id=wlen, state=1, token=token)
         _set_state(self.context, outputs[0], wallet.SerializeToString())
 
