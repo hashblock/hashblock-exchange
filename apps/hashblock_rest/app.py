@@ -28,6 +28,8 @@ from modules.address import Address
 from shared.transactions import initialize_txn_vc
 from modules.decode import (
     initialize_decode,
+    decode_wallet,
+    decode_wallet_list,
     decode_exchange_initiate,
     decode_exchange_initiate_list,
     decode_exchange_reciprocate,
@@ -378,8 +380,25 @@ commit_fields = ns.model('minted_quantity', {
 #
 
 
+@ns.route('/wallet/<string:owner>')
+@ns.param('owner', 'Users wallet')
+class LedgerGetWallet(Resource):
+    def get(self, owner):
+        """Wallet context for specific owner"""
+        result = decode_wallet(owner)
+        return result, 200
+
+
+# @ns.route('/wallets')
+# class LedgerListWallets(Resource):
+#     def get(self):
+#         """Returns wallet listings"""
+#         result = decode_wallet_list()
+#         return result, 200
+
+
 @ns.route('/mint-token')
-class COMMint(Resource):
+class LedgerMintToken(Resource):
     @ns.expect(commit_fields)
     def post(self):
         """Mint a quantity and create commitment"""
@@ -390,7 +409,7 @@ class COMMint(Resource):
             return {"DataException": str(e)}, 400
 
 #
-#   Match post process utilities
+#   Exchange post process utilities
 #
 
 
