@@ -30,9 +30,11 @@
 #include <zcash/Zcash.h>
 #include <zcash/Address.hpp>
 #include <zcash/Note.hpp>
+#include <transaction.h>
 #include <zcash/IncrementalMerkleTree.hpp>
 #include "streams.h"
 #include <utilstrencodings.h>
+#include <librustzcash.h>
 
 using namespace std;
 using namespace libzcash;
@@ -128,7 +130,65 @@ int commitmentToTree(const char* tree, const char *value, const char *unit, cons
         SER_NETWORK, PROTOCOL_VERSION);
     ss_in >> tree_new;
     tree_new.append(u_v);
-    cerr << tree_new.witness().position() << ',' << value << ' ';
+    CDataStream vwpath(SER_NETWORK, PROTOCOL_VERSION);
+    vwpath << tree_new.witness().path();
+    string v_path = HexStr(vwpath.begin(), vwpath.end());
+    
+    boost::filesystem::path sapling_spend = "/root/.zcash-params/sapling-spend.params";
+    boost::filesystem::path sapling_output = "/root/.zcash-params/sapling-output.params";
+    boost::filesystem::path sprout_groth16 = "/root/.zcash-params/sprout-groth16.params";
+
+    std::string sapling_spend_str = sapling_spend.string();
+    std::string sapling_output_str = sapling_output.string();
+    std::string sprout_groth16_str = sprout_groth16.string();
+
+    librustzcash_init_zksnark_params(
+        sapling_spend_str.c_str(),
+        "8270785a1a0d0bc77196f000ee6d221c9c9894f55307bd9357c3f0105d31ca63991ab91324160d8f53e2bbd3c2633a6eb8bdf5205d822e7f3f73edac51b2b70c",
+        sapling_output_str.c_str(),
+        "657e3d38dbb5cb5e7dd2970e8b03d69b4787dd907285b5a7f0790dcc8072f60bf593b32cc2d1c030e00ff5ae64bf84c5c3beb84ddc841d48264b4a171744d028",
+        sprout_groth16_str.c_str(),
+        "e9b238411bd6c0ec4791e9d04245ec350c9c5744f5610dfcce4365d5ca49dfefd5054e371842b3f88fa1b9d7e8e075249b3ebabd167fa8b0f3161292d36c180a"
+    );
+
+    auto ctx = librustzcash_sapling_proving_ctx_init();
+    SaplingSpendingKey spendingKey(uint256S("59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1"));
+    // auto nf = spend.note.nullifier(
+    //         spendingKey.full_viewing_key(), tree_new.witness().position());
+    std::vector<unsigned char> witness(vwpath.begin(), vwpath.end());
+
+    const unsigned char alpha[32] = {
+                0xf3, 0x44, 0xec, 0x38, 0x0f, 0xe1, 0x27, 0x3e, 0x30, 0x98, 0xc2, 0x58, 0x8c, 0x5d,
+                0x3a, 0x79, 0x1f, 0xd7, 0xba, 0x95, 0x80, 0x32, 0x76, 0x07, 0x77, 0xfd, 0x0e, 0xfa,
+                0x8e, 0xf1, 0x16, 0x20
+            };
+    SpendDescription sdesc;
+    unsigned char f_r[32];
+    librustzcash_sapling_generate_r(f_r);
+    auto result = librustzcash_sapling_spend_proof(
+                ctx,
+                spendingKey.full_viewing_key().ak.begin(),
+                spendingKey.expanded_spending_key().nsk.begin(),
+                spendingKey.default_address().d.data(),
+                //uint256S("00b0b92c4c2467605caad7ed24c1952caf3f15c70a2bf22018649e503607c371").begin(),  //r
+                f_r,
+                uint256S((const char*)alpha).begin(),              //spend.alpha.begin(),
+                5,                          //spend.note.value(),
+                tree_new.root().begin(),    //spend.anchor.begin(),
+                witness.data(),
+                sdesc.cv.begin(),
+                sdesc.rk.begin(),
+                sdesc.zkproof.data());
+
+                cerr << "....................................................\n";
+                cerr << result << "\n";
+                cerr << sdesc.zkproof.size() << "\n";
+                cerr << "....................................................\n";
+
+
+    librustzcash_sapling_proving_ctx_free(ctx);
+
+    cerr << v_path << ',' << tree_new.witness().position() << ',' << value << ' ';
     tree_new.append(u_u);
     cerr << tree_new.witness().position() << ',' << unit << ' ';
     tree_new.append(u_a);
@@ -150,9 +210,14 @@ int generateCommitments(const std::string& secret_key, uint64_t value, uint64_t 
         SaplingSpendingKey spendingKey(uint256S(secret_key));
         SaplingPaymentAddress spa = spendingKey.default_address();
         uint256 valueCommitment = *(SaplingNote(spa, value).cm());
+        //output r from note because we need it
+        SaplingNote vnote(spa, unit);
+        
+        uint256 nf = *(vnote.nullifier(spendingKey.expanded_spending_key().full_viewing_key(), 0));
+
         uint256 unitCommitment = *(SaplingNote(spa, unit).cm());
         uint256 assetCommitment = *(SaplingNote(spa, asset).cm());
-        cerr << valueCommitment.GetHex() << ' '
+        cerr << "******" << nf.GetHex() << "*****" << "----------" << vnote.r.GetHex() << "----------" << valueCommitment.GetHex() << ' '
             << unitCommitment.GetHex() << ' '
             << assetCommitment.GetHex();
         return 0;
@@ -214,7 +279,6 @@ int mintQuantity(const std::string& secret_key, const char* tree, uint64_t value
         return 2;
     }
 }
-
 
 int main( int argc , char *argv[]) {
     int result=1;

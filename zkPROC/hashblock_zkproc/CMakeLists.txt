@@ -32,7 +32,8 @@ include_directories(/usr/local/include
 	/root/zcash/src
 	/root/zcash/src/secp256k1/include
 	/root/zcash/depends/x86_64-unknown-linux-gnu/include
-	/root/zcash/depends/x86_64-unknown-linux-gnu/include/gtest)
+	/root/zcash/depends/x86_64-unknown-linux-gnu/include/gtest
+	/root/zcash/src/primitives)
 
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -Wextra -Wfatal-errors -O2 -pthread")
