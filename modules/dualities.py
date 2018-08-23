@@ -111,6 +111,7 @@ class Duality(object):
 
 class AbstractDualitySpec(ABC):
     """Abstraction Factory for generating DualitySpecs"""
+
     def __init__(self, specname, specmap):
         self._specname = specname
         self._specmap = specmap
@@ -152,6 +153,7 @@ class AbstractDualitySpec(ABC):
 
 class DualitySpec(AbstractDualitySpec):
     """Base duality spec satisfies name and map requests"""
+
     def __init__(self, specname, specmap):
         super().__init__(specname, specmap)
 
@@ -170,6 +172,7 @@ class HashblockSpec(DualitySpec):
     concrete specifications and it does not support initiate
     or reciprocate verb listings
     """
+
     def __init__(self, specname, specmap):
         super().__init__(specname, specmap)
 
@@ -187,6 +190,7 @@ class HashblockSpec(DualitySpec):
 
 class UserSpec(DualitySpec):
     """User specification are true specifications"""
+
     def __init__(self, specname, specmap):
         super().__init__(specname, specmap)
         self._initiates = self.specmap[INIT_KEY].keys()
