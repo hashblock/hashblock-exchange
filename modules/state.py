@@ -16,7 +16,7 @@
 
 import logging
 
-from ecies import aes_encrypt, aes_decrypt
+# from ecies import aes_encrypt, aes_decrypt
 
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InternalError
@@ -90,16 +90,20 @@ class State():
 
     @staticmethod
     def encrypt_object_with(object, secret):
-        return aes_encrypt(secret, object)
+        # return aes_encrypt(secret, object)
+        return object
 
     @staticmethod
     def decrypt_object_with(object, secret):
-        return aes_decrypt(secret, object)
+        # return aes_decrypt(secret, object)
+        return object
 
     def encrypt_from(self, object, private_str, public_str):
         """Encrypts a blob"""
-        return aes_encrypt(State.get_secret(private_str, public_str), object)
+        return object
+        # return aes_encrypt(State.get_secret(private_str, public_str), object)
 
     def decrypt_for(self, object, private_str, public_str):
         """Decryptes a byte string blob"""
-        return aes_decrypt(State.get_secret(private_str, public_str), object)
+        return object
+        # return aes_decrypt(State.get_secret(private_str, public_str), object)
