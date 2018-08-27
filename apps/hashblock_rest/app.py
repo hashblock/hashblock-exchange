@@ -40,6 +40,7 @@ from modules.decode import (
 import shared.asset as asset
 import shared.exchange as exchange
 import shared.ledger as ledger
+import shared.langparse as parse
 
 
 # Setup upload location for batch submissions
@@ -67,10 +68,11 @@ api = Api(
 
 ns = api.namespace('hashblock', description='hashblock operations')
 
+# Get ease of use logger
 LOGGER = application.logger
 
 # Initialize configuration
-load_hashblock_config()
+config = load_hashblock_config()
 LOGGER.info("Succesfully loaded hasblock-rest configuration")
 
 # Initialize ZMQ
@@ -78,6 +80,8 @@ initialize_txn_vc()
 LOGGER.info("Succesfully initialized ZMQ connection")
 # Initialize decoder
 initialize_decode()
+# Initialize language parser
+parse.initialize_parse(LOGGER)
 
 
 def assetlinks(data):

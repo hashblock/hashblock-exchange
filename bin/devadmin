@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # ------------------------------------------------------------------------------
 # Copyright 2018 Frank V. Castellucci and Arthur Greef
 #
@@ -14,34 +16,26 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-version: '2.1'
+#
+# Quick generate of local genesis batch file.
+#
 
-rest:
-  hosts:
-    # sawtooth rest-api url and port, should match your setup
-    swrest-connect: http://rest-api:8008  # DEPRECATED
-    # sawtooth validator and port, should match your setup
-    stval-connect: tcp://validator:4004
+info() {
+    echo -e "\033[0;36m\n[--- $1 ---]\n\033[0m"
+}
 
-  # Users
-  users:
-    church: signer1
-    turing: signer2
+info 'hashblock admin development shell'
 
-  operator:
-    sysop: sysops
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-  # zksnark prover and verifier keys based on #B balancing equation constraints
-  zksnark:
-    prover: hashblock_zkSNARK.pk
-    verifier: hashblock_zkSNARK.vk
+mkdir -p $top_dir/samplegenesis
 
-  # Trade agreements between partners
-  agreements:
-    demo:  # Also references duality namespace
-      - church
-      - turing
+docker run -it --rm \
+	-v $top_dir/:/project/hashblock-exchange \
+	-e "PYTHONPATH=/project/hashblock-exchange:/project/hashblock-exchange/apps" \
+	-e "HASHBLOCK_KEYS=/project/hashblock-exchange/localkeys" \
+	-e "HASHBLOCK_CONFIG=/project/hashblock-exchange/localconfig" \
+	-e "GENESIS_BATCH=/project/hashblock-exchange/samplegenesis/genesis.batch" \
+	hashblock-dev-admin \
+	bash
 
-    demo2:  # Also references duality namespace
-      - church
-      - turing

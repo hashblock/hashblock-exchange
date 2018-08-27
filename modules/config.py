@@ -18,6 +18,7 @@ import sys
 import os
 import logging
 import pprint
+import copy
 from yaml import load
 
 from modules.state import State
@@ -111,6 +112,16 @@ def private_key(name):
     if not result:
         raise AuthException
     return result
+
+
+def agreement_list():
+    """Get list of agreements"""
+    return [x for x in REST_CONFIG['rest']['agreement_map']]
+
+
+def agreement_partners(agreement_name):
+    """Get list of partners in agreement name"""
+    return REST_CONFIG['rest']['agreement_map'][agreement_name]
 
 
 def valid_partnership(part1, part2):
@@ -251,6 +262,9 @@ def __load_cfg_and_keys(configfile):
         signer_keys[HB_OPERATOR] = public
         submitter_keys[HB_OPERATOR] = __read_signer(private)
 
+    doc['rest']['agreement_map'] = copy.deepcopy(doc['rest']['agreements'])
+    # pprint.pprint(doc)
+
     # iterate through signers for keys
     for key, value in doc['rest']['users'].items():
         public, private = __read_keys(os.path.join(DEFAULT_KEYS_PATH, value))
@@ -285,6 +299,7 @@ def __load_cfg_and_keys(configfile):
         else:
             raise AuthException
     doc['rest']['partners'] = agreements
+    # pprint.pprint(doc['rest']['partners'])
     # pprint.pprint(doc)
     return doc
 

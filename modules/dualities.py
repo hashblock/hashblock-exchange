@@ -40,6 +40,12 @@ RECP_KEY = 'reciprocates'
 VERS_KEY = 'version'
 NSS_KEY = 'namespaces'
 DEPS_KEY = 'depends_on'
+VERBS_KEY = 'verbs'
+BASEVERBS_KEY = 'base_verbs'
+PRP_KEY = 'prepositions'
+ART_KEY = 'articles'
+OBJ_KEY = 'objects'
+SYN_KEY = 'synonyms'
 
 
 class Duality(object):
@@ -74,14 +80,13 @@ class Duality(object):
     def dualities_version(cls):
         return cls._specification[VERS_KEY]
 
-    @property
     @classmethod
     def spec_names(cls):
-        return cls._lookup.keys()
+        return list(cls._lookup.keys())
 
     @classmethod
     def duality_for_ns(cls, namespace):
-        return cls._lookup[namespace]
+        return cls._lookup.get(namespace, None)
 
     @classmethod
     def breakqname(cls, ns_vs):
@@ -135,6 +140,24 @@ class AbstractDualitySpec(ABC):
 
     @property
     @abstractmethod
+    def prepositions(self):
+        """Return a list of prepositions from spec"""
+        pass
+
+    @property
+    @abstractmethod
+    def articles(self):
+        """Return a list of articles from spec"""
+        pass
+
+    @property
+    @abstractmethod
+    def objects(self):
+        """Return a list of objects from spec"""
+        pass
+
+    @property
+    @abstractmethod
     def initiates(self):
         """Return a list of initiate verbs from spec"""
         pass
@@ -177,6 +200,21 @@ class HashblockSpec(DualitySpec):
         super().__init__(specname, specmap)
 
     @property
+    def prepositions(self):
+        """Return a list of prepositions from spec"""
+        raise RuntimeError("hashblock spec does not support prepositions")
+
+    @property
+    def articles(self):
+        """Return a list of articles from spec"""
+        raise RuntimeError("hashblock spec does not support articles")
+
+    @property
+    def objects(self):
+        """Return a list of objects from spec"""
+        raise RuntimeError("hashblock spec does not support objects")
+
+    @property
     def initiates(self):
         raise RuntimeError("hashblock spec does not support initiates")
 
@@ -193,8 +231,31 @@ class UserSpec(DualitySpec):
 
     def __init__(self, specname, specmap):
         super().__init__(specname, specmap)
-        self._initiates = self.specmap[INIT_KEY].keys()
-        self._reciprocates = self.specmap[RECP_KEY].keys()
+        iverbs = []
+        for iv in self.specmap[INIT_KEY].keys():
+            iverbs.append(iv)
+            iverbs.extend(self.specmap[INIT_KEY][iv][SYN_KEY])
+        self._initiates = iverbs
+        rverbs = []
+        for rv in self.specmap[RECP_KEY].keys():
+            rverbs.append(rv)
+            rverbs.extend(self.specmap[RECP_KEY][rv][SYN_KEY])
+        self._reciprocates = rverbs
+
+    @property
+    def prepositions(self):
+        """Return a list of prepositions from spec"""
+        return self.specmap[VERBS_KEY][BASEVERBS_KEY][PRP_KEY]
+
+    @property
+    def articles(self):
+        """Return a list of articles from spec"""
+        return self.specmap[VERBS_KEY][BASEVERBS_KEY][ART_KEY]
+
+    @property
+    def objects(self):
+        """Return a list of objects from spec"""
+        return self.specmap[VERBS_KEY][BASEVERBS_KEY][OBJ_KEY]
 
     @property
     def initiates(self):

@@ -1,0 +1,59 @@
+# Hashblock Language EBNF
+# Production rules are in UPPER_CASE
+# terminals symbols are in lower case or enclosed in quotes
+# Comments use the '#'
+# There are two types of terminals:
+# 	1. Base terminals - These are a combination of fixed and configurable terms
+#   2. User terminals - These are configurable terms
+# The actual terminals are configurable at runtime
+
+# Start of the grammar
+START := INITIATE | RECIPROCATE ;
+
+# Initiate variations
+INITIATE := RAW_INITIATE | SUGAR_INITIATE ;
+
+# Raw initiate is the basic eg: 'church asks turing price 5 bags peanuts'
+RAW_INITIATE := 'initiate:' PPARTNER IVERB PPARTNER CONJUNCTION QUANTITY ;
+
+# Raw initiate is with fluff basic eg: 'church asks turing the price for 5 bags of peanuts'
+SUGAR_INITIATE := 'initiate:' PPARTNER IVERB PPARTNER ARTICLE CONJUNCTION PREPOSITION QUANTITY ;
+
+# Reciprocate variations
+RECIPROCATE := RAW_RECIPROCATE | SUGAR_RECIPROCATE
+
+RAW_RECIPROCATE := 'reciprocate:' PPARTNER RVERB PPARTNER CONJUNCTION QUANTITY RATIO ;
+SUGAR_RECIPROCATE := 'reciprocate:' PPARTNER RVERB PPARTNER ARTICLE CONJUNCTION ON_ADDRESS
+					SUPPORTING_VERB QUANTITY RATIO ;
+
+# Base configurable production terminals
+ARTICLE := # Configurable set of terms e.g. ( 'a' | 'an' | 'the')
+PREPOSITION := # Configurable set of terms e.g. ('or' | 'of' | 'at' | '@')
+
+# User configurable production terminals
+PPARTNER := # User configurable set of terms e.g. ('church' | 'turing')
+IVERB := # User configurable set of initiate terms e.g. ('ask' | 'offer' | 'commit')
+RVERB := # User configurable set of reciprocate terms e.g. ('tell' | 'accept' | 'obligation')
+CONJUNCTION := # Supporting conjunctions for verb e.g. ('price' | 'weight')
+
+# Quantity Types
+
+RATIO := ( [PREPOSITION] NUMERATOR [PREPOSITION] DENOMINATOR )
+NUMERATOR := QUANTITY
+DENOMINATOR := QUANTITY
+QUANTITY := ( MAGNITUDE UNIT  [PREPOSITION] ASSET )
+
+# Quantity Parts
+
+MAGNITUDE := INTEGER | REAL
+UNIT := QSYMBOL
+ASSET := QSYMBOL
+
+# Address
+ADDRESS := HEX
+
+# Fixed terminals (not configurable)
+HEX := "[0-9a-fA-F]{70}"
+REAL := "[0-9]+\.[0-9]+"
+INTEGER := "[0-9]+"
+QSYMBOL := "[a-zA-Z]([a-zA-Z0-9]*?)\.[!-~]+"
