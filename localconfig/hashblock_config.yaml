@@ -38,6 +38,6 @@ rest:
 
   # Trade agreements between partners
   agreements:
-    standard:  # Also references duality namespace
+    demo:  # Also references duality namespace
       - church
       - turing
