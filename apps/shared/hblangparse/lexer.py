@@ -55,7 +55,8 @@ class Lexer():
         """Adds tokens to the generator"""
         print("Base add {} with {}".format(term, tlist))
         if term in self._base_terms:
-            self.lexgen.add(term, "|".join(tlist), flags=re.I)
+            blist = [r'\b' + x + r'\b' for x in tlist]
+            self.lexgen.add(term, "|".join(blist), flags=re.I)
         else:
             raise LexException("Unsupported term {}".format(term))
 
@@ -63,7 +64,8 @@ class Lexer():
         """Adds tokens to the generator"""
         print("Dyn add {} with {}".format(term, tlist))
         if term in self._cfg_terms:
-            self.lexgen.add(term, "|".join(tlist), flags=re.I)
+            blist = [r'\b' + x + r'\b' for x in tlist]
+            self.lexgen.add(term, "|".join(blist), flags=re.I)
         else:
             raise LexException("Unsupported term {}".format(term))
 

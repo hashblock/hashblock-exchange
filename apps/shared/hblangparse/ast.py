@@ -25,6 +25,10 @@ class HashblockAst(ABC):
     def eval(self):
         pass
 
+    @abstractmethod
+    def to_dict(self, map=None):
+        pass
+
 
 class Initiate(HashblockAst):
     def __init__(self, value):
@@ -33,6 +37,16 @@ class Initiate(HashblockAst):
     def eval(self):
         for t in self.value:
             t.eval()
+
+    def to_dict(self, map=None):
+        result = {
+            "plus": self.value[0].value,
+            "operation": self.value[1].value,
+            "minus": self.value[2].value
+        }
+        for t in self.value[3:]:
+            t.to_dict(result)
+        return result
 
 
 class Reciprocate(HashblockAst):
@@ -44,6 +58,16 @@ class Reciprocate(HashblockAst):
         for t in self.value:
             t.eval()
 
+    def to_dict(self, map=None):
+        result = {
+            "plus": self.value[0].value,
+            "operation": self.value[1].value,
+            "minus": self.value[2].value
+        }
+        for t in self.value[3:]:
+            t.to_dict(result)
+        return result
+
 
 class Partner(HashblockAst):
     def __init__(self, value):
@@ -51,6 +75,9 @@ class Partner(HashblockAst):
 
     def eval(self):
         print("Partner: {}".format(self.value))
+
+    def to_dict(self, map=None):
+        pass
 
 
 class Verb(HashblockAst):
@@ -60,6 +87,9 @@ class Verb(HashblockAst):
     def eval(self):
         print("Verb: {}".format(self.value))
 
+    def to_dict(self, map=None):
+        pass
+
 
 class Conjunction(HashblockAst):
     def __init__(self, value):
@@ -67,6 +97,9 @@ class Conjunction(HashblockAst):
 
     def eval(self):
         print("Conjunction: {}".format(self.value))
+
+    def to_dict(self, map=None):
+        map['object'] = self.value
 
 
 class Ratio(HashblockAst):
@@ -81,6 +114,14 @@ class Ratio(HashblockAst):
         self.value[1].eval()
         print("}")
 
+    def to_dict(self, map=None):
+        r = {}
+        self.value[0].to_dict(r)
+        r['numerator'] = r.pop('quantity')
+        self.value[1].to_dict(r)
+        r['denominator'] = r.pop('quantity')
+        map['ratio'] = r
+
 
 class Quantity(HashblockAst):
     def __init__(self, value):
@@ -92,6 +133,12 @@ class Quantity(HashblockAst):
             t.eval()
         print("}")
 
+    def to_dict(self, map=None):
+        q = {}
+        for t in self.value:
+            t.to_dict(q)
+        map['quantity'] = q
+
 
 class Magnitude(HashblockAst):
     def __init__(self, value):
@@ -99,6 +146,9 @@ class Magnitude(HashblockAst):
 
     def eval(self):
         print("Magnitude: {} ".format(self.value), end='')
+
+    def to_dict(self, map=None):
+        map['value'] = self.value
 
 
 class Unit(HashblockAst):
@@ -109,6 +159,12 @@ class Unit(HashblockAst):
         print(" Unit: ", end='')
         self.value[0].eval()
 
+    def to_dict(self, map=None):
+        u = {}
+        for t in self.value:
+            t.to_dict(u)
+        map['unit'] = u
+
 
 class Asset(HashblockAst):
     def __init__(self, value):
@@ -117,6 +173,12 @@ class Asset(HashblockAst):
     def eval(self):
         print(" Asset: ", end='')
         self.value[0].eval()
+
+    def to_dict(self, map=None):
+        a = {}
+        for t in self.value:
+            t.to_dict(a)
+        map['asset'] = a
 
 
 class QSymbol(HashblockAst):
@@ -127,6 +189,10 @@ class QSymbol(HashblockAst):
     def eval(self):
         print("[namespace: {} term: {}]".format(self.ns, self.term), end='')
 
+    def to_dict(self, map=None):
+        map['system'] = self.ns
+        map['key'] = self.term
+
 
 class Address(HashblockAst):
     def __init__(self, value):
@@ -134,6 +200,9 @@ class Address(HashblockAst):
 
     def eval(self):
         print("For Initiate: {}".format(self.value))
+
+    def to_dict(self, map=None):
+        map['utxq_address'] = self.value
 
 
 def ast_trace(el, indent=1):

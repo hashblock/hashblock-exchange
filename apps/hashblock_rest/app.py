@@ -56,20 +56,20 @@ application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
+    # Get ease of use logger
+    LOGGER = gunicorn_logger
     application.logger.handlers = gunicorn_logger.handlers
     application.logger.setLevel(gunicorn_logger.level)
 
 api = Api(
     application,
     validate=True,
-    version='0.2.0',
+    version='0.3.0',
     title='hashblock-rest',
     description='Convenience REST for hashblock-exchange')
 
 ns = api.namespace('hashblock', description='hashblock operations')
 
-# Get ease of use logger
-LOGGER = application.logger
 
 # Initialize configuration
 config = load_hashblock_config()
@@ -346,6 +346,11 @@ class AU_Decode(Resource):
 #
 
 
+exchange_expression = ns.model('expression', {
+    'namespace': fields.String(required=True),
+    'expression': fields.String(required=True),
+})
+
 exchange_fields = ns.model('quantity detail', {
     'system': fields.String(required=True),
     'key': fields.String(required=True),
@@ -442,13 +447,13 @@ class UTXQDecode(Resource):
         return result, 200
 
 
-@ns.route('/utxqs/<string:agreement>')
-@ns.param('agreement', 'The trading agreement')
+@ns.route('/utxqs/<string:namespace>')
+@ns.param('namespace', 'The trading agreement')
 class UTXQSDecode(Resource):
-    def get(self, agreement):
+    def get(self, namespace):
         """Returns all UTXQs"""
-        result = decode_exchange_initiate_list(agreement)
-        exchangeprep(result, agreement, 'utxq')
+        result = decode_exchange_initiate_list(namespace)
+        exchangeprep(result, namespace, 'utxq')
         return result, 200
 
 
@@ -459,6 +464,17 @@ class UTXQ_Ingest(Resource):
         exchange.create_utxq(request.json)
         return {"status": "OK"}, 200
 
+
+@ns.route('/utxq-expression')
+class UTXQ_EIngest(Resource):
+    @ns.expect(exchange_expression)
+    def post(self):
+        """Create utxq from expression"""
+        exchange.create_utxq(
+            parse.parse_with_ns_to_json(
+                request.json['namespace'],
+                request.json['expression']))
+        return {"status": "OK"}, 200
 
 #
 #   MTXQ management
@@ -492,6 +508,21 @@ class MTXQ_Ingest(Resource):
         """Create a matching transaction"""
         try:
             exchange.create_mtxq(request.json)
+            return {"status": "OK"}, 200
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
+
+
+@ns.route('/mtxq-expression')
+class MTXQ_EIngest(Resource):
+    @ns.expect(exchange_expression)
+    def post(self):
+        """Create mtxq from expression"""
+        try:
+            exchange.create_mtxq(
+                parse.parse_with_ns_to_json(
+                    request.json['namespace'],
+                    request.json['expression']))
             return {"status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400

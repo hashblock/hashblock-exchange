@@ -25,8 +25,8 @@ class Parser():
             mlexer.get_tokens(),
             precedence=[
                 ("left", ["PREPOSITION", "ARTICLES"]),
-                ("left", ["QSYMBOL"]),
-                ("left", ["PPARTNER", "IVERB", "RVERB", "CCONJS"])])
+                ("left", ["PPARTNER", "IVERB", "RVERB", "CCONJS"]),
+                ("left", ["QSYMBOL"])])
 
     def parse(self):
         @self.pg.production('program : request')

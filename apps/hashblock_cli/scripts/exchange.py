@@ -51,7 +51,8 @@ def do_exchange(args, logger):
     print("Args = {}".format(args))
     if args.namespace and args.expression:
         parse.initialize_parse()
-        parse.parse_with_ns(args.namespace, args.expression)
-        initialize_txn_vc()
+        result = parse.parse_with_ns_to_json(args.namespace, args.expression)
+        logger.debug(result)
+        # initialize_txn_vc()
     else:
         print("Not loading")

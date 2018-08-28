@@ -51,6 +51,10 @@ message UTXQ {
     Quantity quantity = 3;
     //  User configured UTXQ verb
     string operation = 4;
+    //  User configured namespace
+    string namespace = 5;
+    //  User configured object/conjunctive
+    string object = 6;
 }
 
 //  Wrapper for UTXQ
@@ -80,6 +84,10 @@ message MTXQ {
     bytes utxq_addr = 6;
     //  User configured MTXQ verb
     string operation = 7;
+    //  User configured namespace
+    string namespace = 8;
+    //  User configured object/conjunctive
+    string object = 9;
 }
 
 // Wrapper for MTXQ

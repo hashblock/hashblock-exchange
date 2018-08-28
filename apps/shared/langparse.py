@@ -65,7 +65,10 @@ def initialize_parse(logger=None):
 
 
 def parse_with_ns(ns, expression):
-    # _logger.debug("Parse {} with namespace {}".format(expression, ns))
-    results = _context.parse_expression(ns, expression)
-    ast.ast_trace(results['ast'])
-    results['ast'].eval()
+    return _context.parse_expression(ns, expression)
+
+
+def parse_with_ns_to_json(ns, expression):
+    result = parse_with_ns(ns, expression)['ast'].to_dict()
+    result['operation'] = ns + '.' + result.pop('operation')
+    return result

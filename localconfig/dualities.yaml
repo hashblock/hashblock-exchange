@@ -41,36 +41,36 @@ namespaces:
         articles: [a, an, the]
         objects: [price, prices, weight, mass, volume]
     initiates:
-      ask:
+      asks:
         class: *hashblock-utxq
         depends_on: null
-        synonyms: [asks, requests, wants]
-      offer:
-        class: *hashblock-utxq
-        depends_on: null
-        synonyms: []
-      commit:
+        synonyms: [requests, wants]
+      offers:
         class: *hashblock-utxq
         depends_on: null
         synonyms: []
-      give:
+      commits:
+        class: *hashblock-utxq
+        depends_on: null
+        synonyms: []
+      gives:
         class: *hashblock-utxq
         depends_on: null
         synonyms: []
     reciprocates:
-      tell:
+      tells:
         class: *hashblock-mtxq
-        depends_on: demo.ask
-        synonyms: [tells, advises, quotes]
-      accept:
+        depends_on: demo.asks
+        synonyms: [advises, quotes]
+      accepts:
         class: *hashblock-mtxq
-        depends_on: demo.offer
+        depends_on: demo.offers
         synonyms: []
-      obligation:
+      obligates:
         class: *hashblock-mtxq
-        depends_on: demo.commit
+        depends_on: demo.commits
         synonyms: []
-      take:
+      takes:
         class: *hashblock-mtxq
-        depends_on: demo.give
+        depends_on: demo.gives
         synonyms: []
