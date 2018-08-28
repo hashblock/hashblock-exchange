@@ -32,14 +32,14 @@ tests = [
     turing tells church price
     95768292a8fd1de17daa001fdd0000000000000000000000000000cee0bfacf900bc6b
     10 currency.$ iso4217.USD
-    1 currency.$ iso4217.USD
+    2 currency.$ iso4217.USD
     1 purchasing.bag food.peanuts
     """,
     """
     turing tells church the price
     for 95768292a8fd1de17daa001fdd0000000000000000000000000000cee0bfacf900bc6b
     is 10 currency.$ iso4217.USD
-    at 1 currency.$ iso4217.USD
+    at 2 currency.$ iso4217.USD
     for 1 purchasing.bag food.peanuts
     """]
 

@@ -93,25 +93,27 @@ class Duality(object):
         return ns_vs.split('.')
 
     @classmethod
-    def is_valid_verb(cls, ns_vs):
-        parts = cls.breakqname(ns_vs)
-        if len(parts) != 2:
-            return False
+    def is_valid_verb(cls, ns, vs):
+        spec = cls.duality_for_ns(ns)
+        if vs in spec.initiates or vs in spec.reciprocates:
+            return True
         else:
-            spec = cls.duality_for_ns(parts[0])
-            if parts[1] in spec.initiates or parts[1] in spec.reciprocates:
-                return True
-            else:
-                return False
+            return False
 
     @classmethod
-    def reciprocate_depends_on(cls, ns_vs):
-        parts = cls.breakqname(ns_vs)
-        if len(parts) != 2:
-            return None
+    def reciprocate_depends_on(cls, ns, vs):
+        spec = cls.duality_for_ns(ns)
+        dpo = spec.depends_on(vs)
+        if '.' in dpo:
+            dns, dvs = cls.breakqname(dpo)
+            dnspec = cls.duality_for_ns(dns)
+            if dvs in dnspec.initiates:
+                return dvs
+            else:
+                raise RuntimeError(
+                    "{} not found in duality {}".format(dvs, dns))
         else:
-            spec = cls.duality_for_ns(parts[0])
-            return spec.depends_on(parts[1])
+            return dpo
 
 
 class AbstractDualitySpec(ABC):

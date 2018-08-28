@@ -347,7 +347,7 @@ class AU_Decode(Resource):
 
 
 exchange_expression = ns.model('expression', {
-    'namespace': fields.String(required=True),
+    'agreement': fields.String(required=True),
     'expression': fields.String(required=True),
 })
 
@@ -368,7 +368,9 @@ ratio_fields = ns.model('ratio', {
 })
 
 utxq_fields = ns.model('utxq_fields', {
+    'agreement': fields.String(required=True),
     'operation': fields.String(required=True),
+    'object': fields.String(required=True),
     'plus': fields.String(required=True),
     'minus': fields.String(required=True),
     'quantity': fields.Nested(quantity_fields, required=True)
@@ -447,13 +449,13 @@ class UTXQDecode(Resource):
         return result, 200
 
 
-@ns.route('/utxqs/<string:namespace>')
-@ns.param('namespace', 'The trading agreement')
+@ns.route('/utxqs/<string:agreement>')
+@ns.param('agreement', 'The trading agreement')
 class UTXQSDecode(Resource):
-    def get(self, namespace):
+    def get(self, agreement):
         """Returns all UTXQs"""
-        result = decode_exchange_initiate_list(namespace)
-        exchangeprep(result, namespace, 'utxq')
+        result = decode_exchange_initiate_list(agreement)
+        exchangeprep(result, agreement, 'utxq')
         return result, 200
 
 
@@ -461,7 +463,7 @@ class UTXQSDecode(Resource):
 class UTXQ_Ingest(Resource):
     @ns.expect(utxq_fields)
     def post(self):
-        exchange.create_utxq(request.json)
+        exchange.create_utxq(request.json['agreement'], request.json)
         return {"status": "OK"}, 200
 
 
@@ -470,10 +472,12 @@ class UTXQ_EIngest(Resource):
     @ns.expect(exchange_expression)
     def post(self):
         """Create utxq from expression"""
-        exchange.create_utxq(
-            parse.parse_with_ns_to_json(
-                request.json['namespace'],
-                request.json['expression']))
+        agr = request.json['agreement']
+        ast_dict = parse.parse_with_ns_to_json(
+            agr,
+            request.json['expression'])
+        ast_dict['agreement'] = agr
+        exchange.create_utxq(agr, ast_dict)
         return {"status": "OK"}, 200
 
 #
@@ -507,7 +511,7 @@ class MTXQ_Ingest(Resource):
     def post(self):
         """Create a matching transaction"""
         try:
-            exchange.create_mtxq(request.json)
+            exchange.create_mtxq(request.json['agreement'], request.json)
             return {"status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400
@@ -519,10 +523,12 @@ class MTXQ_EIngest(Resource):
     def post(self):
         """Create mtxq from expression"""
         try:
-            exchange.create_mtxq(
-                parse.parse_with_ns_to_json(
-                    request.json['namespace'],
-                    request.json['expression']))
+            agr = request.json['agreement']
+            ast_dict = parse.parse_with_ns_to_json(
+                agr,
+                request.json['expression'])
+            ast_dict['agreement'] = agr
+            exchange.create_mtxq(agr, ast_dict)
             return {"status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400

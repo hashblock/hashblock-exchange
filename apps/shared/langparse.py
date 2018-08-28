@@ -65,10 +65,10 @@ def initialize_parse(logger=None):
 
 
 def parse_with_ns(ns, expression):
+    """Parse expression returning dictionary {ast:x, expression: exp}"""
     return _context.parse_expression(ns, expression)
 
 
 def parse_with_ns_to_json(ns, expression):
-    result = parse_with_ns(ns, expression)['ast'].to_dict()
-    result['operation'] = ns + '.' + result.pop('operation')
-    return result
+    """Parse expression returning ast dictionary"""
+    return parse_with_ns(ns, expression)['ast'].to_dict()

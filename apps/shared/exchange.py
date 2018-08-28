@@ -57,9 +57,9 @@ def __validate_partners(plus, minus):
             "No partnership for {} and {}".format(plus, minus))
 
 
-def __validate_operation(request):
+def __validate_operation(ns, request):
     ops = request.pop('operation')
-    if Duality.is_valid_verb(ops):
+    if Duality.is_valid_verb(ns, ops):
         return ops
     else:
         raise DataException(
@@ -125,13 +125,14 @@ def __validate_utxq(request):
     return (quantity_assets)
 
 
-def __validate_mtxq(operation, request):
+def __validate_mtxq(ns, operation, request):
     """Validate the content for mtxq"""
     __validate_partners(request["plus"], request["minus"])
     utxq, ujson = __get_and_validate_utxq(
         request["utxq_address"],
         partnership_secret(request["plus"], request["minus"]))
-    rdo = Duality.reciprocate_depends_on(operation)
+    rdo = Duality.reciprocate_depends_on(ns, operation)
+    print("Rdo = {}".format(rdo))
     if rdo == utxq.operation:
         pass
     else:
@@ -196,7 +197,9 @@ def __create_utxq(ingest):
         plus=public_key(request['plus']).encode(),
         minus=public_key(request['minus']).encode(),
         quantity=__create_quantity(request['quantity']['value'], quantity),
-        operation=operation))
+        operation=operation,
+        agreement=request['agreement'],
+        object=request['object']))
 
 
 def __create_initiate_payload(ingest):
@@ -212,8 +215,9 @@ def __create_initiate_payload(ingest):
         commitment="This space reserved").SerializeToString()
     return (HB_OPERATOR, ExchangePayload(
         udata=datablock,
-        ukey=utxq_addresser.utxq_unmatched(
-            Duality.breakqname(operation), str(uuid.uuid4())),
+        ukey=utxq_addresser.utxq_unmatched(operation, str(uuid.uuid4())),
+        # ukey=utxq_addresser.utxq_unmatched(
+        #     Duality.breakqname(operation), str(uuid.uuid4())),
         type=ExchangePayload.UTXQ))
 
 
@@ -244,7 +248,9 @@ def __create_mtxq(ingest):
             denominator=__create_quantity(
                 data['ratio']['denominator']['value'], denominator)),
         utxq_addr=matched_uaddr.encode(),
-        operation=operation))
+        operation=operation,
+        agreement=data['agreement'],
+        object=data['object']))
 
 
 def __create_reciprocate_payload(ingest):
@@ -271,8 +277,9 @@ def __create_reciprocate_payload(ingest):
     return (HB_OPERATOR, ExchangePayload(
         type=ExchangePayload.MTXQ,
         ukey=matched_uaddr,
-        mkey=mtxq_addresser.mtxq_address(
-            Duality.breakqname(operation), str(uuid.uuid4())),
+        # mkey=mtxq_addresser.mtxq_address(
+        #     Duality.breakqname(operation), str(uuid.uuid4())),
+        mkey=mtxq_addresser.mtxq_address(operation, str(uuid.uuid4())),
         mdata=w_mtxq,
         udata=w_utxq))
 
@@ -289,9 +296,9 @@ def __create_reciprocate_inputs_outputs(ingest):
         payload)
 
 
-def create_utxq(request):
+def create_utxq(ns, request):
     """Create utxq transaction"""
-    operation = __validate_operation(request)
+    operation = __validate_operation(ns, request)
     print("Processing UTXQ create with operation => {}".format(operation))
     quant = __validate_utxq(request)
     utxq_build = compose_builder(
@@ -301,10 +308,10 @@ def create_utxq(request):
     utxq_build((operation, quant, request))
 
 
-def create_mtxq(request):
+def create_mtxq(ns, request):
     """Create mtxq transaction"""
-    operation = __validate_operation(request)
-    qnd = __validate_mtxq(operation, request)
+    operation = __validate_operation(ns, request)
+    qnd = __validate_mtxq(ns, operation, request)
     mtxq_build = compose_builder(
         submit_single_txn, create_transaction,
         __create_reciprocate_inputs_outputs, __create_reciprocate_payload,
