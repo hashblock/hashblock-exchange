@@ -42,6 +42,8 @@ import shared.exchange as exchange
 import shared.ledger as ledger
 import shared.langparse as parse
 
+from colorlog import ColoredFormatter
+
 
 # Setup upload location for batch submissions
 UPLOAD_FOLDER = '/uploads/files/'
@@ -56,10 +58,31 @@ application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
-    # Get ease of use logger
-    LOGGER = gunicorn_logger
+    root_logger = logging.getLogger()
+    handler = gunicorn_logger.handlers[0]
+    formatter = ColoredFormatter(
+        "%(log_color)s[%(asctime)s.%(msecs)03d "
+        "%(levelname)-8s %(module)s]%(reset)s "
+        "%(white)s%(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        reset=True,
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'red',
+        })
+    handler.setFormatter(formatter)
+    root_logger.handlers = gunicorn_logger.handlers
+    root_logger.setLevel(gunicorn_logger.level)
+    root_logger.propagate = False
+
     application.logger.handlers = gunicorn_logger.handlers
     application.logger.setLevel(gunicorn_logger.level)
+    application.logger.propagate = False
+
+LOGGER = logging.getLogger()
 
 api = Api(
     application,
@@ -81,7 +104,7 @@ LOGGER.info("Succesfully initialized ZMQ connection")
 # Initialize decoder
 initialize_decode()
 # Initialize language parser
-parse.initialize_parse(LOGGER)
+parse.initialize_parse()
 
 
 def assetlinks(data):

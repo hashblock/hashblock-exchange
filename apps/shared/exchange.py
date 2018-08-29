@@ -20,6 +20,7 @@ This module is referenced when posting utxq and mtxq exchanges
 """
 import uuid
 import binascii
+import logging
 
 from shared.transactions import (
     submit_single_txn, create_transaction, compose_builder)
@@ -48,6 +49,9 @@ from protobuf.exchange_pb2 import (
     ExchangePayload, UTXQWrapper, MTXQWrapper, UTXQ, MTXQ, Quantity, Ratio)
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 def __validate_partners(plus, minus):
     """Validate the plus and minus are reachable keys"""
     if valid_partnership(plus, minus):
@@ -72,7 +76,8 @@ def __validate_references(value, unit, asset):
     asset_result = None
     int(value)
 
-    print("Validating references for asset {} and unit {}".format(asset, unit))
+    LOGGER.debug(
+        "Validating references for asset {} and unit {}".format(asset, unit))
 
     unit_add = unit_addresser.address_syskey(unit['system'], unit['key'])
     asset_add = asset_addresser.address_syskey(asset['system'], asset['key'])
@@ -100,7 +105,8 @@ def __validate_references(value, unit, asset):
 
 def __get_and_validate_utxq(address, secret):
     """Check that the utxq exists to recipricate on"""
-    print("Address to check utxq {}".format(address))
+    LOGGER.debug(
+        "Address to check utxq {}".format(address))
     if utxq_addresser.is_matched(address):
         raise DataException(
             'Attempt to match using already matched utxq address')
@@ -132,7 +138,8 @@ def __validate_mtxq(ns, operation, request):
         request["utxq_address"],
         partnership_secret(request["plus"], request["minus"]))
     rdo = Duality.reciprocate_depends_on(ns, operation)
-    print("Rdo = {}".format(rdo))
+    LOGGER.debug(
+        "Rdo = {}".format(rdo))
     if rdo == utxq.operation:
         pass
     else:
@@ -299,7 +306,8 @@ def __create_reciprocate_inputs_outputs(ingest):
 def create_utxq(ns, request):
     """Create utxq transaction"""
     operation = __validate_operation(ns, request)
-    print("Processing UTXQ create with operation => {}".format(operation))
+    LOGGER.debug(
+        "Processing UTXQ create with operation => {}".format(operation))
     quant = __validate_utxq(request)
     utxq_build = compose_builder(
         submit_single_txn, create_transaction,

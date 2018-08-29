@@ -19,7 +19,7 @@ import logging
 from yaml import load
 from abc import ABC, abstractmethod
 
-LOGGER = logging
+LOGGER = logging.getLogger(__name__)
 
 
 def _load_dualities(cfg_path, configfile):

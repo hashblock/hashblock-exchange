@@ -24,6 +24,8 @@ from modules.dualities import Duality
 _context = None
 _logger = None
 
+LOGGER = logging.getLogger(__name__)
+
 # _base_terms = ['PREPOSITION', 'ARTICLES']
 # _cfg_terms = ['PPARTNER', 'IVERB', 'RVERB', 'CCONJS']
 # _dterms = [
@@ -39,13 +41,6 @@ _logger = None
 
 def initialize_parse(logger=None):
     global _context
-    global _logger
-
-    if not logger:
-        _logger = logging.getLogger()
-    else:
-        _logger = logger
-
     _context = pc.ParseContext
 
     for ns in config.agreement_list():
@@ -61,7 +56,7 @@ def initialize_parse(logger=None):
                 ('ARTICLES', d.articles)]
             _context.register_context(ns, dterms, bterms)
         else:
-            _logger.warn("Namespace '{}' has no dualities".format(ns))
+            LOGGER.warn("Namespace '{}' has no dualities".format(ns))
 
 
 def parse_with_ns(ns, expression):
