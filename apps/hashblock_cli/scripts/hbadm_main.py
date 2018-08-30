@@ -27,49 +27,50 @@ from colorlog import ColoredFormatter
 
 from modules.exceptions import CliException
 from modules.config import load_hashblock_config
-from modules.config import sawtooth_rest_host
 from scripts.keygen import add_keygen_parser
 from scripts.keygen import do_keygen
 from scripts.genesis import add_genesis_parser
 from scripts.genesis import do_genesis
 from scripts.batch import add_batch_parser
 from scripts.batch import do_batch
+from scripts.exchange import add_exchange_menu
+from scripts.exchange import do_exchange
 
 
 DISTRIBUTION_NAME = 'hashblock-hbadm'
 
 
-def create_console_handler(verbose_level):
+def create_console_handler(logger, verbose_level=0):
+    print("IN CONSOLE HANDLER CREATION")
     clog = logging.StreamHandler()
-    formatter = ColoredFormatter(
-        "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
-        "%(white)s%(message)s",
-        datefmt="%H:%M:%S",
-        reset=True,
-        log_colors={
-            'DEBUG': 'cyan',
-            'INFO': 'green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'red',
-        })
+    clog.setFormatter(
+        ColoredFormatter(
+            "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
+            "%(white)s%(message)s",
+            datefmt="%H:%M:%S",
+            reset=True,
+            log_colors={
+                'DEBUG': 'cyan',
+                'INFO': 'green',
+                'WARNING': 'yellow',
+                'ERROR': 'red',
+                'CRITICAL': 'red',
+            }))
 
-    clog.setFormatter(formatter)
+    logger.addHandler(clog)
 
     if verbose_level == 0:
-        clog.setLevel(logging.WARN)
+        logger.setLevel(logging.INFO)
     elif verbose_level == 1:
-        clog.setLevel(logging.INFO)
+        logger.setLevel(logging.WARN)
     else:
-        clog.setLevel(logging.DEBUG)
-
-    return clog
+        logger.setLevel(logging.DEBUG)
+    return logger
 
 
 def setup_loggers(verbose_level):
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(create_console_handler(verbose_level))
+    return create_console_handler(logger, verbose_level)
 
 
 def create_parent_parser(prog_name):
@@ -108,11 +109,11 @@ def create_parser(prog_name):
     add_keygen_parser(subparsers, parent_parser)
     add_genesis_parser(subparsers, parent_parser)
     add_batch_parser(subparsers, parent_parser)
+    add_exchange_menu(subparsers, parent_parser)
     return parser
 
 
-def main(prog_name=os.path.basename(sys.argv[0]), args=None,
-         with_loggers=True):
+def main(prog_name=os.path.basename(sys.argv[0]), args=None):
     parser = create_parser(prog_name)
     if args is None:
         args = sys.argv[1:]
@@ -121,12 +122,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     r_config = load_hashblock_config()
     print("Succesfully loaded hasblock-exchange configuration")
 
-    if with_loggers is True:
-        if args.verbose is None:
-            verbose_level = 0
-        else:
-            verbose_level = args.verbose
-        setup_loggers(verbose_level=verbose_level)
+    logger = setup_loggers(verbose_level=2)
 
     if args.command == 'keygen':
         do_keygen(args)
@@ -134,6 +130,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         do_genesis(args, r_config)
     elif args.command == 'batch':
         do_batch(args, r_config)
+    elif args.command == 'exchange':
+        do_exchange(args, logger)
     else:
         raise CliException("invalid command: {}".format(args.command))
 

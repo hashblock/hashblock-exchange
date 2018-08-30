@@ -43,7 +43,7 @@ def zkproc_quantity_cm(secret, value, unit, asset):
             format(zkp_gen.returncode))
 
 
-def zkproc_insert_cm(tree, value_cm, unit_cm, asset_cm):
+def zkproc_insert_cm(tree, value_cm, unit_cm, asset_cm, log=None):
     """Inserts quantity commitments into merkle trie
 
         Returns:
@@ -52,21 +52,29 @@ def zkproc_insert_cm(tree, value_cm, unit_cm, asset_cm):
                 [unit tree pos, unit_commitment],
                 [asset tree pos, asset_commitment]]
     """
+    if log:
+        log.debug("Tree {}".format(tree))
+        log.debug("Valu {}".format(value_cm))
+        log.debug("Unit {}".format(unit_cm))
+        log.debug("Asst {}".format(asset_cm))
     zkp_gen = subprocess.run(
         ['hbzkproc', '-ctm', tree, value_cm, unit_cm, asset_cm],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if zkp_gen.returncode == 0:
         val_tup, unit_tup, asset_tup, new_tree = \
-            zkp_gen.stderr.decode("utf-8").split()
+            zkp_gen.stderr.decode().split()
         return [
             new_tree,
             val_tup.split(','),
             unit_tup.split(','),
             asset_tup.split(',')]
     else:
+        sout = zkp_gen.stdout.decode()
+        if log:
+            log.error(sout)
         raise InternalError(
-            "hbzkproc commitments to tree failed with {}".
-            format(zkp_gen.returncode))
+            "hbzkproc commitments to tree failed with {} {}".
+            format(zkp_gen.returncode, zkp_gen.stdout.decode()))
 
 
 def zksnark_genkeys(file_path, secret_str):

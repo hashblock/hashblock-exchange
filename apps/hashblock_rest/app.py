@@ -28,6 +28,8 @@ from modules.address import Address
 from shared.transactions import initialize_txn_vc
 from modules.decode import (
     initialize_decode,
+    decode_wallet,
+    decode_wallet_list,
     decode_exchange_initiate,
     decode_exchange_initiate_list,
     decode_exchange_reciprocate,
@@ -38,6 +40,9 @@ from modules.decode import (
 import shared.asset as asset
 import shared.exchange as exchange
 import shared.ledger as ledger
+import shared.langparse as parse
+
+from colorlog import ColoredFormatter
 
 
 # Setup upload location for batch submissions
@@ -53,22 +58,44 @@ application.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
+    root_logger = logging.getLogger()
+    handler = gunicorn_logger.handlers[0]
+    formatter = ColoredFormatter(
+        "%(log_color)s[%(asctime)s.%(msecs)03d "
+        "%(levelname)-8s %(module)s]%(reset)s "
+        "%(white)s%(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        reset=True,
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'red',
+        })
+    handler.setFormatter(formatter)
+    root_logger.handlers = gunicorn_logger.handlers
+    root_logger.setLevel(gunicorn_logger.level)
+    root_logger.propagate = False
+
     application.logger.handlers = gunicorn_logger.handlers
     application.logger.setLevel(gunicorn_logger.level)
+    application.logger.propagate = False
+
+LOGGER = logging.getLogger()
 
 api = Api(
     application,
     validate=True,
-    version='0.2.0',
+    version='0.3.0',
     title='hashblock-rest',
     description='Convenience REST for hashblock-exchange')
 
 ns = api.namespace('hashblock', description='hashblock operations')
 
-LOGGER = application.logger
 
 # Initialize configuration
-load_hashblock_config()
+config = load_hashblock_config()
 LOGGER.info("Succesfully loaded hasblock-rest configuration")
 
 # Initialize ZMQ
@@ -76,6 +103,8 @@ initialize_txn_vc()
 LOGGER.info("Succesfully initialized ZMQ connection")
 # Initialize decoder
 initialize_decode()
+# Initialize language parser
+parse.initialize_parse()
 
 
 def assetlinks(data):
@@ -340,6 +369,11 @@ class AU_Decode(Resource):
 #
 
 
+exchange_expression = ns.model('expression', {
+    'agreement': fields.String(required=True),
+    'expression': fields.String(required=True),
+})
+
 exchange_fields = ns.model('quantity detail', {
     'system': fields.String(required=True),
     'key': fields.String(required=True),
@@ -357,7 +391,9 @@ ratio_fields = ns.model('ratio', {
 })
 
 utxq_fields = ns.model('utxq_fields', {
+    'agreement': fields.String(required=True),
     'operation': fields.String(required=True),
+    'object': fields.String(required=True),
     'plus': fields.String(required=True),
     'minus': fields.String(required=True),
     'quantity': fields.Nested(quantity_fields, required=True)
@@ -378,8 +414,25 @@ commit_fields = ns.model('minted_quantity', {
 #
 
 
+@ns.route('/wallet/<string:owner>')
+@ns.param('owner', 'Users wallet')
+class LedgerGetWallet(Resource):
+    def get(self, owner):
+        """Wallet context for specific owner"""
+        result = decode_wallet(owner)
+        return result, 200
+
+
+# @ns.route('/wallets')
+# class LedgerListWallets(Resource):
+#     def get(self):
+#         """Returns wallet listings"""
+#         result = decode_wallet_list()
+#         return result, 200
+
+
 @ns.route('/mint-token')
-class COMMint(Resource):
+class LedgerMintToken(Resource):
     @ns.expect(commit_fields)
     def post(self):
         """Mint a quantity and create commitment"""
@@ -390,7 +443,7 @@ class COMMint(Resource):
             return {"DataException": str(e)}, 400
 
 #
-#   Match post process utilities
+#   Exchange post process utilities
 #
 
 
@@ -433,9 +486,22 @@ class UTXQSDecode(Resource):
 class UTXQ_Ingest(Resource):
     @ns.expect(utxq_fields)
     def post(self):
-        exchange.create_utxq(request.json)
+        exchange.create_utxq(request.json['agreement'], request.json)
         return {"status": "OK"}, 200
 
+
+@ns.route('/utxq-expression')
+class UTXQ_EIngest(Resource):
+    @ns.expect(exchange_expression)
+    def post(self):
+        """Create utxq from expression"""
+        agr = request.json['agreement']
+        ast_dict = parse.parse_with_ns_to_json(
+            agr,
+            request.json['expression'])
+        ast_dict['agreement'] = agr
+        exchange.create_utxq(agr, ast_dict)
+        return {"status": "OK"}, 200
 
 #
 #   MTXQ management
@@ -468,7 +534,24 @@ class MTXQ_Ingest(Resource):
     def post(self):
         """Create a matching transaction"""
         try:
-            exchange.create_mtxq(request.json)
+            exchange.create_mtxq(request.json['agreement'], request.json)
+            return {"status": "OK"}, 200
+        except (DataException, ValueError) as e:
+            return {"DataException": str(e)}, 400
+
+
+@ns.route('/mtxq-expression')
+class MTXQ_EIngest(Resource):
+    @ns.expect(exchange_expression)
+    def post(self):
+        """Create mtxq from expression"""
+        try:
+            agr = request.json['agreement']
+            ast_dict = parse.parse_with_ns_to_json(
+                agr,
+                request.json['expression'])
+            ast_dict['agreement'] = agr
+            exchange.create_mtxq(agr, ast_dict)
             return {"status": "OK"}, 200
         except (DataException, ValueError) as e:
             return {"DataException": str(e)}, 400

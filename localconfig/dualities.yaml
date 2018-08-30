@@ -35,29 +35,42 @@ namespaces:
         numerator: *quantity
 
   demo:
+    verbs:
+      base_verbs:
+        prepositions: [is, for, of, at, '@']
+        articles: [a, an, the]
+        objects: [price, prices, weight, mass, volume]
     initiates:
-      ask:
+      asks:
         class: *hashblock-utxq
         depends_on: null
-      offer:
+        synonyms: [requests, wants]
+      offers:
         class: *hashblock-utxq
         depends_on: null
-      commit:
+        synonyms: []
+      commits:
         class: *hashblock-utxq
         depends_on: null
-      give:
+        synonyms: []
+      gives:
         class: *hashblock-utxq
         depends_on: null
+        synonyms: []
     reciprocates:
-      tell:
+      tells:
         class: *hashblock-mtxq
-        depends_on: demo.ask
-      accept:
+        depends_on: demo.asks
+        synonyms: [advises, quotes]
+      accepts:
         class: *hashblock-mtxq
-        depends_on: demo.offer
-      obligation:
+        depends_on: demo.offers
+        synonyms: []
+      obligates:
         class: *hashblock-mtxq
-        depends_on: demo.commit
-      take:
+        depends_on: demo.commits
+        synonyms: []
+      takes:
         class: *hashblock-mtxq
-        depends_on: demo.give
+        depends_on: demo.gives
+        synonyms: []

@@ -24,10 +24,10 @@ from functools import lru_cache
 from base64 import b64decode
 
 from google.protobuf.json_format import MessageToDict
-from modules.config import (key_owner, agreement_secret)
+from modules.config import (key_owner, public_key, agreement_secret)
 
 from modules.state import State
-from modules.exceptions import AuthException
+from modules.exceptions import AuthException, DataException
 from modules.address import Address
 
 from protobuf.exchange_pb2 import (
@@ -38,6 +38,9 @@ from protobuf.unit_pb2 import (
     Unit, UnitCandidates)
 from protobuf.asset_pb2 import (
     Asset, AssetCandidates)
+
+from protobuf.ledger_pb2 import (Wallet, Token)
+
 
 from shared.transactions import get_txn_vc
 
@@ -324,6 +327,28 @@ def __format_quantity(quantity):
         magnitude,
         unit,
         resource)
+
+
+def decode_wallet(user):
+    data = []
+    try:
+        pub_key = public_key(user)
+        wallet = Wallet()
+        wallet.ParseFromString(
+            __get_leaf_data(ledger_addresser.wallet(pub_key))['data'])
+        # for t in wallet.tokens:
+
+        return MessageToDict(wallet, True)
+    except AuthException:
+        raise DataException("User {} not found".format(user))
+    return {
+        'family': 'ledger',
+        'data': data
+    }
+
+
+def decode_wallet_list():
+    return {'status': 'TBD'}
 
 
 def __decode_exchange(address, data):

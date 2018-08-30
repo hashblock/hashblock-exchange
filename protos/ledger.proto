@@ -59,12 +59,8 @@ message Token {
 
 message Wallet {
     message WalletToken {
-        enum State {
-            MINTED = 0;
-            SPENT = 1;
-        }
         uint64 id = 1;
-        State state = 2;
+        uint64 state = 2;
         Token token = 3;
     }
     repeated WalletToken tokens = 1;
@@ -93,10 +89,9 @@ message LedgerPayload {
     //  data is starting Merkle Trie string (default is 64 '0's)
 
     // Action = 2 - Mint Token
-    //  User wallet address in txn.outputs[0]
-    //  Bytes is comma seperated value_commitment, unit commitment, asset commitment
-    //  To push: bytes(','.join(list), 'utf8')
-    //  To pull: data.decode('utf8').split(',') to create list
+    //  User wallet address in inputs/outputs[0]
+    //  Merkle tree address is inputs/outputs[1]
+    //  data is token
 
     bytes data = 2;
 }
