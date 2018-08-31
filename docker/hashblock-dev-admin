@@ -34,6 +34,8 @@ RUN apt-get update \
 WORKDIR /project/hashblock-exchange
 COPY apps/hashblock_cli/requirements.txt /project/hashblock-exchange/apps/hashblock_cli/requirements.txt
 
+RUN pip3 install --upgrade pip setuptools wheel
+
 RUN pip3 install eciespy cryptography && \
     SECP_BUNDLED_EXPERIMENTAL=1 pip3 --no-cache-dir install --no-binary secp256k1 secp256k1 && \
     pip3 install --trusted-host pypi.python.org -r apps/hashblock_cli/requirements.txt && \
