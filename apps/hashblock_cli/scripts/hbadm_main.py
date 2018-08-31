@@ -25,6 +25,7 @@ import pkg_resources
 
 from colorlog import ColoredFormatter
 
+from sawtooth_sdk.processor.log import init_console_logging
 from modules.exceptions import CliException
 from modules.config import load_hashblock_config
 from scripts.keygen import add_keygen_parser
@@ -41,8 +42,7 @@ DISTRIBUTION_NAME = 'hashblock-hbadm'
 
 
 def create_console_handler(logger, verbose_level=0):
-    print("IN CONSOLE HANDLER CREATION")
-    clog = logging.StreamHandler()
+    clog = logger.handlers[0]
     clog.setFormatter(
         ColoredFormatter(
             "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
@@ -58,6 +58,7 @@ def create_console_handler(logger, verbose_level=0):
             }))
 
     logger.addHandler(clog)
+    logger.propagate = False
 
     if verbose_level == 0:
         logger.setLevel(logging.INFO)
@@ -120,9 +121,9 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
     args = parser.parse_args(args)
 
     r_config = load_hashblock_config()
-    print("Succesfully loaded hasblock-exchange configuration")
 
     logger = setup_loggers(verbose_level=2)
+    logger.info("Succesfully loaded hasblock-exchange configuration")
 
     if args.command == 'keygen':
         do_keygen(args)
@@ -131,7 +132,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
     elif args.command == 'batch':
         do_batch(args, r_config)
     elif args.command == 'exchange':
-        do_exchange(args, logger)
+        do_exchange(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 
