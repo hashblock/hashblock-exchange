@@ -66,4 +66,6 @@ def parse_with_ns(ns, expression):
 
 def parse_with_ns_to_json(ns, expression):
     """Parse expression returning ast dictionary"""
-    return parse_with_ns(ns, expression)['ast'].to_dict()
+    result = parse_with_ns(ns, expression)['ast'].to_dict()
+    result['agreement'] = ns
+    return result

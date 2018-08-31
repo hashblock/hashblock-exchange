@@ -61,9 +61,9 @@ def __validate_partners(plus, minus):
             "No partnership for {} and {}".format(plus, minus))
 
 
-def __validate_operation(ns, request):
+def __validate_operation(request):
     ops = request.pop('operation')
-    if Duality.is_valid_verb(ns, ops):
+    if Duality.is_valid_verb(request['agreement'], ops):
         return ops
     else:
         raise DataException(
@@ -131,13 +131,13 @@ def __validate_utxq(request):
     return (quantity_assets)
 
 
-def __validate_mtxq(ns, operation, request):
+def __validate_mtxq(operation, request):
     """Validate the content for mtxq"""
     __validate_partners(request["plus"], request["minus"])
     utxq, ujson = __get_and_validate_utxq(
         request["utxq_address"],
         partnership_secret(request["plus"], request["minus"]))
-    rdo = Duality.reciprocate_depends_on(ns, operation)
+    rdo = Duality.reciprocate_depends_on(request['agreement'], operation)
     LOGGER.debug(
         "Rdo = {}".format(rdo))
     if rdo == utxq.operation:
@@ -303,9 +303,9 @@ def __create_reciprocate_inputs_outputs(ingest):
         payload)
 
 
-def create_utxq(ns, request):
+def create_utxq(request):
     """Create utxq transaction"""
-    operation = __validate_operation(ns, request)
+    operation = __validate_operation(request)
     LOGGER.debug(
         "Processing UTXQ create with operation => {}".format(operation))
     quant = __validate_utxq(request)
@@ -316,10 +316,10 @@ def create_utxq(ns, request):
     utxq_build((operation, quant, request))
 
 
-def create_mtxq(ns, request):
+def create_mtxq(request):
     """Create mtxq transaction"""
-    operation = __validate_operation(ns, request)
-    qnd = __validate_mtxq(ns, operation, request)
+    operation = __validate_operation(request)
+    qnd = __validate_mtxq(operation, request)
     mtxq_build = compose_builder(
         submit_single_txn, create_transaction,
         __create_reciprocate_inputs_outputs, __create_reciprocate_payload,
