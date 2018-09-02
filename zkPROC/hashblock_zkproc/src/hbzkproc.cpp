@@ -133,7 +133,7 @@ int commitmentToTree(const char* tree, const char *value, const char *unit, cons
     CDataStream vwpath(SER_NETWORK, PROTOCOL_VERSION);
     vwpath << tree_new.witness().path();
     string v_path = HexStr(vwpath.begin(), vwpath.end());
-    
+
     boost::filesystem::path sapling_spend = "/root/.zcash-params/sapling-spend.params";
     boost::filesystem::path sapling_output = "/root/.zcash-params/sapling-output.params";
     boost::filesystem::path sprout_groth16 = "/root/.zcash-params/sprout-groth16.params";
@@ -162,17 +162,19 @@ int commitmentToTree(const char* tree, const char *value, const char *unit, cons
                 0x3a, 0x79, 0x1f, 0xd7, 0xba, 0x95, 0x80, 0x32, 0x76, 0x07, 0x77, 0xfd, 0x0e, 0xfa,
                 0x8e, 0xf1, 0x16, 0x20
             };
+
     SpendDescription sdesc;
-    unsigned char f_r[32];
-    librustzcash_sapling_generate_r(f_r);
+    // unsigned char f_r[32];
+    // librustzcash_sapling_generate_r(f_r);
     auto result = librustzcash_sapling_spend_proof(
                 ctx,
                 spendingKey.full_viewing_key().ak.begin(),
                 spendingKey.expanded_spending_key().nsk.begin(),
                 spendingKey.default_address().d.data(),
-                //uint256S("00b0b92c4c2467605caad7ed24c1952caf3f15c70a2bf22018649e503607c371").begin(),  //r
-                f_r,
-                uint256S((const char*)alpha).begin(),              //spend.alpha.begin(),
+                // f_r,
+                uint256S("00b0b92c4c2467605caad7ed24c1952caf3f15c70a2bf22018649e503607c371").begin(),  //r
+                //spend.alpha.begin(),
+                uint256S((const char*)alpha).begin(),
                 5,                          //spend.note.value(),
                 tree_new.root().begin(),    //spend.anchor.begin(),
                 witness.data(),
@@ -180,10 +182,10 @@ int commitmentToTree(const char* tree, const char *value, const char *unit, cons
                 sdesc.rk.begin(),
                 sdesc.zkproof.data());
 
-                cerr << "....................................................\n";
-                cerr << result << "\n";
-                cerr << sdesc.zkproof.size() << "\n";
-                cerr << "....................................................\n";
+    cerr << "....................................................\n";
+    cerr << result << "\n";
+    cerr << sdesc.zkproof.size() << "\n";
+    cerr << "....................................................\n";
 
 
     librustzcash_sapling_proving_ctx_free(ctx);
@@ -212,7 +214,7 @@ int generateCommitments(const std::string& secret_key, uint64_t value, uint64_t 
         uint256 valueCommitment = *(SaplingNote(spa, value).cm());
         //output r from note because we need it
         SaplingNote vnote(spa, unit);
-        
+
         uint256 nf = *(vnote.nullifier(spendingKey.expanded_spending_key().full_viewing_key(), 0));
 
         uint256 unitCommitment = *(SaplingNote(spa, unit).cm());
