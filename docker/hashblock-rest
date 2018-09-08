@@ -51,16 +51,18 @@ LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 RUN apt-get update \
  && apt-get install -y -q \
     apt-transport-https \
-	libssl-dev \
-	libffi-dev  \
-    python3-dev \
+    wget \
+    libssl-dev \
+    libffi-dev  \
+    python3 \
     python3-pip \
-    build-essential \
-    automake \
-    pkg-config \
-    libtool \
-    libevent-openssl-2.0-5 \
-    libffi-dev
+    pkg-config
+
+RUN wget -qO - https://pkgs.cossacklabs.com/gpg | apt-key add - \
+    && echo "deb https://pkgs.cossacklabs.com/stable/ubuntu xenial main" | \
+    tee /etc/apt/sources.list.d/cossacklabs.list \
+    && apt-get update \
+    && apt-get install -y -q libthemis
 
 RUN mkdir -p /project/hashblock-exchange && \
     mkdir -p /project/hashblock-exchange/apps && \
@@ -76,9 +78,9 @@ COPY apps/shared apps/shared
 COPY --from=base /builder/apps/protobuf apps/protobuf
 COPY apps/hashblock_rest apps/hashblock_rest
 
-RUN pip3 install eciespy cryptography && \
-    SECP_BUNDLED_EXPERIMENTAL=1 pip3 --no-cache-dir install --no-binary secp256k1 secp256k1 && \
-    pip3 install -r apps/hashblock_rest/requirements.txt && \
+RUN pip3 install --upgrade pip setuptools wheel
+
+RUN pip3 install -r apps/hashblock_rest/requirements.txt && \
     rm -r /root/.cache && \
     apt-get remove -y build-essential automake && apt-get autoremove -y
 

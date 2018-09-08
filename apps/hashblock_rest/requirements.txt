@@ -4,3 +4,4 @@ gunicorn
 requests
 sawtooth-sdk
 rply
+pythemis

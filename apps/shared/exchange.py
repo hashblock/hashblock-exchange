@@ -32,6 +32,7 @@ from modules.config import (
     keys_path,
     HB_OPERATOR,
     valid_partnership, partnership_secret)
+from modules.secure import Secure
 from modules.decode import (
     asset_addresser,
     unit_addresser,
@@ -40,7 +41,6 @@ from modules.decode import (
     get_node,
     decode_unit_list,
     decode_asset_list,
-    STATE_CRYPTO,
     get_utxq_obj_json)
 from modules.exceptions import (
     AuthException, RestException, DataException,
@@ -49,7 +49,7 @@ from protobuf.exchange_pb2 import (
     ExchangePayload, UTXQWrapper, MTXQWrapper, UTXQ, MTXQ, Quantity, Ratio)
 
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger()
 
 
 def __validate_partners(plus, minus):
@@ -105,8 +105,6 @@ def __validate_references(value, unit, asset):
 
 def __get_and_validate_utxq(address, secret):
     """Check that the utxq exists to recipricate on"""
-    LOGGER.debug(
-        "Address to check utxq {}".format(address))
     if utxq_addresser.is_matched(address):
         raise DataException(
             'Attempt to match using already matched utxq address')
@@ -138,8 +136,8 @@ def __validate_mtxq(operation, request):
         request["utxq_address"],
         partnership_secret(request["plus"], request["minus"]))
     rdo = Duality.reciprocate_depends_on(request['agreement'], operation)
-    LOGGER.debug(
-        "Rdo = {}".format(rdo))
+    # LOGGER.debug(
+    #     "Rdo = {}".format(rdo))
     if rdo == utxq.operation:
         pass
     else:
@@ -212,11 +210,10 @@ def __create_utxq(ingest):
 def __create_initiate_payload(ingest):
     """Create the utxq payload"""
     operation, request, data = ingest
+    ps = partnership_secret(request["plus"], request["minus"])
     encrypted = binascii.hexlify(
-        STATE_CRYPTO.encrypt_from(
-            data.SerializeToString(),
-            private_key(request['plus']),
-            public_key(request['minus'])))
+        Secure.encrypt_object_with(
+            data.SerializeToString(), ps))
     datablock = UTXQWrapper(
         utxq=encrypted,
         commitment="This space reserved").SerializeToString()
@@ -264,19 +261,15 @@ def __create_reciprocate_payload(ingest):
     """Create the mtxq payload"""
     operation, utxq, matched_uaddr, prf_pair, request, payload = ingest
     proof, pairing = prf_pair
+    ps = partnership_secret(request["plus"], request["minus"])
     e_utxq = binascii.hexlify(
-        STATE_CRYPTO.encrypt_from(
-            utxq.SerializeToString(),
-            private_key(request['plus']),
-            public_key(request['minus'])))
+        Secure.encrypt_object_with(utxq.SerializeToString(), ps))
     w_utxq = UTXQWrapper(
         utxq=e_utxq,
         commitment="This space reserved").SerializeToString()
     e_mtxq = binascii.hexlify(
-        STATE_CRYPTO.encrypt_from(
-            payload.SerializeToString(),
-            private_key(request['plus']),
-            public_key(request['minus'])))
+        Secure.encrypt_object_with(
+            payload.SerializeToString(), ps))
     w_mtxq = MTXQWrapper(
         mtxq=e_mtxq,
         pairing=pairing.encode(),

@@ -21,7 +21,7 @@ import pprint
 import copy
 from yaml import load
 
-from modules.state import State
+from modules.secure import Secure
 from modules.dualities import Duality
 from modules.exceptions import CliException, AuthException
 from sawtooth_signing import create_context
@@ -181,27 +181,25 @@ def valid_key(key_value):
     return False if key_owner(key_value) == UNKNOWN_OWNER else True
 
 
-def __read_keyfile(key_filename):
-    try:
-        with open(key_filename, 'r') as key_file:
-            key_file_key = key_file.read().strip()
-    except IOError as e:
-        raise CliException('Unable to read key file: {}'.format(str(e)))
-    return key_file_key
-
-
-def __read_keys(key_file_prefix):
-    """Reads in the public and private keys"""
+def __read_st_keys(key_file_prefix):
+    """Reads in the public and private sawtooth keys"""
     return (
-        __read_keyfile(key_file_prefix + ".pub"),
-        __read_keyfile(key_file_prefix + ".priv"))
+        Secure.read_keyfile(key_file_prefix + ".pub"),
+        Secure.read_keyfile(key_file_prefix + ".priv"))
+
+
+def __read_ed_keys(key_file_prefix):
+    """Reads in the public and private encryption/decryption keys"""
+    return (
+        Secure.read_keyfile(key_file_prefix + ".dhpub"),
+        Secure.read_keyfile(key_file_prefix + ".dhpriv"))
 
 
 def __read_signer(signing_key):
-    """Reads the given file as a hex key.
+    """Returns a signing object for given key.
 
     Args:
-        private_key: The private key from file
+        private_key: The private key hex string from file
 
     Returns:
         Signer: the signer
@@ -244,6 +242,8 @@ def __load_cfg_and_keys(configfile):
     signer_keys = {}
     private_keys = {}
     public_keys = {}
+    dhpriv_keys = {}
+    dhpub_keys = {}
     submitter_keys = {}
     # Get the operator key
     # public, private, signer = __fabricate_signer()
@@ -255,10 +255,14 @@ def __load_cfg_and_keys(configfile):
     if not doc['rest']['operator']:
         raise ValueError("Missing operator settings in config file")
     else:
-        public, private = __read_keys(
+        public, private = __read_st_keys(
             os.path.join(DEFAULT_KEYS_PATH, doc['rest']['operator']['sysop']))
         public_keys[HB_OPERATOR] = public
         private_keys[HB_OPERATOR] = private
+        dhpub, dhpriv = __read_ed_keys(
+            os.path.join(DEFAULT_KEYS_PATH, doc['rest']['operator']['sysop']))
+        dhpub_keys[HB_OPERATOR] = dhpub
+        dhpriv_keys[HB_OPERATOR] = dhpriv
         signer_keys[HB_OPERATOR] = public
         submitter_keys[HB_OPERATOR] = __read_signer(private)
 
@@ -267,14 +271,23 @@ def __load_cfg_and_keys(configfile):
 
     # iterate through signers for keys
     for key, value in doc['rest']['users'].items():
-        public, private = __read_keys(os.path.join(DEFAULT_KEYS_PATH, value))
+        public, private = __read_st_keys(
+            os.path.join(DEFAULT_KEYS_PATH, value))
         public_keys[key] = public
         private_keys[key] = private
+
+        dhpub, dhpriv = __read_ed_keys(
+            os.path.join(DEFAULT_KEYS_PATH, value))
+        dhpub_keys[key] = dhpub
+        dhpriv_keys[key] = dhpriv
+
         signer_keys[key] = public
         submitter_keys[key] = __read_signer(private)
         doc['rest']['agreements']['wallet_' + key] = [key, HB_OPERATOR]
 
     doc['rest']['public_keys'] = public_keys
+    doc['rest']['dhpub_keys'] = dhpub_keys
+    doc['rest']['dhpriv_keys'] = dhpriv_keys
     doc['rest']['private_keys'] = private_keys
     doc['rest']['signer_keys'] = signer_keys
     doc['rest']['submitters'] = submitter_keys
@@ -282,7 +295,8 @@ def __load_cfg_and_keys(configfile):
     # iterate through zksnark keys
     zksnark_keys = {}
     for key, value in doc['rest']['zksnark'].items():
-        zksnarkkey = __read_keyfile(os.path.join(DEFAULT_KEYS_PATH, value))
+        zksnarkkey = Secure.read_keyfile(
+            os.path.join(DEFAULT_KEYS_PATH, value))
         zksnark_keys[key] = zksnarkkey
     doc['rest']['zksnark_keys'] = submitter_keys
 
@@ -291,13 +305,16 @@ def __load_cfg_and_keys(configfile):
     agreements = {}
     for key, value in doc['rest']['agreements'].items():
         if len(value) == 2:
-            value.append(
-                State.get_secret(
-                    doc['rest']['private_keys'][value[0]],
-                    doc['rest']['public_keys'][value[1]]))
+            prv_key = doc['rest']['dhpriv_keys'][value[0]]
+            pub_key = doc['rest']['dhpub_keys'][value[1]]
+            scrt = Secure.get_secret(
+                bytes.fromhex(prv_key), bytes.fromhex(pub_key))
+            Secure.encrypt_object_with(b'Test Msg', scrt)
+            value.append(scrt)
             agreements[key] = value
         else:
             raise AuthException
+    # print(agreements)
     doc['rest']['partners'] = agreements
     # pprint.pprint(doc['rest']['partners'])
     # pprint.pprint(doc)

@@ -33,7 +33,7 @@ from modules.config import (
     public_key,
     agreement_secret,
     public_key_values_list)
-from modules.state import State
+from modules.secure import Secure
 from modules.decode import ledger_addresser as _addresser
 from modules.decode import asset_addresser as _asset_addy
 from modules.decode import unit_addresser as _unit_addy
@@ -96,7 +96,7 @@ def _mint_token(ingest):
         unit=bytes(unit, 'utf8'),
         asset=bytes(asset, 'utf8')).SerializeToString()
     evalue = binascii.hexlify(
-        State.encrypt_object_with(ser_value, ekey))
+        Secure.encrypt_object_with(ser_value, ekey))
     return (
         pubkey,
         Token(

@@ -19,9 +19,12 @@ from __future__ import print_function
 import getpass
 import os
 import sys
+import logging
 
 from modules.exceptions import CliException
-from sawtooth_signing import create_context
+from modules.secure import Secure
+
+LOGGER = logging.getLogger()
 
 
 def add_keygen_parser(subparsers, parent_parser):
@@ -70,7 +73,7 @@ def do_keygen(args):
         key_dir = os.path.join(os.path.expanduser('~'), '.sawtooth', 'keys')
         if not os.path.exists(key_dir):
             if not args.quiet:
-                print('creating key directory: {}'.format(key_dir))
+                LOGGER.info('creating key directory: {}'.format(key_dir))
             try:
                 os.makedirs(key_dir, 0o755)
             except IOError as e:
@@ -79,44 +82,69 @@ def do_keygen(args):
     priv_filename = os.path.join(key_dir, key_name + '.priv')
     pub_filename = os.path.join(key_dir, key_name + '.pub')
 
+    dhpriv_filename = os.path.join(key_dir, key_name + '.dhpriv')
+    dhpub_filename = os.path.join(key_dir, key_name + '.dhpub')
+
     if not args.force:
         file_exists = False
-        for filename in [priv_filename, pub_filename]:
+        for filename in [priv_filename, pub_filename, dhpriv_filename, dhpub_filename]:
             if os.path.exists(filename):
                 file_exists = True
-                print('file exists: {}'.format(filename), file=sys.stderr)
+                LOGGER.warn('file exists: {}'.format(filename))
         if file_exists:
             raise CliException(
                 'files exist, rerun with --force to overwrite existing files')
 
-    context = create_context('secp256k1')
-    private_key = context.new_random_private_key()
-    public_key = context.get_public_key(private_key)
+    private_key, public_key = Secure.sawtooth_key_pair()
+    dhpriv, dhpub = Secure.encrypting_key_pair()
 
     try:
         priv_exists = os.path.exists(priv_filename)
         with open(priv_filename, 'w') as priv_fd:
             if not args.quiet:
                 if priv_exists:
-                    print('overwriting file: {}'.format(priv_filename))
+                    LOGGER.warn('overwriting file: {}'.format(priv_filename))
                 else:
-                    print('writing file: {}'.format(priv_filename))
+                    LOGGER.info('writing file: {}'.format(priv_filename))
             priv_fd.write(private_key.as_hex())
             priv_fd.write('\n')
             # Set the private key u+rw g+r
             os.chmod(priv_filename, 0o640)
 
+        priv_exists = os.path.exists(dhpriv_filename)
+        with open(dhpriv_filename, 'w') as priv_fd:
+            if not args.quiet:
+                if priv_exists:
+                    LOGGER.warn('overwriting file: {}'.format(dhpriv_filename))
+                else:
+                    LOGGER.info('writing file: {}'.format(dhpriv_filename))
+            priv_fd.write(dhpriv.hex())
+            priv_fd.write('\n')
+            # Set the private key u+rw g+r
+            os.chmod(dhpriv_filename, 0o640)
+
         pub_exists = os.path.exists(pub_filename)
         with open(pub_filename, 'w') as pub_fd:
             if not args.quiet:
                 if pub_exists:
-                    print('overwriting file: {}'.format(pub_filename))
+                    LOGGER.warn('overwriting file: {}'.format(pub_filename))
                 else:
-                    print('writing file: {}'.format(pub_filename))
+                    LOGGER.info('writing file: {}'.format(pub_filename))
             pub_fd.write(public_key.as_hex())
             pub_fd.write('\n')
             # Set the public key u+rw g+r o+r
             os.chmod(pub_filename, 0o644)
 
+        pub_exists = os.path.exists(dhpub_filename)
+        with open(dhpub_filename, 'w') as pub_fd:
+            if not args.quiet:
+                if pub_exists:
+                    LOGGER.warn('overwriting file: {}'.format(dhpub_filename))
+                else:
+                    LOGGER.info('writing file: {}'.format(dhpub_filename))
+            pub_fd.write(dhpub.hex())
+            pub_fd.write('\n')
+            # Set the public key u+rw g+r o+r
+            os.chmod(dhpub_filename, 0o644)
     except IOError as ioe:
         raise CliException('IOError: {}'.format(str(ioe)))
