@@ -114,25 +114,11 @@ string treeStats(const uint256& v, const SaplingMerkleTree& tree) {
 }
 
 /*
-    Add commitments to current tree, returns
-    For each commitment: position,commitment <sp>
-    followed by the new serialized tree, so:
-    x,value<sp>y,unit<sp>z,asset<sp> tree
+    TODO: This loading of the keys is way busy so we do it once for each
+    block of commitments to add to the tree and the resulting witness
 */
 
-int commitmentToTree(const char* tree, const char *value, const char *unit, const char *asset) {
-    SaplingMerkleTree tree_new;
-    uint256 u_v = uint256S(value);
-    uint256 u_u = uint256S(unit);
-    uint256 u_a = uint256S(asset);
-    CDataStream ss_in(
-        ParseHex(tree),
-        SER_NETWORK, PROTOCOL_VERSION);
-    ss_in >> tree_new;
-    tree_new.append(u_v);
-    CDataStream vwpath(SER_NETWORK, PROTOCOL_VERSION);
-    vwpath << tree_new.witness().path();
-    string v_path = HexStr(vwpath.begin(), vwpath.end());
+int initialize_parameters() {
 
     boost::filesystem::path sapling_spend = "/root/.zcash-params/sapling-spend.params";
     boost::filesystem::path sapling_output = "/root/.zcash-params/sapling-output.params";
@@ -151,55 +137,111 @@ int commitmentToTree(const char* tree, const char *value, const char *unit, cons
         "e9b238411bd6c0ec4791e9d04245ec350c9c5744f5610dfcce4365d5ca49dfefd5054e371842b3f88fa1b9d7e8e075249b3ebabd167fa8b0f3161292d36c180a"
     );
 
+}
+
+/*
+    Add commitments to current tree, returns
+    For each commitment: position,commitment <sp>
+    and proof
+    followed by the new serialized tree, so:
+    x,value<sp>y,unit<sp>z,asset<sp> tree
+*/
+
+const unsigned char alpha[32] = {
+            0xf3, 0x44, 0xec, 0x38, 0x0f, 0xe1, 0x27, 0x3e, 0x30, 0x98, 0xc2, 0x58, 0x8c, 0x5d,
+            0x3a, 0x79, 0x1f, 0xd7, 0xba, 0x95, 0x80, 0x32, 0x76, 0x07, 0x77, 0xfd, 0x0e, 0xfa,
+            0x8e, 0xf1, 0x16, 0x20
+        };
+
+
+int inTreeOutProof(
+    SaplingMerkleTree &tree,
+    SaplingSpendingKey &spendingKey,
+    uint64_t value,
+    uint256 &comm,
+    uint256 &r,
+    SpendDescription &sdesc)
+{
+    // Insert in tree
+    tree.append(comm);
+
+    // Get witness slot
+    CDataStream witness_stream(SER_NETWORK, PROTOCOL_VERSION);
+    witness_stream << tree.witness().path();
+    string v_path = HexStr(witness_stream.begin(), witness_stream.end());
+    std::vector<unsigned char> witness(v_path.begin(), v_path.end());
+
+    // Setup a context (may reuse just one as input arg to call)
     auto ctx = librustzcash_sapling_proving_ctx_init();
-    SaplingSpendingKey spendingKey(uint256S("59c193cb554c7100dd6c1f38b5c77f028146be29373ee9e503bfcc81e70d1dd1"));
-    // auto nf = spend.note.nullifier(
-    //         spendingKey.full_viewing_key(), tree_new.witness().position());
-    std::vector<unsigned char> witness(vwpath.begin(), vwpath.end());
 
-    const unsigned char alpha[32] = {
-                0xf3, 0x44, 0xec, 0x38, 0x0f, 0xe1, 0x27, 0x3e, 0x30, 0x98, 0xc2, 0x58, 0x8c, 0x5d,
-                0x3a, 0x79, 0x1f, 0xd7, 0xba, 0x95, 0x80, 0x32, 0x76, 0x07, 0x77, 0xfd, 0x0e, 0xfa,
-                0x8e, 0xf1, 0x16, 0x20
-            };
-
-    SpendDescription sdesc;
-    // unsigned char f_r[32];
-    // librustzcash_sapling_generate_r(f_r);
+    // Get the proof
     auto result = librustzcash_sapling_spend_proof(
                 ctx,
                 spendingKey.full_viewing_key().ak.begin(),
                 spendingKey.expanded_spending_key().nsk.begin(),
                 spendingKey.default_address().d.data(),
-                // f_r,
-                uint256S("00b0b92c4c2467605caad7ed24c1952caf3f15c70a2bf22018649e503607c371").begin(),  //r
+                r.begin(),
                 //spend.alpha.begin(),
                 uint256S((const char*)alpha).begin(),
-                5,                          //spend.note.value(),
-                tree_new.root().begin(),    //spend.anchor.begin(),
+                value,                      //spend.note.value(),
+                tree.root().begin(),    //spend.anchor.begin(),
                 witness.data(),
                 sdesc.cv.begin(),
                 sdesc.rk.begin(),
                 sdesc.zkproof.data());
-
-    cerr << "....................................................\n";
-    cerr << result << "\n";
-    cerr << sdesc.zkproof.size() << "\n";
-    cerr << "....................................................\n";
-
-
+    // Delete context (may reuse just one as input arg to call)
     librustzcash_sapling_proving_ctx_free(ctx);
-
-    cerr << v_path << ',' << tree_new.witness().position() << ',' << value << ' ';
-    tree_new.append(u_u);
-    cerr << tree_new.witness().position() << ',' << unit << ' ';
-    tree_new.append(u_a);
-    cerr << tree_new.witness().position()  << ',' << asset<< ' ';
-    CDataStream ss_out(SER_NETWORK, PROTOCOL_VERSION);
-    ss_out << tree_new;
-    string tree_hex = HexStr(ss_out.begin(), ss_out.end());
-    cerr << tree_hex;
     return 0;
+}
+
+int commitmentToTree(
+        const char* tree,
+        const char* private_key,
+        const char *valueCM,
+        const char *valueR,
+        const char *unitCM,
+        const char *unitR,
+        const char *assetCM,
+        const char *assetR)
+{
+    int result = 1;
+    if( verifyPrivateKey(private_key) ) {
+        SaplingSpendingKey spendingKey(uint256S(private_key));
+
+        SaplingMerkleTree tree_new;
+        uint256 u_v = uint256S(valueCM);
+        uint256 r_v = uint256S(valueR);
+
+        uint256 u_u = uint256S(unitCM);
+        uint256 r_u = uint256S(unitR);
+
+        uint256 u_a = uint256S(assetCM);
+        uint256 r_a = uint256S(assetR);
+
+        CDataStream ss_in(
+            ParseHex(tree),
+            SER_NETWORK, PROTOCOL_VERSION);
+        ss_in >> tree_new;
+
+        SpendDescription vdesc;
+        SpendDescription udesc;
+        SpendDescription adesc;
+
+        // auto vres = inTreeOutProof(tree, spendingKey,)
+
+        cerr << "....................................................\n";
+        cerr << result << "\n";
+        cerr << vdesc.zkproof.size() << "\n";
+        cerr << "....................................................\n";
+
+
+        CDataStream ss_out(SER_NETWORK, PROTOCOL_VERSION);
+        ss_out << tree_new;
+        string tree_hex = HexStr(ss_out.begin(), ss_out.end());
+        cerr << tree_hex;
+        return 0;
+    }
+    return result;
 }
 
 /*
@@ -211,17 +253,53 @@ int generateCommitments(const std::string& secret_key, uint64_t value, uint64_t 
     if( verifyPrivateKey(secret_key) ) {
         SaplingSpendingKey spendingKey(uint256S(secret_key));
         SaplingPaymentAddress spa = spendingKey.default_address();
-        uint256 valueCommitment = *(SaplingNote(spa, value).cm());
-        //output r from note because we need it
-        SaplingNote vnote(spa, unit);
+        SaplingNote valueNote = SaplingNote(spa, value);
+        SaplingNote unitNote = SaplingNote(spa, unit);
+        SaplingNote assetNote = SaplingNote(spa, asset);
 
-        uint256 nf = *(vnote.nullifier(spendingKey.expanded_spending_key().full_viewing_key(), 0));
+        uint256 valueCommitment = *(valueNote.cm());
+        uint256 valueR = valueNote.r;
+        uint256 unitCommitment = *(unitNote.cm());
+        uint256 unitR = unitNote.r;
+        uint256 assetCommitment = *(assetNote.cm());
+        uint256 assetR = assetNote.r;
 
-        uint256 unitCommitment = *(SaplingNote(spa, unit).cm());
-        uint256 assetCommitment = *(SaplingNote(spa, asset).cm());
-        cerr << "******" << nf.GetHex() << "*****" << "----------" << vnote.r.GetHex() << "----------" << valueCommitment.GetHex() << ' '
+        array<unsigned char, ZC_MEMO_SIZE> memo;
+        SaplingNotePlaintext vnpt = SaplingNotePlaintext(valueNote,memo);
+        // cout << "VNPT = " << vnpt << endl;
+        CDataStream ss_out(SER_NETWORK, PROTOCOL_VERSION);
+        ss_out << vnpt;
+        string valueN_hex = HexStr(ss_out.begin(), ss_out.end());
+
+        cout << "Value commitment " <<  valueCommitment.GetHex() << endl;
+        cout << "Value r " <<  valueR.GetHex() << endl;
+        cout << "Value value " <<  value << endl << endl;
+
+        cout << "Value Note Plain Text out hex " << valueN_hex << endl << endl;
+        // Rebuild from hex all the pieces we like
+        SaplingNote v_note;
+        SaplingNotePlaintext i_vnpt;
+        CDataStream ss_in(
+            ParseHex(valueN_hex),
+            SER_NETWORK, PROTOCOL_VERSION);
+        ss_in >> i_vnpt;
+
+        v_note = *(i_vnpt.note(spendingKey.expanded_spending_key().full_viewing_key().in_viewing_key()));
+        cout << "Reconstituted value " << i_vnpt.value() << endl;
+        cout << "Reconstituted r from VNPT Note " << v_note.r.GetHex() << endl;
+        uint256 r_cm = *(v_note.cm());
+        cout << "Reconstituted commitment from VNPT Note " << r_cm.GetHex() << endl;
+
+
+
+        // uint256 nf = *(valueNote.nullifier(spendingKey.expanded_spending_key().full_viewing_key(), 0));
+
+        cerr << valueCommitment.GetHex() << ' '
+            << valueR.GetHex() << ' '
             << unitCommitment.GetHex() << ' '
-            << assetCommitment.GetHex();
+            << unitR.GetHex() << ' '
+            << assetCommitment.GetHex() << ' '
+            << assetR.GetHex();
         return 0;
     }
     else {
@@ -313,7 +391,7 @@ int main( int argc , char *argv[]) {
                 return result;
             }
             else {
-                return commitmentToTree(argv[2], argv[3], argv[4], argv[5]);
+                //return commitmentToTree(argv[2], argv[3], argv[4], argv[5]);
             }
         }
         else {

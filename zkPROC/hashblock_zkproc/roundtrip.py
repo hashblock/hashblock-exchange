@@ -44,20 +44,24 @@ def commit_run(secret, tree, value, unit, asset):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if qcm_gen.returncode == 0:
-        val_cm, unit_cm, asset_cm = qcm_gen.stderr.decode("utf-8").split()
-        print("Value CM {}".format(val_cm))
-        print("Unit CM {}".format(unit_cm))
-        print("Asset CM {}".format(asset_cm))
+        val_cm, val_r, unit_cm, unit_r, asset_cm, asset_r = \
+            qcm_gen.stderr.decode("utf-8").split()
+        print("Value CM {} R {}".format(val_cm, val_r))
+        print("Unit CM {} R {}".format(unit_cm, unit_r))
+        print("Asset CM {} {}".format(asset_cm, asset_r))
         ctm = subprocess.run(
-            ['build/hbzkproc', '-ctm', tree, val_cm, unit_cm, asset_cm],
+            [
+                'build/hbzkproc', '-ctm',
+                secret, tree,
+                val_cm, val_r, unit_cm, unit_r, asset_cm, asset_r],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if(ctm.returncode == 0):
-            val_tup, unit_tup, asset_tup, new_tree = \
-                ctm.stderr.decode("utf-8").split()
-            print("Value CM tuple {}".format(val_tup))
-            print("Unit CM tuple {}".format(unit_tup))
-            print("Asset CM tuple {}".format(asset_tup))
-            print("Tree after insert {}".format(new_tree))
+            result = ctm.stderr.decode("utf-8").split()
+            print("Value CM tuple {} Proof {}".format(result[0], result[1]))
+            print("Unit CM tuple {} Proof {}".format(result[2], result[3]))
+            print("Asset CM tuple {} Proof{}".format(result[4], result[5]))
+            print("Tree after insert {}".format(result[6]))
+            new_tree = result[6]
         else:
             print("Turing's commitment to tree fault {}".format(ctm.stderr))
             print("Log {}".format(ctm.stdout.decode()))
