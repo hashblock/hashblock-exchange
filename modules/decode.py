@@ -19,6 +19,7 @@
 This module is referenced when fetching an address to
 decode into it's type data structure
 """
+import logging
 import binascii
 from functools import lru_cache
 from base64 import b64decode
@@ -26,7 +27,7 @@ from base64 import b64decode
 from google.protobuf.json_format import MessageToDict
 from modules.config import (key_owner, public_key, agreement_secret)
 
-from modules.state import State
+from modules.secure import Secure
 from modules.exceptions import AuthException, DataException
 from modules.address import Address
 
@@ -42,7 +43,7 @@ from protobuf.asset_pb2 import (
 from protobuf.ledger_pb2 import (Wallet, Token)
 
 
-from shared.transactions import get_txn_vc
+from shared.transactions import initialize_txn_vc, get_txn_vc
 
 asset_addresser = Address.asset_addresser()
 unit_addresser = Address.unit_addresser()
@@ -51,13 +52,27 @@ utxq_addresser = Address.exchange_utxq_addresser()
 mtxq_addresser = Address.exchange_mtxq_addresser()
 ledger_addresser = Address.ledger_addresser()
 
-
-STATE_CRYPTO = State()
+LOGGER = logging.getLogger()
 VALIDATOR = None
 
 
-def initialize_decode():
+class Decode(object):
+
+    _decoder = None
+
+    class Decoder(object):
+        def __init__(self):
+            self._validator = get_txn_vc()
+
+    @classmethod
+    def initialize(cls):
+        if not cls._decoder:
+            cls._decoder = Decode.Decoder()
+
+
+def initialize_transactor():
     global VALIDATOR
+    initialize_txn_vc()
     VALIDATOR = get_txn_vc()
 
 
@@ -68,7 +83,7 @@ def get_node(address):
 def __decrypt_leaf(edata, partner_secret):
     """Fetch encrypted leaf data from chain"""
     data = binascii.unhexlify(edata.decode())
-    return STATE_CRYPTO.decrypt_object_with(data, partner_secret)
+    return Secure.decrypt_object_with(data, partner_secret)
 
 
 def __get_encrypted_UTXQ(address, partner_secret=None):

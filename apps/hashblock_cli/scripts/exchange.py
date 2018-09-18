@@ -15,9 +15,11 @@
 # ------------------------------------------------------------------------------
 
 from __future__ import print_function
-
+import logging
 import shared.langparse as parse
 from shared.transactions import initialize_txn_vc
+
+LOGGER = logging.getLogger(__name__)
 
 
 def add_exchange_menu(subparsers, parent_parser):
@@ -47,12 +49,11 @@ def add_exchange_menu(subparsers, parent_parser):
         action='store_true')
 
 
-def do_exchange(args, logger):
-    print("Args = {}".format(args))
+def do_exchange(args):
     if args.namespace and args.expression:
         parse.initialize_parse()
         result = parse.parse_with_ns_to_json(args.namespace, args.expression)
-        logger.debug(result)
+        LOGGER.debug(result)
         # initialize_txn_vc()
     else:
-        print("Not loading")
+        LOGGER.error("The namespace and expression must be provided")

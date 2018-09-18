@@ -1,3 +1,5 @@
+colorlog
 requests
 sawtooth-sdk
 rply
+pythemis

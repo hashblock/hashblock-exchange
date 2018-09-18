@@ -21,17 +21,21 @@ LABEL maintainers="Frank V. Castellucci, Arthur Greef"
 RUN apt-get update \
  && apt-get install -y -q \
     apt-transport-https \
-    python3-dev \
+    wget \
+    libssl-dev \
+    libffi-dev  \
+    python3 \
     python3-pip \
-    build-essential \
-    automake \
-    pkg-config \
-    libtool \
-    libevent-openssl-2.0-5 \
-    libffi-dev
+    pkg-config
 
-RUN pip3 install --trusted-host pypi.python.org --upgrade pip setuptools && \
-    rm -r /root/.cache
+RUN wget -qO - https://pkgs.cossacklabs.com/gpg | apt-key add - \
+    && echo "deb https://pkgs.cossacklabs.com/stable/ubuntu xenial main" | \
+    tee /etc/apt/sources.list.d/cossacklabs.list \
+    && apt-get update \
+    && apt-get install -y -q libthemis
+
+
+RUN pip3 install --upgrade pip setuptools wheel
 
 WORKDIR /project/hashblock-exchange
 RUN touch __init__.py
@@ -40,12 +44,9 @@ COPY apps/shared apps/shared
 COPY apps/protobuf apps/protobuf
 COPY apps/hashblock_rest apps/hashblock_rest
 
-RUN pip3 install eciespy cryptography && \
-	SECP_BUNDLED_EXPERIMENTAL=1 pip3 --no-cache-dir install --no-binary secp256k1 secp256k1 && \
-	pip3 install --trusted-host pypi.python.org -r apps/hashblock_rest/requirements.txt
-
-RUN apt-get remove -y build-essential automake && \
-	apt-get autoremove -y
+RUN pip3 install -r apps/hashblock_rest/requirements.txt && \
+    rm -r /root/.cache && \
+    apt-get remove -y build-essential automake && apt-get autoremove -y
 
 ENV PYTHONPATH /project/hashblock-exchange/apps/hashblock_rest:/project/hashblock-exchange/apps:/project/hashblock-exchange
 

@@ -201,7 +201,7 @@ shift $(($OPTIND-1))
 
 docker_build() {
     info "Building $1"
-    docker build -f docker/$1 $2 -t $3
+    docker build --force-rm --squash -f docker/$1 $2 -t $3
 }
 
 genesis_build() {

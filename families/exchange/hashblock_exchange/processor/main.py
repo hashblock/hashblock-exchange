@@ -42,32 +42,37 @@ from processor.config.exchange import \
 DISTRIBUTION_NAME = 'hashblock-exchange'
 
 
-def create_console_handler(verbose_level):
-    clog = logging.StreamHandler()
-    formatter = ColoredFormatter(
-        "%(log_color)s[%(asctime)s.%(msecs)03d "
-        "%(levelname)-8s %(module)s]%(reset)s "
-        "%(white)s%(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        reset=True,
-        log_colors={
-            'DEBUG': 'cyan',
-            'INFO': 'green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'red',
-        })
+def create_console_handler(logger, verbose_level=0):
+    clog = logger.handlers[0]
+    clog.setFormatter(
+        ColoredFormatter(
+            "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
+            "%(white)s%(message)s",
+            datefmt="%H:%M:%S",
+            reset=True,
+            log_colors={
+                'DEBUG': 'cyan',
+                'INFO': 'green',
+                'WARNING': 'yellow',
+                'ERROR': 'red',
+                'CRITICAL': 'red',
+            }))
 
-    clog.setFormatter(formatter)
+    logger.addHandler(clog)
+    logger.propagate = False
 
     if verbose_level == 0:
-        clog.setLevel(logging.WARN)
+        logger.setLevel(logging.INFO)
     elif verbose_level == 1:
-        clog.setLevel(logging.INFO)
+        logger.setLevel(logging.WARN)
     else:
-        clog.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+    return logger
 
-    return clog
+
+def setup_console_loggers(verbose_level):
+    logger = logging.getLogger()
+    return create_console_handler(logger, verbose_level)
 
 
 def setup_loggers(verbose_level, processor):
@@ -86,7 +91,7 @@ def setup_loggers(verbose_level, processor):
             log_dir=log_dir,
             name="exchange-" + str(processor.zmq_id)[2:-1])
 
-    init_console_logging(verbose_level=verbose_level)
+    return setup_console_loggers(verbose_level)
 
 
 def create_parser(prog_name):
@@ -156,7 +161,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level, processor=processor)
 
-    my_logger = logging.getLogger(__name__)
+    my_logger = logging.getLogger()
     my_logger.debug("Processor loaded")
     handler = ExchangeTransactionHandler()
     processor.add_handler(handler)

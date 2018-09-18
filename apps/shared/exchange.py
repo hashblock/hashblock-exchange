@@ -32,6 +32,7 @@ from modules.config import (
     keys_path,
     HB_OPERATOR,
     valid_partnership, partnership_secret)
+from modules.secure import Secure
 from modules.decode import (
     asset_addresser,
     unit_addresser,
@@ -40,7 +41,6 @@ from modules.decode import (
     get_node,
     decode_unit_list,
     decode_asset_list,
-    STATE_CRYPTO,
     get_utxq_obj_json)
 from modules.exceptions import (
     AuthException, RestException, DataException,
@@ -49,7 +49,7 @@ from protobuf.exchange_pb2 import (
     ExchangePayload, UTXQWrapper, MTXQWrapper, UTXQ, MTXQ, Quantity, Ratio)
 
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger()
 
 
 def __validate_partners(plus, minus):
@@ -61,9 +61,9 @@ def __validate_partners(plus, minus):
             "No partnership for {} and {}".format(plus, minus))
 
 
-def __validate_operation(ns, request):
+def __validate_operation(request):
     ops = request.pop('operation')
-    if Duality.is_valid_verb(ns, ops):
+    if Duality.is_valid_verb(request['agreement'], ops):
         return ops
     else:
         raise DataException(
@@ -105,8 +105,6 @@ def __validate_references(value, unit, asset):
 
 def __get_and_validate_utxq(address, secret):
     """Check that the utxq exists to recipricate on"""
-    LOGGER.debug(
-        "Address to check utxq {}".format(address))
     if utxq_addresser.is_matched(address):
         raise DataException(
             'Attempt to match using already matched utxq address')
@@ -131,15 +129,15 @@ def __validate_utxq(request):
     return (quantity_assets)
 
 
-def __validate_mtxq(ns, operation, request):
+def __validate_mtxq(operation, request):
     """Validate the content for mtxq"""
     __validate_partners(request["plus"], request["minus"])
     utxq, ujson = __get_and_validate_utxq(
         request["utxq_address"],
         partnership_secret(request["plus"], request["minus"]))
-    rdo = Duality.reciprocate_depends_on(ns, operation)
-    LOGGER.debug(
-        "Rdo = {}".format(rdo))
+    rdo = Duality.reciprocate_depends_on(request['agreement'], operation)
+    # LOGGER.debug(
+    #     "Rdo = {}".format(rdo))
     if rdo == utxq.operation:
         pass
     else:
@@ -212,11 +210,10 @@ def __create_utxq(ingest):
 def __create_initiate_payload(ingest):
     """Create the utxq payload"""
     operation, request, data = ingest
+    ps = partnership_secret(request["plus"], request["minus"])
     encrypted = binascii.hexlify(
-        STATE_CRYPTO.encrypt_from(
-            data.SerializeToString(),
-            private_key(request['plus']),
-            public_key(request['minus'])))
+        Secure.encrypt_object_with(
+            data.SerializeToString(), ps))
     datablock = UTXQWrapper(
         utxq=encrypted,
         commitment="This space reserved").SerializeToString()
@@ -264,19 +261,15 @@ def __create_reciprocate_payload(ingest):
     """Create the mtxq payload"""
     operation, utxq, matched_uaddr, prf_pair, request, payload = ingest
     proof, pairing = prf_pair
+    ps = partnership_secret(request["plus"], request["minus"])
     e_utxq = binascii.hexlify(
-        STATE_CRYPTO.encrypt_from(
-            utxq.SerializeToString(),
-            private_key(request['plus']),
-            public_key(request['minus'])))
+        Secure.encrypt_object_with(utxq.SerializeToString(), ps))
     w_utxq = UTXQWrapper(
         utxq=e_utxq,
         commitment="This space reserved").SerializeToString()
     e_mtxq = binascii.hexlify(
-        STATE_CRYPTO.encrypt_from(
-            payload.SerializeToString(),
-            private_key(request['plus']),
-            public_key(request['minus'])))
+        Secure.encrypt_object_with(
+            payload.SerializeToString(), ps))
     w_mtxq = MTXQWrapper(
         mtxq=e_mtxq,
         pairing=pairing.encode(),
@@ -303,9 +296,9 @@ def __create_reciprocate_inputs_outputs(ingest):
         payload)
 
 
-def create_utxq(ns, request):
+def create_utxq(request):
     """Create utxq transaction"""
-    operation = __validate_operation(ns, request)
+    operation = __validate_operation(request)
     LOGGER.debug(
         "Processing UTXQ create with operation => {}".format(operation))
     quant = __validate_utxq(request)
@@ -316,10 +309,10 @@ def create_utxq(ns, request):
     utxq_build((operation, quant, request))
 
 
-def create_mtxq(ns, request):
+def create_mtxq(request):
     """Create mtxq transaction"""
-    operation = __validate_operation(ns, request)
-    qnd = __validate_mtxq(ns, operation, request)
+    operation = __validate_operation(request)
+    qnd = __validate_mtxq(operation, request)
     mtxq_build = compose_builder(
         submit_single_txn, create_transaction,
         __create_reciprocate_inputs_outputs, __create_reciprocate_payload,

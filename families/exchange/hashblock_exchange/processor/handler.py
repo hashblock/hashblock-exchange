@@ -15,17 +15,11 @@
 # ------------------------------------------------------------------------------
 
 import logging
-
 from sawtooth_sdk.processor.handler import TransactionHandler
-
 from modules.address import Address
-from modules.config import load_hashblock_config
-
 from processor.services import Service
 
-
 LOGGER = logging.getLogger(__name__)
-load_hashblock_config()
 
 
 class ExchangeTransactionHandler(TransactionHandler):

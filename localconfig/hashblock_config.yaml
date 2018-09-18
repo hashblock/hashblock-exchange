@@ -41,7 +41,3 @@ rest:
     demo:  # Also references duality namespace
       - church
       - turing
-
-    demo2:  # Also references duality namespace
-      - church
-      - turing
