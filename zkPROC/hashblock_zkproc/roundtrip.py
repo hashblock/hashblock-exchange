@@ -19,7 +19,7 @@ import subprocess
 tree_i = "0000000000000000000000000000000000000000000000000000000000000000"
 
 secret_str = "13dc0ddd3ff7431ea297f517c4878b682655a892da3b38e85da00cefe8975bb3"
-value_str = ["5", "10", "1", "1"]
+value_str = ["5", "10", "1", "9"]
 unit_str = [
     "F1B94C743FD09943",
     "CA66A94FBBF9D5F7",
@@ -35,36 +35,35 @@ asset_str = [
 def commit_run(secret, tree, value, unit, asset):
     """ """
     print("----------------------------------------------------")
-    print("In Tree {}".format(tree))
-    print("In Value CM {}".format(value))
-    print("In Unit CM {}".format(unit))
-    print("In Asset CM {}".format(asset))
+    print("In Tree ".format(tree))
+    print("In Value {}".format(value))
+    print("In Unit {}".format(unit))
+    print("In Asset {}".format(asset))
     qcm_gen = subprocess.run(
         ['build/hbzkproc', '-qc', secret, value, unit, asset],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if qcm_gen.returncode == 0:
-        val_cm, val_r, unit_cm, unit_r, asset_cm, asset_r = \
-            qcm_gen.stderr.decode("utf-8").split()
-        print("Value CM {} R {}".format(val_cm, val_r))
-        print("Unit CM {} R {}".format(unit_cm, unit_r))
-        print("Asset CM {} {}".format(asset_cm, asset_r))
+        v_note, u_note, a_note = qcm_gen.stderr.decode("utf-8").split()
+        # print("Out Value Note {}".format(v_note))
+        # print("Out Unit Note {}".format(u_note))
+        # print("Out Asset Note {}".format(a_note))
         ctm = subprocess.run(
             [
                 'build/hbzkproc', '-ctm',
-                secret, tree,
-                val_cm, val_r, unit_cm, unit_r, asset_cm, asset_r],
+                tree, secret,
+                v_note, u_note, a_note],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if(ctm.returncode == 0):
-            result = ctm.stderr.decode("utf-8").split()
-            print("Value CM tuple {} Proof {}".format(result[0], result[1]))
-            print("Unit CM tuple {} Proof {}".format(result[2], result[3]))
-            print("Asset CM tuple {} Proof{}".format(result[4], result[5]))
-            print("Tree after insert {}".format(result[6]))
-            new_tree = result[6]
+            new_tree, vprf, uprf, aprf = ctm.stderr.decode("utf-8").split()
+            print("Tree output {}".format(new_tree))
+            print("Value proof {}".format(vprf))
+            print("Unit proof {}".format(uprf))
+            print("Asset proof {}".format(aprf))
         else:
             print("Turing's commitment to tree fault {}".format(ctm.stderr))
             print("Log {}".format(ctm.stdout.decode()))
+            new_tree = tree
         return new_tree
     else:
         print("Turing's quantity commitment fault {}".format(qcm_gen.stderr))
